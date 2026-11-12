@@ -54,29 +54,41 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .live-bar .auto i{width:7px;height:7px;border-radius:50%;background:var(--win);animation:pulse 1.6s infinite}
 .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:8px;margin-bottom:18px}
 .lgrid>*{min-width:0}
-.lcard{display:grid;grid-template-columns:62px minmax(0,1fr);gap:2px 10px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--live);border-radius:10px;padding:7px 10px;cursor:pointer;box-shadow:var(--shadow)}
+.lcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--live);border-radius:10px;padding:8px 10px;cursor:pointer;box-shadow:var(--shadow)}
 .lcard:hover{border-color:var(--live)}
-.lside{display:flex;flex-direction:column;gap:1px;font-size:12px;line-height:1.3;white-space:nowrap}
 .match .sc{white-space:nowrap}
 .lmini .match .sc{font-size:15px}
-.lside small{color:var(--muted);font-size:11px}
-.lside small b{color:var(--text);font-size:13px}
-.lrows{display:grid;gap:1px;min-width:0}
-.lr{display:flex;align-items:center;gap:7px;min-width:0;color:var(--muted)}
-.lr.lead{color:var(--text)}
-.lr .lg{width:20px;height:20px;flex:none}
-.ln{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
-.ln .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ln small{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lq{display:flex;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
-.lq i{font-style:normal;width:21px;text-align:center}
-.ls{font-size:18px;font-weight:800;min-width:34px;text-align:right;font-variant-numeric:tabular-nums;border-radius:5px;padding:0 3px;flex:none}
-.lr.lead .ls{color:var(--text)}
-.ls.up{animation:goal 2.2s ease-out}
+.lmain{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px}
+.lt{min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.3;color:var(--muted)}
+.lt.home{align-items:flex-end;text-align:right}
+.lt.away{align-items:flex-start;text-align:left}
+.lt.lead{color:var(--text)}
+.nmrow{display:flex;align-items:center;gap:6px;max-width:100%;min-width:0}
+.nmrow .lg{width:22px;height:22px;flex:none}
+.nmrow .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lt .lq{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.5px;white-space:nowrap}
+.lt small{font-size:10.5px;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc{text-align:center;padding:0 2px}
+.lsc{position:relative;display:inline-flex;align-items:center;gap:5px;font-size:22px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.lsc span{color:var(--muted);font-weight:600}
+.lsc b{border-radius:5px;padding:0 3px}
+.lsc b.up{animation:goal 2.2s ease-out}
+.ltot{margin-left:2px;font-size:10.5px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:5px;padding:1px 5px;white-space:nowrap}
+.lclk{font-size:11.5px;white-space:nowrap;margin-top:1px}
 .lmini{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px;margin-bottom:18px}
 .lmini>*{min-width:0}
 .lmini .match{padding:6px 10px}
 @media (max-width:640px){ .lmini{grid-template-columns:1fr} }
+.otab{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;font-variant-numeric:tabular-nums;table-layout:fixed}
+.otab th,.otab td{padding:3px 4px;text-align:center;border-top:1px solid var(--border)}
+.otab thead th{border-top:1px dashed var(--border);color:var(--muted);font-weight:600;font-size:11px}
+.otab tbody th{text-align:left;color:var(--muted);font-weight:700;width:52px}
+.otab thead th:nth-child(2){width:62px}
+.otab td{font-weight:700}
+.otab td.ln{font-weight:600;color:var(--muted)}
+.otab td small{font-weight:500;color:var(--muted);font-size:10.5px}
+.otab td.hit{background:var(--win-bg);color:var(--win)}
+.otab td.hit small{color:var(--win)}
 .lx,.lodds{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:11px;color:var(--muted);border-top:1px dashed var(--border);padding-top:4px;margin-top:3px}
 .og{display:inline-flex;align-items:center;gap:3px}
 .og em{font-style:normal;font-weight:700;margin-right:1px}
@@ -111,8 +123,9 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .outs i.on{background:var(--live);border-color:var(--live)}
 .live-empty{text-align:center;padding:28px 16px}
 .live-empty b{display:block;font-size:16px;margin-bottom:4px;color:var(--text)}
-@media (max-width:640px){ .lgrid{grid-template-columns:1fr} .lcard{grid-template-columns:60px minmax(0,1fr);gap:2px 8px;padding:6px 8px} .lside{font-size:11.5px} .lq i{width:19px} }
-@media (max-width:360px){ .lq{display:none} }
+.shortn{display:none}
+@media (max-width:640px){ .lgrid{grid-template-columns:1fr} .lcard{padding:7px 8px} .lmain{gap:6px} .lsc{font-size:19px;gap:4px} .nmrow{gap:4px} .nmrow .lg{width:18px;height:18px} .ltot{font-size:10px;padding:1px 4px} }
+@media (max-width:480px){ .fulln{display:none} .shortn{display:inline} }
 /* 배당 */
 .odds{display:grid;gap:6px}
 .odds.compact{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)}
@@ -1357,19 +1370,20 @@ function oddsLine(m, o){
   if (!o) return "";
   const soccer = L().sport === "soccer", ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
   const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
-  const v = (ml, hit) => `<b class="${hit ? "hit" : ""}">${fOdds(ml)}</b>`;
-  const g = [];
+  const td = (txt, hit) => `<td class="${hit ? "hit" : ""}">${txt}</td>`;
+  const rows = [];
   if (ho.moneyLine != null || ao.moneyLine != null)
-    g.push(`<span class="og"><em>${soccer ? "승무패" : "승패"}</em>${v(ho.moneyLine, hs > as)}${soccer ? v((o.drawOdds || {}).moneyLine, hs === as) : ""}${v(ao.moneyLine, hs < as)}</span>`);
+    rows.push(`<tr><th>${soccer ? "승무패" : "승패"}</th><td class="ln">-</td>${td(fOdds(ho.moneyLine), hs > as)}${soccer ? td(fOdds((o.drawOdds || {}).moneyLine), hs === as) : ""}${td(fOdds(ao.moneyLine), hs < as)}</tr>`);
   if (o.spread != null && !isNaN(Number(o.spread))){
     const adj = hs + Number(o.spread) - as;
-    g.push(`<span class="og"><em>핸디 ${sgn(o.spread)}</em>${v(ho.spreadOdds, adj > 0)}${v(ao.spreadOdds, adj < 0)}</span>`);
+    rows.push(`<tr><th>핸디</th><td class="ln">홈 ${sgn(o.spread)}</td>${td(fOdds(ho.spreadOdds), adj > 0)}${soccer ? "<td></td>" : ""}${td(fOdds(ao.spreadOdds), adj < 0)}</tr>`);
   }
   if (o.overUnder != null && !isNaN(Number(o.overUnder))){
     const line = Number(o.overUnder), tot = hs + as;
-    g.push(`<span class="og"><em>언오버 ${line}</em><b class="${tot > line ? "hit" : ""}">오 ${fOdds(o.overOdds)}</b><b class="${tot < line ? "hit" : ""}">언 ${fOdds(o.underOdds)}</b></span>`);
+    rows.push(`<tr><th>언오버</th><td class="ln">${line}</td>${td(`<small>오버</small> ${fOdds(o.overOdds)}`, tot > line)}${soccer ? "<td></td>" : ""}${td(`<small>언더</small> ${fOdds(o.underOdds)}`, tot < line)}</tr>`);
   }
-  return g.length ? `<div class="lodds">${g.join("")}</div>` : "";
+  if (!rows.length) return "";
+  return `<table class="otab"><thead><tr><th></th><th>기준</th><th>홈</th>${soccer ? "<th>무</th>" : ""}<th>원정</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
 }
 
 function liveCard(m){
@@ -1381,12 +1395,14 @@ function liveCard(m){
   const cOf = side => (comp.competitors || []).find(c => c.homeAway === side) || {};
   const ev = sp === "soccer" ? soccerEvents(m, comp) : [[], []];
   const qs = side => sp === "basketball" ? (cOf(side).linescores || []).map(x => x.value) : [];
-  const row = (t, side, i) => {
+  // 좁은 화면에서는 NBA·MLB 팀을 애칭만 (골든스테이트 워리어스 → 워리어스)
+  const nm = t => { const full = ko(t.name), parts = full.split(" ");
+    return sp !== "soccer" && parts.length > 1 ? `<span class="fulln">${esc(full)}</span><span class="shortn">${esc(parts[parts.length - 1])}</span>` : esc(full); };
+  const team = (t, side, i) => {
     const q = qs(side), lead = i === 0 ? hs > as : as > hs;
-    return `<div class="lr ${lead ? "lead" : ""}">${logo(t.logo)}
-      <span class="ln"><span class="nm">${esc(ko(t.name))}</span>${ev[i].length ? `<small>${ev[i].join(" ")}</small>` : ""}</span>
-      ${q.length ? `<span class="lq">${q.map(x => `<i>${x}</i>`).join("")}</span>` : ""}
-      <b class="ls ${up[i] ? "up" : ""}">${t.score ?? 0}</b></div>`;
+    const sub = [q.length ? `<span class="lq">${q.join(" ")}</span>` : "", ev[i].length ? `<small>${ev[i].join(" ")}</small>` : ""].join("");
+    return `<div class="lt ${i ? "away" : "home"} ${lead ? "lead" : ""}">
+      <div class="nmrow">${i ? logo(t.logo) : ""}<span class="nm">${nm(t)}</span>${i ? "" : logo(t.logo)}</div>${sub}</div>`;
   };
   let extra = "";
   if (sp === "baseball" && comp.situation && m.state === "in"){
@@ -1396,10 +1412,14 @@ function liveCard(m){
     const bat = s.batter?.athlete?.shortName, pit = s.pitcher?.athlete?.shortName;
     extra = `<div class="lx">${dia}${outs}${s.balls != null ? `<span>B-S ${s.balls}-${s.strikes}</span>` : ""}${bat ? `<span>타자 ${esc(bat)}</span>` : ""}${pit ? `<span>투수 ${esc(pit)}</span>` : ""}</div>`;
   }
-  const sum = sp === "soccer" ? "" : `<small>합산 <b>${hs + as}</b></small>`;
+  const sum = sp === "soccer" ? "" : `<span class="ltot">합 ${hs + as}</span>`;
   return `<button class="lcard ${up[0] || up[1] ? "flash" : ""}" data-match="${m.id}">
-    <div class="lside"><span class="live">● ${esc(liveText(m))}</span>${sum}</div>
-    <div class="lrows">${row(m.home, "home", 0)}${row(m.away, "away", 1)}</div>
+    <div class="lmain">
+      ${team(m.home, "home", 0)}
+      <div class="lc"><div class="lsc"><b class="${up[0] ? "up" : ""}">${hs}</b><span>:</span><b class="${up[1] ? "up" : ""}">${as}</b>${sum}</div>
+        <div class="lclk live">● ${esc(liveText(m))}</div></div>
+      ${team(m.away, "away", 1)}
+    </div>
     ${extra}${oddsLine(m, (lv.odds || {})[m.id])}</button>`;
 }
 
