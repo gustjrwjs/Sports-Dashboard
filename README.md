@@ -4,13 +4,14 @@
 
 여러 리그의 순위표, 경기 일정·결과, 팀별 최근 5경기 기록, 라인업·선수 기록, 경기 미리보기를 한 페이지에서 볼 수 있는 한국어 대시보드입니다. 화면 위쪽에서 종목별로 묶인 리그를 골라 바꿉니다.
 
-> A Korean-language sports dashboard: Premier League, La Liga, Serie A, Bundesliga, UEFA Nations League, NBA and MLB in one page. Live standings, fixtures & results, last-5 form, lineups / box scores and match previews. No API key, no dependencies.
+> A Korean-language sports dashboard: Premier League, La Liga, Serie A, Bundesliga, UEFA Champions League, Europa League, Nations League, NBA and MLB in one page. Live standings, fixtures & results, last-5 form, lineups / box scores and match previews. No API key, no dependencies.
 
 ## 지원 리그
 
 | 종목 | 리그 | 순위표 | 경기 상세 |
 | --- | --- | --- | --- |
 | ⚽ 축구 | 프리미어리그 · 라리가 · 세리에 A · 분데스리가 | 챔피언스리그·유로파·콘퍼런스리그 예선·강등(플레이오프) 구간 | 포메이션·선발 11명(경기장 그림), 득점·경고·교체 |
+| ⚽ 축구 | UEFA 챔피언스리그 · 유로파리그 | 리그 페이즈 36팀 단일 순위표, 16강 직행·녹아웃 PO(시드/비시드)·탈락 구간 | 포메이션·선발 11명, 득점·경고·교체 |
 | ⚽ 축구 | UEFA 네이션스리그 | 리그 A~D 14개 조, 8강·승격·강등 구간 | 포메이션·선발 11명, 득점·경고·교체 |
 | 🏀 농구 | NBA | 동부·서부 콘퍼런스, 플레이오프 직행·플레이-인 구간 | 선수별 박스스코어(출전 시간·득점·리바운드·어시스트 등), 부상·결장 선수 |
 | ⚾ 야구 | MLB | AL·NL 6개 지구, 포스트시즌 진출 팀 | 이닝별 점수, 타순·타격 기록, 투수 기록, 선발 투수 예고 |
@@ -41,7 +42,7 @@
   - **주목할 선수**: 이번 시즌 기록이 좋은 선수 4명과 핵심 스탯 (축구: 출전·골·도움·유효슈팅, 농구: 경기당 득점·리바·어시·야투%, 야구: 타자 2명·투수 2명)
   - **부상·결장 선수**: 팀 창을 열 때마다 ESPN 최신 부상 보고를 불러옴. 보고 이후 경기에 뛰었으면 '복귀'로, 최근 경기에 뛰었지만 새 보고가 있으면 출전 기록을 함께 표시
   - **최신 뉴스**: 접어 두었다가 눌러서 펼쳐 보는 ESPN 기사 목록 (영어)
-- 리그 선택은 주소에 남습니다. 예: `.../static/#nba` 링크를 보내면 NBA 화면이 바로 열립니다. 주소 이름: `#epl` `#laliga` `#seriea` `#bundesliga` `#unl` `#nba` `#mlb`
+- 리그 선택은 주소에 남습니다. 예: `.../static/#nba` 링크를 보내면 NBA 화면이 바로 열립니다. 주소 이름: `#epl` `#laliga` `#seriea` `#bundesliga` `#ucl` `#uel` `#unl` `#nba` `#mlb`
 - PC와 모바일 화면 지원, 다크 모드 지원
 
 ## 사용 방법
