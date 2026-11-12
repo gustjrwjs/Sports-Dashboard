@@ -362,7 +362,37 @@ tr.grp-row td{background:var(--surface-2);font-size:11px;color:var(--muted);text
 ul.inj{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
 ul.inj li{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px}
 ul.inj li:last-child{border-bottom:0}
-ul.inj .stt{margin-left:auto;font-size:12px;color:var(--loss);font-weight:600}
+ul.inj .stt{margin-left:auto;font-size:12px;color:var(--loss);font-weight:600;text-align:right;display:flex;flex-direction:column;align-items:flex-end;flex:none}
+ul.inj .stt small{color:var(--muted);font-weight:400;font-size:10.5px;white-space:nowrap}
+ul.inj .stt{white-space:nowrap}
+ul.inj li.back .stt{color:var(--win)}
+ul.inj .stt small.pl{color:var(--win);font-weight:600}
+ul.inj .inn{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+ul.inj .inn small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kp{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.kpc{display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;gap:2px 10px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+.kpc .hs{width:44px;height:44px;grid-row:1/3;border-radius:50%;object-fit:cover;background:var(--surface-2)}
+.kpc .ph{display:grid;place-items:center;font-weight:800;color:var(--muted)}
+.kpn{display:flex;align-items:baseline;gap:6px;min-width:0}
+.kpn b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpn small{color:var(--muted);font-size:11px;white-space:nowrap}
+.kps{display:flex;gap:10px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.kps span{display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.kps small{font-size:10px;color:var(--muted)}
+.kps b{font-size:13px}
+.newsbox summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px}
+.newsbox summary::-webkit-details-marker{display:none}
+.newsbox summary .sp{font-weight:400;font-size:12px}
+.newsbox .chev{font-style:normal;display:inline-block;margin-left:4px;transition:transform .15s}
+.newsbox[open] .chev{transform:rotate(180deg)}
+.newsbox[open] summary{border-radius:10px 10px 0 0;border-bottom:0}
+.newsbox[open] ul.news{border-radius:0 0 10px 10px}
+ul.news{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+ul.news li{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+ul.news li:last-child{border-bottom:0}
+ul.news a{color:var(--text);text-decoration:none;font-weight:600;font-size:13px;line-height:1.35}
+ul.news a:hover{text-decoration:underline}
+ul.news small{font-size:11px}
 
 @media (max-width:640px){
   .groups,.mlist,.cols,.lineups,.prob{grid-template-columns:1fr}
@@ -466,6 +496,10 @@ const COMP = {"UEFA Nations League":"네이션스리그","FIFA World Cup":"월�
 const NOTE = {"Qualifies for QFs":"8강 진출","Promotion":"승격","Promotion playoffs":"승격 플레이오프","Relegation playoffs":"강등 플레이오프","Relegation":"강등","Relegation or playoffs":"강등 또는 플레이오프",
   "Relegated":"강등","Relegation playoff":"강등 플레이오프",
   "Champions League":"챔피언스리그","Europa League":"유로파리그","Conference League":"콘퍼런스리그","Conference League qualifying":"콘퍼런스리그 예선","Champions League qualifying":"챔피언스리그 예선"};
+// 순위 구간 색 (ESPN 색은 "##B5E7CE"처럼 잘못 오거나 유로파·콘퍼런스가 같은 색이라 직접 지정)
+const ZONE_COLOR = {"챔피언스리그":"#2563eb","챔피언스리그 예선":"#60a5fa","유로파리그":"#f97316","콘퍼런스리그":"#14b8a6","콘퍼런스리그 예선":"#14b8a6",
+  "8강 진출":"#22c55e","승격":"#22c55e","승격 플레이오프":"#86efac","강등 플레이오프":"#fca5a5","강등 또는 플레이오프":"#f87171","강등":"#ef4444"};
+const cleanColor = c => { const m = String(c || "").match(/#?([0-9a-f]{6}|[0-9a-f]{3})$/i); return m ? "#" + m[1] : ""; };
 const RK = {W:"승",D:"무",L:"패"};
 const INJ = {"Out":"결장","Day-To-Day":"출전 불투명","Questionable":"출전 불투명","Doubtful":"출전 어려움","Probable":"출전 유력","Suspension":"출장 정지","Injured List":"부상자 명단","10-Day-IL":"10일 IL","15-Day-IL":"15일 IL","60-Day-IL":"60일 IL"};
 
@@ -591,7 +625,7 @@ async function loadStandings(lg){
     rows.forEach((r, i) => {
       if (Lg.sport !== "soccer") r.rank = i + 1;
       // 순위 구간 표시
-      if (Lg.sport === "soccer") r.zone = noteKo(r.note, letter);
+      if (Lg.sport === "soccer"){ r.zone = noteKo(r.note, letter); r.noteColor = r.zone ? (ZONE_COLOR[r.zone] || cleanColor(r.noteColor)) : ""; }
       else if (lg === "nba"){ if (r.seed && r.seed <= 6){ r.zone = "플레이오프 직행"; r.noteColor = "#81D6AC"; } else if (r.seed && r.seed <= 10){ r.zone = "플레이-인"; r.noteColor = "#FEE59A"; } }
       else if (lg === "mlb" && /^[xyzw*]$/.test(r.clincher)){ r.zone = "포스트시즌 진출"; r.noteColor = "#81D6AC"; }
     });
@@ -913,6 +947,7 @@ async function openTeam(id, n = 5){
         <div>${info.id ? `<span class="pill">${esc(rankText(info))}</span> ` : ""}<span class="muted">${esc(line)}</span></div>
         ${info.zone ? `<div class="note">현재 순위 기준: ${esc(info.zone)}</div>` : ""}
       </div></div>
+      <div id="intel" data-tid="${id}"><div class="loading">주목할 선수·부상자·뉴스를 불러오는 중…</div></div>
       <div class="sec"><div class="sec-h"><h3>최근 ${n}경기${L().scope === "all" ? " (모든 대회)" : ""}</h3>
         <span class="sp chips"><button class="chip ${n === 5 ? "on" : ""}" data-team="${id}" data-n="5">5경기</button><button class="chip ${n === 10 ? "on" : ""}" data-team="${id}" data-n="10">10경기</button></span></div>
         ${kpis(stats(rs), `최근 ${rs.length}경기`)}${resList(rs)}</div>
@@ -921,7 +956,130 @@ async function openTeam(id, n = 5){
         ${t.upcoming.length ? `<ul class="res fx">${t.upcoming.slice(0, 5).map(e => { const home = e.home.id === id, op = home ? e.away : e.home; return `<li>
           <span class="d">${dFull(e.date)}</span><span class="c">${esc(compKo(e.competition) || L().short)}</span><span class="ha">${venueKo(e, home)}</span>
           <span class="o">${logo(op.logo)}<span>${esc(ko(op.name))}</span></span></li>`; }).join("")}</ul>` : '<div class="card empty">예정된 경기가 없습니다.</div>'}</div>`);
+    fillIntel(lg, id, t);
   } catch (e) { openModal(errBox(e)); }
+}
+
+// ---------------------------------------------------------------- 팀 정보: 주목할 선수 · 부상자 · 뉴스 (팀 창 열 때마다 최신으로)
+const flatRoster = r => (r && r.athletes || []).flatMap(a => a.items ? a.items : [a]);
+const statMap = (names, vals) => { const o = {}; (names || []).forEach((k, i) => { o[k] = vals[i]; }); return o; };
+const num = v => { const n = parseFloat(String(v ?? "").replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; };
+const md = iso => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const timeAgo = iso => { const s = (Date.now() - new Date(iso)) / 1000; if (!isFinite(s)) return "";
+  return s < 3600 ? Math.max(1, Math.round(s / 60)) + "분 전" : s < 86400 ? Math.round(s / 3600) + "시간 전" : Math.round(s / 86400) + "일 전"; };
+
+async function keyPlayers(lg, id, roster){
+  const sp = LEAGUES[lg].sport, list = flatRoster(roster);
+  if (!list.length) return [];
+  if (sp === "soccer"){
+    return list.map(a => {
+      const cats = ((a.statistics || {}).splits || {}).categories || [];
+      const s = {}; for (const c of cats) for (const x of c.stats || []) s[x.name] = x.value;
+      const g = s.totalGoals || 0, as = s.goalAssists || 0, ap = s.appearances || 0;
+      return {a, score:g * 3 + as * 2 + ap * .1 + (s.shotsOnTarget || 0) * .2,
+        stats:[["출전", ap], ["골", g], ["도움", as], ["유효슈팅", s.shotsOnTarget ?? "-"]]};
+    }).filter(x => x.score > 0).sort((x, y) => y.score - x.score).slice(0, 4);
+  }
+  // 농구·야구: 선수별 시즌 기록 (1시간 캐시)
+  const path = a => `common/v3/sports/${sp}/${LEAGUES[lg].slug}/athletes/${a.id}/overview`;
+  const out = [];
+  for (let i = 0; i < list.length; i += 10)
+    await Promise.all(list.slice(i, i + 10).map(a => espn(path(a), 3600).then(o => { if (o && o.statistics) out.push({a, st:o.statistics}); }).catch(() => {})));
+  const rows = out.map(({a, st}) => {
+    const split = (st.splits || []).find(x => /Regular|Season/i.test(x.displayName || "") && !/Career/i.test(x.displayName || "")) || (st.splits || [])[0];
+    if (!split) return null;
+    const m = statMap(st.names, split.stats);
+    if (sp === "basketball"){
+      if (!num(m.gamesPlayed)) return null;
+      return {a, score:num(m.avgPoints) + num(m.avgRebounds) * .5 + num(m.avgAssists) * .7,
+        stats:[["득점", m.avgPoints], ["리바", m.avgRebounds], ["어시", m.avgAssists], ["야투%", m.fieldGoalPct], ["경기", m.gamesPlayed]]};
+    }
+    const pitch = /Pitch/i.test(st.displayName || "") || m.ERA != null || m.earnedRunAverage != null;
+    if (pitch){
+      const ip = num(m.innings || m.inningsPitched), so = num(m.strikeouts), era = m.ERA ?? m.earnedRunAverage;
+      if (!ip) return null;
+      return {a, pitch:true, score:ip * .3 + so * .2 - num(era) * 2, stats:[["평균자책", era], ["승", m.wins ?? "-"], ["탈삼진", so], ["이닝", m.innings ?? m.inningsPitched ?? "-"]]};
+    }
+    const ab = num(m.atBats), h = num(m.hits);
+    if (ab < 20) return null;
+    return {a, score:num(m.homeRuns) * 3 + num(m.RBIs) + h * .3,
+      stats:[["타율", (h / ab).toFixed(3).replace(/^0/, "")], ["홈런", m.homeRuns], ["타점", m.RBIs], ["안타", m.hits]]};
+  }).filter(Boolean).sort((x, y) => y.score - x.score);
+  if (sp === "baseball") return [...rows.filter(r => !r.pitch).slice(0, 2), ...rows.filter(r => r.pitch).slice(0, 2)];
+  return rows.slice(0, 4);
+}
+
+// 최근 경기에 뛴 선수 (부상 복귀 확인용): {이름: "선발"|"교체"}
+function playedIn(sum, teamId, sp){
+  const out = {};
+  if (!sum) return out;
+  if (sp === "soccer"){
+    for (const r of sum.rosters || []) if (String(r.team?.id) === String(teamId))
+      for (const p of r.roster || []) { const n = p.athlete?.displayName; if (n && (p.starter || p.subbedIn)) out[n] = p.starter ? "선발" : "교체"; }
+    return out;
+  }
+  for (const t of sum.boxscore?.players || []) if (String(t.team?.id) === String(teamId))
+    for (const st of t.statistics || []) for (const a of st.athletes || []) {
+      const n = a.athlete?.displayName; if (!n || a.didNotPlay || !(a.stats || []).length) continue;
+      if (!out[n] || a.starter) out[n] = a.starter ? "선발" : "교체";
+    }
+  return out;
+}
+
+async function teamInjuries(lg, id, roster, t){
+  const Lg = LEAGUES[lg], sp = Lg.sport, list = [];
+  const add = (name, status, note, date, img) => { if (name && !list.some(x => x.name === name)) list.push({name, status, note, date, img}); };
+  if (sp !== "soccer"){
+    const all = await espn(`site/v2/sports/${sp}/${Lg.slug}/injuries`, 600).catch(() => null);
+    const mine = ((all || {}).injuries || []).find(x => String(x.id) === String(id));
+    for (const i of (mine || {}).injuries || []) add(i.athlete?.displayName, i.status, i.shortComment || "", i.date, i.athlete?.headshot?.href);
+  }
+  for (const a of flatRoster(roster)) for (const i of a.injuries || [])
+    add(a.displayName, i.status || i.type?.description || "부상", (i.details || {}).type || "", i.date, a.headshot?.href);
+  // 다음 경기 미리보기의 부상자 명단 (축구는 여기서 주로 나옴)
+  const next = t.upcoming[0], last = t.past[0];
+  const [nsum, lsum] = await Promise.all([
+    next ? espn(summaryPath(lg, next.id), 600).catch(() => null) : null,
+    last ? espn(summaryPath(lg, last.id), 3600).catch(() => null) : null]);
+  for (const g of (nsum || {}).injuries || []) if (String(g.team?.id) === String(id))
+    for (const i of g.injuries || []) add(i.athlete?.displayName, i.status, (i.details || {}).type || "", i.date, i.athlete?.headshot?.href);
+  // 복귀 확인: 부상 보고 이후 경기에서 뛰었으면 '복귀'
+  const played = playedIn(lsum, id, sp), lastDate = last ? new Date(last.date) : null;
+  for (const x of list){
+    const how = played[x.name];
+    if (!how || !lastDate) continue;
+    if (!x.date || new Date(x.date) < lastDate) { x.back = how; x.backDate = last.date; }  // 보고 이후 경기에 뜀 → 복귀
+    else { x.played = how; x.backDate = last.date; }  // 최근 경기엔 뛰었지만 그 뒤 새 보고가 있음 → 상태 유지 + 출전 기록 표시
+  }
+  return list.sort((a, b) => (a.back ? 1 : 0) - (b.back ? 1 : 0));
+}
+
+async function fillIntel(lg, id, t){
+  const Lg = LEAGUES[lg], sp = Lg.sport;
+  const box = () => { const el = $("#intel"); return el && el.dataset.tid === String(id) && modal.open ? el : null; };
+  const [roster, news] = await Promise.all([
+    espn(`site/v2/sports/${sp}/${Lg.slug}/teams/${id}/roster`, 1800).catch(() => null),
+    espn(`site/v2/sports/${sp}/${Lg.slug}/news?team=${id}&limit=6`, 600).catch(() => null)]);
+  const [keys, inj] = await Promise.all([keyPlayers(lg, id, roster).catch(() => []), teamInjuries(lg, id, roster, t).catch(() => [])]);
+  await withTimeout(lookupPlayers([...keys.map(k => k.a.displayName), ...inj.map(i => i.name)], OCC[sp]), 5000);
+  const el = box(); if (!el) return;
+  const kp = keys.length ? `<div class="kp">${keys.map(k => `<div class="kpc">
+      ${headImg(k.a.headshot?.href || imgOf(k.a.displayName, 120), "hs") || `<span class="hs ph">${esc(k.a.jersey || "")}</span>`}
+      <div class="kpn"><b title="${nameTitle(k.a.displayName)}">${esc(koFull(k.a.displayName))}</b>
+        <small>${esc([k.a.position?.abbreviation, k.a.jersey ? "#" + k.a.jersey : "", k.pitch ? "투수" : ""].filter(Boolean).join(" · "))}</small></div>
+      <div class="kps">${k.stats.map(([l, v]) => `<span><small>${l}</small><b>${esc(v ?? "-")}</b></span>`).join("")}</div></div>`).join("")}</div>`
+    : '<div class="card empty">이번 시즌 선수 기록이 아직 없습니다.</div>';
+  const injHtml = inj.length ? `<ul class="inj">${inj.map(i => `<li class="${i.back ? "back" : ""}">${headImg(i.img || imgOf(i.name, 80))}
+      <span class="inn"><span title="${nameTitle(i.name)}">${esc(koFull(i.name))}</span>${i.note ? `<small class="muted">${esc(i.note)}</small>` : ""}</span>
+      <span class="stt">${i.back ? `복귀 · ${md(i.backDate)} ${i.back} 출전` : esc(INJ[i.status] || i.status || "")}${i.date && !i.back ? `<small>${esc(timeAgo(i.date))} 보고</small>` : ""}${i.played ? `<small class="pl">${md(i.backDate)} ${i.played} 출전</small>` : ""}</span></li>`).join("")}</ul>`
+    : `<div class="card empty">ESPN에 올라온 부상·결장 선수가 없습니다.${sp === "soccer" ? "<br><small>축구는 ESPN 부상 정보가 적어서, 실제 부상자가 있어도 경기 직전 명단이 나와야 표시될 수 있습니다.</small>" : ""}</div>`;
+  const arts = ((news || {}).articles || []).filter(a => a.headline).slice(0, 5);
+  const newsHtml = arts.length ? `<ul class="news">${arts.map(a => { const href = (a.links?.web?.href || "").replace(/^http:/, "https:");
+      return `<li><a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(a.headline)}</a><small class="muted">${esc(timeAgo(a.published))} · ESPN</small></li>`; }).join("")}</ul>` : "";
+  el.innerHTML = `
+    <div class="sec"><div class="sec-h"><h3>주목할 선수</h3><span class="muted sp">이번 시즌 기록 기준${sp === "basketball" ? " · 경기당 평균" : ""}</span></div>${kp}</div>
+    <div class="sec"><div class="sec-h"><h3>부상·결장 선수</h3><span class="muted sp">ESPN 최신 보고 · 최근 경기에 뛰었으면 '복귀'로 표시</span></div>${injHtml}</div>
+    ${newsHtml ? `<details class="sec newsbox"><summary><span>📰 최신 뉴스 <span class="muted">${arts.length}</span></span><span class="muted sp">ESPN 기사 (영어) <i class="chev">▼</i></span></summary>${newsHtml}</details>` : ""}`;
 }
 
 function cmpRow(label, a, b, higherBetter, fmt = v => v){
