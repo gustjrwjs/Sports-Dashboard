@@ -67,6 +67,21 @@ header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
 .brow .wbadge{font-size:9.5px;padding:2px 3px}
 .binfo{font-size:10.5px;text-align:right;margin-top:1px}
 .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-bottom:16px}
+/* 경기 상세 배당 표 */
+.otbl-wrap{padding:4px 6px;overflow-x:auto}
+table.otbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13.5px}
+table.otbl thead th{font-size:11.5px;color:var(--muted);font-weight:600;padding:6px 4px;text-align:center;border-bottom:1px solid var(--border)}
+table.otbl tbody th{text-align:left;color:var(--muted);font-weight:700;padding:9px 6px;white-space:nowrap;width:70px}
+table.otbl td{text-align:center;padding:5px 3px;border-top:1px solid var(--border)}
+table.otbl tbody tr:first-child td,table.otbl tbody tr:first-child th{border-top:0}
+table.otbl tbody th{border-top:1px solid var(--border)}
+table.otbl td b{display:inline-block;min-width:46px;padding:4px 6px;border-radius:7px;background:var(--surface-2);font-weight:800}
+table.otbl td small{display:block;font-size:10px;color:var(--muted);margin-bottom:1px}
+table.otbl td.hit b{background:var(--win-bg);color:var(--win);box-shadow:inset 0 0 0 1px var(--win)}
+table.otbl td.hit small{color:var(--win)}
+table.otbl td.ln{color:var(--muted);font-weight:700;white-space:nowrap}
+table.otbl td.ores{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+table.otbl td.ores.on{color:var(--live)}
 /* 1·2차전 표 */
 .bracket.two .bcol{width:250px}
 table.blegs{width:100%;border-collapse:collapse;table-layout:fixed;font-variant-numeric:tabular-nums}
@@ -1491,6 +1506,7 @@ function pickOdds(sum){
 }
 function oddsBlock(m, o, compact){
   if (!o) return "";
+  if (!compact) return oddsTable(m, o);
   const soccer = L().sport === "soccer", ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
   const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0, started = m.state !== "pre";
   const cell = (k, v, hit) => `<span class="oc ${hit ? "hit" : ""}"><small>${k}</small><b>${v}</b></span>`;
@@ -1513,8 +1529,32 @@ function oddsBlock(m, o, compact){
   }
   if (!rows.length) return "";
   const src = `${esc((o.provider || {}).name || "ESPN")} 경기 전 기준 · 소수점 배당`;
-  return compact ? `<div class="odds compact">${rows.join("")}<div class="osrc">${src}</div></div>`
-    : `<div class="sec"><div class="sec-h"><h3>배당·기준점</h3><span class="muted sp">${src} · 프로토 배당과 다를 수 있음</span></div><div class="card odds">${rows.join("")}</div></div>`;
+  return `<div class="odds compact">${rows.join("")}<div class="osrc">${src}</div></div>`;
+}
+// 경기 상세 창용 배당 표: 구분 | 기준 | 홈 | (무) | 원정 | 결과
+function oddsTable(m, o){
+  const soccer = L().sport === "soccer", ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
+  const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0, started = m.state !== "pre", fin = m.state === "post";
+  const td = (v, hit, sub) => `<td class="${hit && started ? "hit" : ""}">${sub ? `<small>${sub}</small>` : ""}<b>${v}</b></td>`;
+  const res = (txt, good) => `<td class="ores ${good ? "on" : ""}">${txt}</td>`;
+  const rows = [];
+  if (ho.moneyLine != null || ao.moneyLine != null){
+    const r = !started ? "-" : hs > as ? (fin ? "홈승" : "홈 우세") : hs < as ? (fin ? "원정승" : "원정 우세") : (fin ? "무승부" : "동점");
+    rows.push(`<tr><th>${soccer ? "승무패" : "승패"}</th><td class="ln">-</td>${td(fOdds(ho.moneyLine), hs > as)}${soccer ? td(fOdds((o.drawOdds || {}).moneyLine), hs === as) : ""}${td(fOdds(ao.moneyLine), hs < as)}${res(r, started)}</tr>`);
+  }
+  if (o.spread != null && !isNaN(Number(o.spread))){
+    const sp = Number(o.spread), adj = hs + sp - as;
+    const r = !started ? "-" : adj > 0 ? (fin ? "홈 적중" : "홈 우세") : adj < 0 ? (fin ? "원정 적중" : "원정 우세") : (fin ? "적특" : "동점");
+    rows.push(`<tr><th>핸디</th><td class="ln">홈 ${sgn(sp)}</td>${td(fOdds(ho.spreadOdds), adj > 0)}${soccer ? '<td class="na"></td>' : ""}${td(fOdds(ao.spreadOdds), adj < 0)}${res(r, started)}</tr>`);
+  }
+  if (o.overUnder != null && !isNaN(Number(o.overUnder))){
+    const line = Number(o.overUnder), tot = hs + as;
+    const r = !started ? "-" : fin ? `${tot}점 · ${tot > line ? "오버" : tot < line ? "언더" : "적특"}` : `현재 ${tot}${tot > line ? " · 오버" : ` · ${+(line - tot).toFixed(1)} 남음`}`;
+    rows.push(`<tr><th>언더오버</th><td class="ln">${line}</td>${td(fOdds(o.overOdds), tot > line, "오버")}${soccer ? '<td class="na"></td>' : ""}${td(fOdds(o.underOdds), tot < line, "언더")}${res(r, started)}</tr>`);
+  }
+  if (!rows.length) return "";
+  return `<div class="sec"><div class="sec-h"><h3>배당·기준점</h3><span class="muted sp">${esc((o.provider || {}).name || "ESPN")} 경기 전 기준 · 소수점 · 프로토와 다를 수 있음</span></div>
+    <div class="card otbl-wrap"><table class="otbl"><thead><tr><th></th><th>기준</th><th>홈</th>${soccer ? "<th>무</th>" : ""}<th>원정</th><th>${fin ? "결과" : started ? "현재" : "결과"}</th></tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
 }
 
 function getSummary(ev, lg = S.lg){
