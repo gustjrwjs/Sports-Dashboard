@@ -62,7 +62,8 @@ create policy "read comments" on public.comments for select to anon, authenticat
 
 -- 비밀값 해시는 읽기에서 숨김
 revoke select on public.posts from anon, authenticated;
-grant select (id, created_at, category, nickname, title, body, image_url, likes, comment_count) on public.posts to anon, authenticated;
+-- hidden은 댓글 읽기 규칙(숨긴 글의 댓글 가리기)이 확인하는 데 필요
+grant select (id, created_at, category, nickname, title, body, image_url, likes, comment_count, hidden) on public.posts to anon, authenticated;
 revoke select on public.comments from anon, authenticated;
 grant select (id, post_id, created_at, nickname, body, is_admin) on public.comments to anon, authenticated;
 revoke all on public.admin_config from anon, authenticated;
