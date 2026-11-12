@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>네이션스리그 대시보드</title>
+<style>
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --surface-2:#f0f2f7; --text:#131722; --muted:#5f6779;
+  --border:#e1e5ee; --accent:#1d4ed8; --accent-soft:#e7eeff;
+  --win:#15803d; --win-bg:#dcfce7; --draw:#5f6779; --draw-bg:#eceef3; --loss:#b91c1c; --loss-bg:#fee2e2;
+  --live:#e11d48; --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0d1016; --surface:#151a23; --surface-2:#1c2230; --text:#e7eaf0; --muted:#97a0b2;
+    --border:#262d3b; --accent:#7096ff; --accent-soft:#1b2747;
+    --win:#4ade80; --win-bg:#13301f; --draw:#a3abbb; --draw-bg:#262c38; --loss:#f87171; --loss-bg:#3a1a1c;
+    --live:#fb7185; --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+.top-in{display:flex;align-items:center;gap:12px;padding:12px 0 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand .mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;letter-spacing:-.5px}
+.brand h1{font-size:17px;margin:0;letter-spacing:-.3px}
+.brand .sub{color:var(--muted);font-size:12px}
+.upd{color:var(--muted);font-size:12px}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+nav.tabs{display:flex;gap:4px;margin-top:8px;overflow-x:auto}
+nav.tabs button{background:none;border:0;padding:10px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;font-weight:600;white-space:nowrap}
+nav.tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
+main{padding:18px 0 48px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:5px 13px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip .n{opacity:.7;margin-left:4px;font-size:12px}
+.sep{width:1px;height:22px;background:var(--border);margin:0 4px}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:baseline;gap:8px;padding:12px 14px 6px}
+.card-h h3{margin:0;font-size:15px}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:14px}
+.groups>*,.mlist>*,.cols>*{min-width:0}
+.tbl-wrap{overflow-x:auto}
+table.st{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.st th{font-size:12px;color:var(--muted);font-weight:600;padding:6px 6px;text-align:center;border-bottom:1px solid var(--border)}
+table.st td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)}
+table.st tr:last-child td{border-bottom:0}
+table.st tbody tr{cursor:pointer}
+table.st tbody tr:hover td{background:var(--surface-2)}
+.tl{text-align:left!important}
+td.rk{font-weight:700;box-shadow:inset 4px 0 0 var(--zone);width:34px}
+td.pts{font-weight:800}
+.tm{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.lg{width:20px;height:20px;object-fit:contain;flex:none}
+.lg.big{width:44px;height:44px}
+.lg.mid{width:28px;height:28px}
+.form{display:inline-flex;gap:3px}
+.f{width:20px;height:20px;border-radius:5px;display:inline-grid;place-items:center;font-size:11px;font-weight:700}
+.f-W{background:var(--win-bg);color:var(--win)}
+.f-D{background:var(--draw-bg);color:var(--draw)}
+.f-L{background:var(--loss-bg);color:var(--loss)}
+.f-x{background:var(--surface-2);animation:pulse 1.2s infinite ease-in-out}
+@keyframes pulse{50%{opacity:.4}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* 경기 목록 */
+.day{margin-bottom:16px}
+.day h4{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600}
+.day h4 .today{color:var(--accent);margin-left:6px}
+.mlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:8px}
+.match{display:grid;grid-template-columns:34px 1fr 92px 1fr;align-items:center;gap:8px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;box-shadow:var(--shadow)}
+.match:hover{border-color:var(--accent)}
+.grp{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:2px 0;text-align:center}
+.side{display:flex;align-items:center;gap:8px;min-width:0}
+.side span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side.home{justify-content:flex-end;text-align:right}
+.side.won{font-weight:700}
+.mid{display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.sc{font-weight:800;font-size:16px;font-variant-numeric:tabular-nums}
+.vs{font-weight:700;color:var(--muted)}
+.mid small{font-size:11px;color:var(--muted)}
+.live{color:var(--live)!important;font-weight:700}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.strip .match{min-width:300px;grid-template-columns:1fr 70px 1fr}
+.strip-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
+.strip-h h3{margin:0;font-size:15px}
+
+/* 팀 */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.tbtn{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left}
+.tbtn:hover{border-color:var(--accent)}
+.tbtn .meta{font-size:12px;color:var(--muted)}
+.lsec{margin-bottom:20px}
+.lsec h3{font-size:15px;margin:0 0 10px}
+
+/* 모달 */
+dialog{border:0;padding:0;border-radius:16px;background:var(--bg);color:var(--text);width:min(960px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
+dialog::backdrop{background:rgba(5,8,14,.55)}
+.m-in{padding:18px}
+.m-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:10px 10px 0;background:var(--bg)}
+.m-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.m-head h2{margin:0;font-size:20px}
+.pill{display:inline-block;font-size:12px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:12px 0}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.kpi .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.kpi .k{font-size:12px;color:var(--muted)}
+.sec{margin-top:16px}
+.sec-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sec-h h3{margin:0;font-size:15px}
+.sec-h .sp{margin-left:auto}
+ul.res{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+ul.res li{display:grid;grid-template-columns:76px 86px 36px 1fr auto 26px;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border)}
+ul.res li:last-child{border-bottom:0}
+ul.res .d,ul.res .c,ul.res .ha{font-size:12px;color:var(--muted)}
+ul.res .c{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.res .o{display:flex;align-items:center;gap:8px;min-width:0}
+ul.res .o span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.res .s{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+ul.res .s small{display:block;font-size:10px;font-weight:500;color:var(--muted)}
+ul.res.fx li{grid-template-columns:120px 86px 36px 1fr}
+.empty{padding:14px;color:var(--muted);text-align:center}
+.mh{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;text-align:center}
+.mh .t{display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:16px;cursor:pointer}
+.mh .t small{font-weight:500;color:var(--muted);font-size:12px}
+.mh .ctr .sc{font-size:30px}
+.mh .ctr .when{font-size:13px;color:var(--muted)}
+.meta-line{text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+.cmp{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.cmp .r{display:grid;grid-template-columns:1fr 150px 1fr;align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.cmp .r:last-child{border-bottom:0}
+.cmp .r>div:first-child{text-align:right}
+.cmp .r .k{text-align:center;color:var(--muted);font-size:12px}
+.cmp .best{font-weight:800;color:var(--accent)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cols ul.res li{grid-template-columns:64px 1fr auto 26px}
+.err{background:var(--loss-bg);color:var(--loss);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.loading{padding:30px;text-align:center;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin-top:6px}
+
+@media (max-width:640px){
+  .groups,.mlist,.cols{grid-template-columns:1fr}
+  .hide-sm{display:none}
+  .match{grid-template-columns:30px 1fr 74px 1fr;padding:9px 8px;gap:6px}
+  .lg{width:18px;height:18px}
+  ul.res li{grid-template-columns:52px 1fr auto 26px}
+  ul.res .c,ul.res .ha{display:none}
+  ul.res.fx li{grid-template-columns:96px 1fr}
+  .cmp .r{grid-template-columns:1fr 96px 1fr;padding:7px 8px}
+  .cmp .f{width:16px;height:16px;font-size:10px}
+  .cmp .form{gap:2px}
+  .mh .t{font-size:14px}
+  .m-in{padding:12px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="top-in">
+      <div class="brand">
+        <div class="mark">UNL</div>
+        <div><h1>UEFA 네이션스리그</h1><div class="sub" id="season">불러오는 중…</div></div>
+      </div>
+      <span class="upd" id="upd"></span>
+      <button class="btn" id="refresh" title="데이터 새로고침">새로고침</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="standings" class="on">순위표</button>
+      <button data-tab="matches">경기 일정·결과</button>
+      <button data-tab="teams">팀 분석</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="main"><div class="loading">데이터를 불러오는 중…</div></main>
+<dialog id="modal"><div class="m-bar"><button class="btn" id="mclose">닫기</button></div><div class="m-in" id="mbody"></div></dialog>
+
+<script>
+const KO = {"Albania":"알바니아","Andorra":"안도라","Armenia":"아르메니아","Austria":"오스트리아","Azerbaijan":"아제르바이잔","Belarus":"벨라루스","Belgium":"벨기에","Bosnia and Herzegovina":"보스니아 헤르체고비나","Bosnia-Herzegovina":"보스니아 헤르체고비나","Bulgaria":"불가리아","Croatia":"크로아티아","Cyprus":"키프로스","Czechia":"체코","Czech Republic":"체코","Denmark":"덴마크","England":"잉글랜드","Estonia":"에스토니아","Faroe Islands":"페로 제도","Finland":"핀란드","France":"프랑스","Georgia":"조지아","Germany":"독일","Gibraltar":"지브롤터","Greece":"그리스","Hungary":"헝가리","Iceland":"아이슬란드","Israel":"이스라엘","Italy":"이탈리아","Kazakhstan":"카자흐스탄","Kosovo":"코소보","Latvia":"라트비아","Liechtenstein":"리히텐슈타인","Lithuania":"리투아니아","Luxembourg":"룩셈부르크","Malta":"몰타","Moldova":"몰도바","Montenegro":"몬테네그로","Netherlands":"네덜란드","North Macedonia":"북마케도니아","Northern Ireland":"북아일랜드","Norway":"노르웨이","Poland":"폴란드","Portugal":"포르투갈","Republic of Ireland":"아일랜드","Ireland":"아일랜드","Romania":"루마니아","Russia":"러시아","San Marino":"산마리노","Scotland":"스코틀랜드","Serbia":"세르비아","Slovakia":"슬로바키아","Slovenia":"슬로베니아","Spain":"스페인","Sweden":"스웨덴","Switzerland":"스위스","Türkiye":"튀르키예","Turkey":"튀르키예","Ukraine":"우크라이나","Wales":"웨일스",
+"Argentina":"아르헨티나","Brazil":"브라질","Uruguay":"우루과이","Colombia":"콜롬비아","Paraguay":"파라과이","Ecuador":"에콰도르","Chile":"칠레","Peru":"페루","Venezuela":"베네수엘라","Bolivia":"볼리비아","Mexico":"멕시코","United States":"미국","USA":"미국","Canada":"캐나다","Panama":"파나마","Costa Rica":"코스타리카","Jamaica":"자메이카","Haiti":"아이티","Curaçao":"퀴라소","Honduras":"온두라스","Morocco":"모로코","Senegal":"세네갈","Ivory Coast":"코트디부아르","Côte d'Ivoire":"코트디부아르","Egypt":"이집트","Algeria":"알제리","Tunisia":"튀니지","Ghana":"가나","Nigeria":"나이지리아","Cameroon":"카메룬","South Africa":"남아프리카공화국","Cape Verde":"카보베르데","Cape Verde Islands":"카보베르데","DR Congo":"콩고민주공화국","Mali":"말리","Burkina Faso":"부르키나파소","Japan":"일본","South Korea":"대한민국","Korea Republic":"대한민국","Australia":"호주","Iran":"이란","Saudi Arabia":"사우디아라비아","Qatar":"카타르","Iraq":"이라크","Jordan":"요르단","Uzbekistan":"우즈베키스탄","United Arab Emirates":"아랍에미리트","China PR":"중국","China":"중국","New Zealand":"뉴질랜드","Oman":"오만"};
+const COMP = {"UEFA Nations League":"네이션스리그","FIFA World Cup":"월드컵","FIFA World Cup Qualifying - UEFA":"월드컵 예선","International Friendly":"친선경기","UEFA European Championship":"유로","UEFA European Championship Qualifying":"유로 예선","UEFA European Championship Qualifying Playoffs":"유로 예선 PO"};
+const NOTE = {"Qualifies for QFs":"8강 진출","Promotion":"승격","Promotion playoffs":"승격 플레이오프","Relegation playoffs":"강등 플레이오프","Relegation":"강등","Relegation or playoffs":"강등 또는 플레이오프"};
+const RK = {W:"승",D:"무",L:"패"};
+
+const $ = s => document.querySelector(s);
+const ko = n => KO[n] || n || "?";
+const compKo = c => COMP[c] || c || "";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const logo = (u, cls="") => u ? `<img class="lg ${cls}" src="${esc(u)}" alt="" loading="lazy">` : `<span class="lg ${cls}"></span>`;
+const signed = n => n > 0 ? "+" + n : String(n);
+const pct = (a, n) => n ? Math.round(a / n * 100) + "%" : "-";
+const fx1 = n => (Math.round(n * 100) / 100).toFixed(2);
+const dkey = iso => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const dayLabel = iso => new Date(iso).toLocaleDateString("ko-KR", {year:"numeric", month:"long", day:"numeric", weekday:"short"});
+const timeOnly = iso => new Date(iso).toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", hour12:false});
+const dShort = iso => new Date(iso).toLocaleDateString("ko-KR", {year:"2-digit", month:"2-digit", day:"2-digit"});
+const dFull = iso => new Date(iso).toLocaleString("ko-KR", {month:"long", day:"numeric", weekday:"short", hour:"2-digit", minute:"2-digit", hour12:false});
+
+const S = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, tab:"standings", league:"ALL", mStatus:"ALL", season:"", poll:null, scrolled:false};
+
+// ------------------------------------------------------------ 데이터 (로컬 서버 → 실패 시 ESPN 직접 호출)
+let MODE = location.protocol.startsWith("http") ? "server" : "direct";
+async function api(p){
+  if (MODE === "server"){
+    try {
+      const r = await fetch(p, {cache:"no-store"});
+      const j = await r.json();
+      if (!r.ok || j.error) throw new Error(j.error || "HTTP " + r.status);
+      return j;
+    } catch (e) {
+      MODE = "direct";  // 서버가 꺼져 있거나 응답이 없으면 브라우저에서 직접 불러옴
+    }
+  }
+  try {
+    if (p === "/api/standings") return await D.standings();
+    if (p === "/api/matches") return await D.matches();
+    if (p === "/api/forms") return await D.forms();
+    if (p.startsWith("/api/team/")) return await D.team(p.split("/").pop());
+  } catch (e) {
+    throw new Error("ESPN 데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요. (" + (e.message || e) + ")");
+  }
+  throw new Error("알 수 없는 요청: " + p);
+}
+
+const ESPN_SITE = "https://site.api.espn.com/apis/site/v2/sports/soccer", ESPN_V2 = "https://site.api.espn.com/apis/v2/sports/soccer", LG = "uefa.nations";
+async function getJSON(u){ const r = await fetch(u, {cache:"no-store"}); if (!r.ok) throw new Error("ESPN " + r.status); return r.json(); }
+const toInt = v => { if (v && typeof v === "object") v = v.displayValue ?? v.value; const n = parseFloat(v); return Number.isFinite(n) ? Math.trunc(n) : null; };
+function nTeam(c){
+  const t = c.team || {};
+  return {id:String(t.id), name:t.displayName || t.name, abbr:t.abbreviation, logo:t.logo || (t.logos || [{}])[0]?.href,
+          score:toInt(c.score), shootout:toInt(c.shootoutScore), winner:c.winner};
+}
+function nEvent(ev){
+  const comp = (ev.competitions || [{}])[0], status = comp.status || ev.status || {}, st = status.type || {};
+  let home = null, away = null;
+  for (const c of comp.competitors || []) { if (c.homeAway === "home") home = nTeam(c); else away = nTeam(c); }
+  return {id:String(ev.id), date:ev.date, state:st.state, completed:!!st.completed, status:st.name, detail:st.shortDetail || st.detail,
+          clock:status.displayClock, home, away, venue:(comp.venue || {}).fullName, neutral:!!comp.neutralSite,
+          competition:(ev.league || {}).name || "UEFA Nations League"};
+}
+const D = {
+  _st:null,
+  standings(){
+    if (this._st && Date.now() - this._st.t < 30000) return this._st.p;
+    const p = getJSON(`${ESPN_V2}/${LG}/standings`).then(d => {
+      const season = (d.seasons || [{}])[0];
+      const groups = (d.children || []).map(ch => {
+        const rows = ((ch.standings || {}).entries || []).map(e => {
+          const s = Object.fromEntries((e.stats || []).map(x => [x.name, x.value]));
+          const t = e.team || {}, note = e.note || {};
+          return {id:String(t.id), name:t.displayName, abbr:t.abbreviation, logo:(t.logos || [{}])[0]?.href,
+                  rank:toInt(s.rank) || 0, p:toInt(s.gamesPlayed) || 0, w:toInt(s.wins) || 0, d:toInt(s.ties) || 0, l:toInt(s.losses) || 0,
+                  gf:toInt(s.pointsFor) || 0, ga:toInt(s.pointsAgainst) || 0, gd:toInt(s.pointDifferential) || 0, pts:toInt(s.points) || 0,
+                  note:note.description, noteColor:note.color};
+        }).sort((a, b) => (a.rank || 99) - (b.rank || 99));
+        return {name:ch.name, rows};
+      });
+      return {season:season.displayName, year:season.year, groups};
+    });
+    this._st = {t:Date.now(), p};
+    p.catch(() => { this._st = null; });
+    return p;
+  },
+  async matches(){
+    let y;
+    try { y = Number((await this.standings()).year); } catch {}
+    if (!y){ const n = new Date(); y = n.getMonth() >= 6 ? n.getFullYear() : n.getFullYear() - 1; }
+    const months = [`${y}09`, `${y}10`, `${y}11`, `${y+1}03`, `${y+1}06`];
+    const lists = await Promise.all(months.map(m => getJSON(`${ESPN_SITE}/${LG}/scoreboard?dates=${m}&limit=300`).then(d => d.events || []).catch(() => [])));
+    const seen = new Set(), out = [];
+    for (const e of lists.flat()){ const n = nEvent(e); if (seen.has(n.id) || !n.home || !n.away) continue; seen.add(n.id); out.push(n); }
+    out.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    return {matches:out};
+  },
+  async team(id){
+    const [past, fut] = await Promise.all([getJSON(`${ESPN_SITE}/all/teams/${id}/schedule`),
+                                           getJSON(`${ESPN_SITE}/all/teams/${id}/schedule?fixture=true`).catch(() => ({}))]);
+    const p = (past.events || []).map(nEvent).filter(e => e.completed && e.home && e.away).sort((a, b) => b.date.localeCompare(a.date));
+    const u = (fut.events || []).map(nEvent).filter(e => !e.completed && e.home && e.away).sort((a, b) => a.date.localeCompare(b.date));
+    const info = past.team || {};
+    return {id, name:info.displayName, logo:info.logo, past:p, upcoming:u};
+  },
+  async forms(){
+    const ids = (await this.standings()).groups.flatMap(g => g.rows.map(r => r.id));
+    const out = {};
+    for (let i = 0; i < ids.length; i += 8){  // 8개씩 나눠서 요청
+      await Promise.all(ids.slice(i, i + 8).map(id => getTeam(id).then(t => { out[id] = t.past.slice(0, 5); }).catch(() => { out[id] = []; })));
+    }
+    return out;
+  },
+};
+
+function lettersInclude(spec, L){
+  for (const tok of spec.replace(/\s/g,"").split(",")){
+    if (tok.includes("-")){ const [a,b] = tok.split("-"); if (L >= a && L <= b) return true; }
+    else if (tok === L) return true;
+  }
+  return false;
+}
+function noteKo(desc, L){
+  if (!desc) return "";
+  for (const part of desc.split(";")){
+    const m = part.trim().match(/^([A-D](?:\s*[-,]\s*[A-D])*)\s*:\s*(.+)$/);
+    if (m && lettersInclude(m[1], L)) return NOTE[m[2].trim()] || m[2].trim();
+  }
+  return "";
+}
+
+function applyStandings(st){
+  S.season = st.season || "";
+  S.groups = st.groups.map(g => { const code = (g.name || "").replace(/^Group\s*/i, ""); return {...g, code, L: code[0]}; })
+    .sort((a,b) => a.code.localeCompare(b.code));
+  S.info = {};
+  for (const g of S.groups) for (const r of g.rows){ r.noteKo = noteKo(r.note, g.L); S.info[r.id] = {...r, group:g.code, L:g.L}; }
+}
+
+// 특정 팀 관점의 경기 결과
+function resultFor(ev, tid){
+  const isHome = ev.home.id === tid;
+  const me = isHome ? ev.home : ev.away, op = isHome ? ev.away : ev.home;
+  if (me.score == null || op.score == null) return null;
+  const r = me.score > op.score ? "W" : me.score < op.score ? "L" : "D";
+  let pk = null;
+  if (r === "D" && /PEN/.test(ev.status || "")) pk = me.winner ? "승부차기 승" : "승부차기 패";
+  return {ev, me, op, r, gf:me.score, ga:op.score, home:isHome, pk};
+}
+function stats(rs){
+  const s = {n:rs.length, W:0, D:0, L:0, gf:0, ga:0, cs:0, fts:0, o25:0, btts:0};
+  for (const r of rs){ s[r.r]++; s.gf += r.gf; s.ga += r.ga; if (!r.ga) s.cs++; if (!r.gf) s.fts++; if (r.gf + r.ga > 2) s.o25++; if (r.gf && r.ga) s.btts++; }
+  s.avgGf = s.n ? s.gf / s.n : 0; s.avgGa = s.n ? s.ga / s.n : 0;
+  return s;
+}
+// ESPN이 월드컵 경기를 중립으로 표시하지 않는 경우가 있어 개최국 외에는 중립 처리
+const HOSTS = ["United States","USA","Mexico","Canada"];
+const isNeutral = ev => ev.neutral || (/^FIFA World Cup$/.test(ev.competition || "") && !HOSTS.includes(ev.home.name));
+const venueKo = (ev, home) => isNeutral(ev) ? "중립" : home ? "홈" : "원정";
+const badge = r => `<span class="f f-${r}">${RK[r]}</span>`;
+function formStrip(tid){
+  if (S.forms === null) return `<span class="form">${'<span class="f f-x"></span>'.repeat(5)}</span>`;
+  const evs = (S.forms[tid] || []).map(e => resultFor(e, tid)).filter(Boolean).reverse();
+  if (!evs.length) return '<span class="muted">-</span>';
+  return `<span class="form">${evs.map(x => `<span class="f f-${x.r}" title="${esc(dShort(x.ev.date))} ${esc(ko(x.op.name))} ${x.gf}-${x.ga} · ${esc(compKo(x.ev.competition))}">${RK[x.r]}</span>`).join("")}</span>`;
+}
+
+// ------------------------------------------------------------ 렌더링
+function render(){
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+  $("#season").textContent = S.season ? S.season.replace("UEFA Nations League", "시즌") : "";
+  if (S.tab === "standings") renderStandings();
+  else if (S.tab === "matches") renderMatches();
+  else renderTeams();
+}
+function leagueChips(){
+  const o = [["ALL","전체"],["A","리그 A"],["B","리그 B"],["C","리그 C"],["D","리그 D"]];
+  return `<div class="chips">${o.map(([k,l]) => `<button class="chip ${S.league===k?"on":""}" data-league="${k}">${l}</button>`).join("")}</div>`;
+}
+const leagueOf = m => (S.info[m.home.id] || S.info[m.away.id] || {}).L;
+const groupOf = m => (S.info[m.home.id] || S.info[m.away.id] || {}).group || "";
+
+function matchCard(m, compact){
+  const won = side => m.state === "post" && m[side].winner ? "won" : "";
+  let mid;
+  if (m.state === "pre") mid = `<span class="vs">${timeOnly(m.date)}</span><small>예정</small>`;
+  else if (m.state === "in") mid = `<span class="sc">${m.home.score ?? 0} : ${m.away.score ?? 0}</span><small class="live">● ${esc(m.clock || "LIVE")}</small>`;
+  else if (!m.completed) mid = `<span class="vs">-</span><small>${esc(m.detail || "")}</small>`;
+  else mid = `<span class="sc">${m.home.score} : ${m.away.score}</span><small>${/PEN/.test(m.status||"") ? "승부차기" : "종료"}</small>`;
+  return `<button class="match" data-match="${m.id}">
+    ${compact ? "" : `<span class="grp">${esc(groupOf(m))}</span>`}
+    <span class="side home ${won("home")}"><span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
+    <span class="mid">${mid}</span>
+    <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span></span>
+  </button>`;
+}
+
+function nextStrip(){
+  const pool = S.matches.filter(m => S.league === "ALL" || leagueOf(m) === S.league);
+  const live = pool.filter(m => m.state === "in");
+  let list, title;
+  if (live.length){ list = live; title = "진행 중인 경기"; }
+  else {
+    const nx = pool.find(m => m.state === "pre");
+    if (!nx) return "";
+    const k = dkey(nx.date);
+    list = pool.filter(m => m.state === "pre" && dkey(m.date) === k);
+    title = "다음 경기 · " + dayLabel(nx.date);
+  }
+  return `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div>
+    <div class="strip">${list.map(m => matchCard(m, true)).join("")}</div>`;
+}
+
+function renderStandings(){
+  const groups = S.groups.filter(g => S.league === "ALL" || g.L === S.league);
+  const zones = new Map();
+  for (const g of groups) for (const r of g.rows) if (r.noteColor && r.noteKo) zones.set(r.noteKo, r.noteColor);
+  $("#main").innerHTML = `${nextStrip()}
+    <div class="bar">${leagueChips()}</div>
+    <div class="groups">${groups.map(g => `
+      <section class="card">
+        <header class="card-h"><h3>${esc(g.code)}조</h3><span class="muted">리그 ${esc(g.L)}</span></header>
+        <div class="tbl-wrap"><table class="st">
+          <thead><tr><th>#</th><th class="tl">팀</th><th>경기</th><th>승</th><th>무</th><th>패</th><th class="hide-sm">득점</th><th class="hide-sm">실점</th><th>득실</th><th>승점</th><th class="tl">최근 5경기</th></tr></thead>
+          <tbody>${g.rows.map(r => `<tr data-team="${r.id}" tabindex="0">
+            <td class="rk" style="--zone:${esc(r.noteColor || "transparent")}" title="${esc(r.noteKo)}">${r.rank}</td>
+            <td class="tl"><span class="tm">${logo(r.logo)}<span>${esc(ko(r.name))}</span></span></td>
+            <td>${r.p}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
+            <td class="hide-sm">${r.gf}</td><td class="hide-sm">${r.ga}</td><td>${signed(r.gd)}</td><td class="pts">${r.pts}</td>
+            <td class="tl">${formStrip(r.id)}</td></tr>`).join("")}</tbody>
+        </table></div>
+      </section>`).join("")}</div>
+    <div class="legend">${[...zones].map(([l,c]) => `<span><i style="background:${esc(c)}"></i>${esc(l)}</span>`).join("")}
+      <span>최근 5경기: 모든 대회 기준, 왼쪽이 과거 → 오른쪽이 최근 (마우스를 올리면 상세)</span></div>`;
+}
+
+function renderMatches(){
+  const base = S.matches.filter(m => S.league === "ALL" || leagueOf(m) === S.league);
+  const cnt = {ALL:base.length, pre:0, in:0, post:0};
+  base.forEach(m => cnt[m.state] = (cnt[m.state] || 0) + 1);
+  const list = S.mStatus === "ALL" ? base : base.filter(m => m.state === S.mStatus);
+  const days = [];
+  for (const m of list){ const k = dkey(m.date); if (!days.length || days[days.length-1].k !== k) days.push({k, iso:m.date, ms:[]}); days[days.length-1].ms.push(m); }
+  const today = dkey(new Date().toISOString());
+  const st = [["ALL","전체"],["pre","예정"],["in","진행 중"],["post","종료"]];
+  $("#main").innerHTML = `<div class="bar">${leagueChips()}<span class="sep"></span>
+      <div class="chips">${st.map(([k,l]) => `<button class="chip ${S.mStatus===k?"on":""}" data-mstatus="${k}">${l}<span class="n">${cnt[k]||0}</span></button>`).join("")}</div></div>
+    ${days.length ? days.map(d => `<div class="day" data-day="${d.k}"><h4>${dayLabel(d.iso)}${d.k===today?'<span class="today">오늘</span>':""}</h4>
+      <div class="mlist">${d.ms.map(m => matchCard(m)).join("")}</div></div>`).join("") : '<div class="card empty">해당하는 경기가 없습니다.</div>'}
+    <p class="note">시간은 이 컴퓨터의 시간대 기준입니다. 경기를 누르면 두 팀 비교·최근 5경기·맞대결을 볼 수 있습니다.</p>`;
+  if (!S.scrolled){
+    S.scrolled = true;
+    const target = days.find(d => d.ms.some(m => m.state !== "post"));
+    if (target){ document.querySelector(`[data-day="${target.k}"]`)?.scrollIntoView({block:"start"}); window.scrollBy(0, -130); }
+  }
+}
+
+function renderTeams(){
+  const Ls = ["A","B","C","D"].filter(L => S.league === "ALL" || L === S.league);
+  $("#main").innerHTML = `<div class="bar">${leagueChips()}</div>` + Ls.map(L => `
+    <div class="lsec"><h3>리그 ${L}</h3><div class="tgrid">${S.groups.filter(g => g.L === L).flatMap(g => g.rows.map(r => `
+      <button class="tbtn" data-team="${r.id}">${logo(r.logo, "mid")}<span><b>${esc(ko(r.name))}</b><div class="meta">${esc(g.code)}조 ${r.rank}위 · 승점 ${r.pts}</div></span></button>`)).join("")}
+    </div></div>`).join("");
+}
+
+// ------------------------------------------------------------ 모달
+const modal = $("#modal");
+function openModal(html){ $("#mbody").innerHTML = html; if (!modal.open) modal.showModal(); modal.scrollTop = 0; }
+const errBox = e => `<div class="err">${esc(e.message || e)}</div>`;
+function getTeam(id){
+  if (!S.teamCache[id]) S.teamCache[id] = api("/api/team/" + id).catch(e => { delete S.teamCache[id]; throw e; });
+  return S.teamCache[id];
+}
+function resList(rs){
+  if (!rs.length) return '<div class="card empty">기록이 없습니다.</div>';
+  return `<ul class="res">${rs.map(r => `<li>
+    <span class="d">${dShort(r.ev.date)}</span><span class="c" title="${esc(r.ev.competition)}">${esc(compKo(r.ev.competition))}</span>
+    <span class="ha">${venueKo(r.ev, r.home)}</span>
+    <span class="o">${logo(r.op.logo)}<span>${esc(ko(r.op.name))}</span></span>
+    <span class="s">${r.gf} - ${r.ga}${r.pk ? `<small>${r.pk}</small>` : ""}</span>${badge(r.r)}</li>`).join("")}</ul>`;
+}
+function kpis(s){
+  return `<div class="kpis">
+    <div class="kpi"><div class="v">${s.W}승 ${s.D}무 ${s.L}패</div><div class="k">최근 ${s.n}경기</div></div>
+    <div class="kpi"><div class="v">${fx1(s.avgGf)}</div><div class="k">경기당 득점</div></div>
+    <div class="kpi"><div class="v">${fx1(s.avgGa)}</div><div class="k">경기당 실점</div></div>
+    <div class="kpi"><div class="v">${s.cs}</div><div class="k">무실점 경기</div></div>
+    <div class="kpi"><div class="v">${s.fts}</div><div class="k">무득점 경기</div></div>
+    <div class="kpi"><div class="v">${pct(s.o25, s.n)}</div><div class="k">2.5골 오버</div></div>
+    <div class="kpi"><div class="v">${pct(s.btts, s.n)}</div><div class="k">양팀 득점</div></div>
+  </div>`;
+}
+
+async function openTeam(id, n = 5){
+  const info = S.info[id] || {};
+  openModal(`<div class="loading">${esc(ko(info.name))} 데이터를 불러오는 중…</div>`);
+  try {
+    const t = await getTeam(id);
+    const all = t.past.map(e => resultFor(e, id)).filter(Boolean);
+    const rs = all.slice(0, n);
+    const nl = all.filter(r => r.ev.competition === "UEFA Nations League" && dkey(r.ev.date) >= `${(new Date(S.matches[0]?.date||0)).getFullYear()}-07-01`);
+    const name = info.name || t.name;
+    openModal(`
+      <div class="m-head">${logo(info.logo || t.logo, "big")}<div>
+        <h2>${esc(ko(name))}</h2>
+        <div>${info.group ? `<span class="pill">${esc(info.group)}조 ${info.rank}위</span> ` : ""}<span class="muted">${info.group ? `네이션스리그 ${info.p}경기 ${info.w}승 ${info.d}무 ${info.l}패 · ${info.gf}득 ${info.ga}실 · 승점 ${info.pts}` : ""}</span></div>
+        ${info.noteKo ? `<div class="note">현재 순위 기준: ${esc(info.noteKo)}</div>` : ""}
+      </div></div>
+      <div class="sec"><div class="sec-h"><h3>최근 ${n}경기 (모든 대회)</h3>
+        <span class="sp chips"><button class="chip ${n===5?"on":""}" data-team="${id}" data-n="5">5경기</button><button class="chip ${n===10?"on":""}" data-team="${id}" data-n="10">10경기</button></span></div>
+        ${kpis(stats(rs))}${resList(rs)}</div>
+      <div class="sec"><div class="sec-h"><h3>이번 시즌 네이션스리그</h3></div>${kpis(stats(nl))}</div>
+      <div class="sec"><div class="sec-h"><h3>다음 경기</h3></div>
+        ${t.upcoming.length ? `<ul class="res fx">${t.upcoming.slice(0,5).map(e => { const home = e.home.id === id, op = home ? e.away : e.home; return `<li>
+          <span class="d">${dFull(e.date)}</span><span class="c">${esc(compKo(e.competition))}</span><span class="ha">${venueKo(e, home)}</span>
+          <span class="o">${logo(op.logo)}<span>${esc(ko(op.name))}</span></span></li>`; }).join("")}</ul>` : '<div class="card empty">예정된 경기가 없습니다.</div>'}</div>`);
+  } catch (e) { openModal(errBox(e)); }
+}
+
+function cmpRow(label, a, b, higherBetter, fmt = v => v){
+  let ca = "", cb = "";
+  if (higherBetter != null && a != null && b != null && a !== b){
+    const aBetter = higherBetter ? a > b : a < b;
+    if (aBetter) ca = "best"; else cb = "best";
+  }
+  return `<div class="r"><div class="${ca}">${a == null ? "-" : fmt(a)}</div><div class="k">${label}</div><div class="${cb}">${b == null ? "-" : fmt(b)}</div></div>`;
+}
+
+async function openMatch(id){
+  const m = S.matches.find(x => x.id === id);
+  if (!m) return;
+  const hi = S.info[m.home.id] || {}, ai = S.info[m.away.id] || {};
+  let center;
+  if (m.state === "pre") center = `<div class="vs" style="font-size:22px">VS</div><div class="when">${dFull(m.date)}</div>`;
+  else center = `<div class="sc">${m.home.score ?? "-"} : ${m.away.score ?? "-"}</div><div class="when">${m.state === "in" ? `<span class="live">● ${esc(m.clock || "LIVE")}</span>` : esc(m.completed ? "경기 종료" : m.detail || "")} · ${dFull(m.date)}</div>`;
+  const head = `<div class="mh">
+      <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>홈 · ${esc(hi.group || "")}조 ${hi.rank || "-"}위</small></div>
+      <div class="ctr">${center}</div>
+      <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>원정 · ${esc(ai.group || "")}조 ${ai.rank || "-"}위</small></div>
+    </div><div class="meta-line">네이션스리그 ${esc(groupOf(m))}조${m.venue ? " · " + esc(m.venue) : ""}</div>`;
+  openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
+  try {
+    const [h, a] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id)]);
+    const before = (t, tid) => t.past.filter(e => e.id !== m.id && e.date < m.date).map(e => resultFor(e, tid)).filter(Boolean);
+    const hr = before(h, m.home.id), ar = before(a, m.away.id);
+    const h5 = hr.slice(0, 5), a5 = ar.slice(0, 5), hs = stats(h5), as = stats(a5);
+    const h2hMap = new Map();
+    for (const e of [...h.past, ...a.past]) {
+      const ids = [e.home.id, e.away.id];
+      if (e.id !== m.id && ids.includes(m.home.id) && ids.includes(m.away.id)) h2hMap.set(e.id, e);
+    }
+    const h2h = [...h2hMap.values()].sort((x, y) => y.date.localeCompare(x.date)).map(e => resultFor(e, m.home.id)).filter(Boolean);
+    const strip = rs => `<span class="form">${rs.slice().reverse().map(r => badge(r.r)).join("")}</span>`;
+    const short = rs => rs.length ? `<ul class="res">${rs.map(r => `<li><span class="d">${dShort(r.ev.date)}</span>
+        <span class="o">${logo(r.op.logo)}<span>${esc(ko(r.op.name))}</span></span>
+        <span class="s">${r.gf} - ${r.ga}${r.pk ? `<small>${r.pk}</small>` : ""}</span>${badge(r.r)}</li>`).join("")}</ul>` : '<div class="card empty">기록 없음</div>';
+    openModal(head + `
+      <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전, 모든 대회 기준</span></div>
+        <div class="cmp">
+          <div class="r"><div>${strip(h5)}</div><div class="k">최근 5경기 흐름</div><div>${strip(a5)}</div></div>
+          ${cmpRow("조 순위", hi.rank, ai.rank, false)}
+          ${cmpRow("승점 (NL)", hi.pts, ai.pts, true)}
+          ${cmpRow("득실차 (NL)", hi.gd, ai.gd, true, signed)}
+          ${cmpRow("최근 5경기 승", hs.W, as.W, true)}
+          ${cmpRow("최근 5경기 패", hs.L, as.L, false)}
+          ${cmpRow("경기당 득점", hs.avgGf, as.avgGf, true, fx1)}
+          ${cmpRow("경기당 실점", hs.avgGa, as.avgGa, false, fx1)}
+          ${cmpRow("무실점 경기", hs.cs, as.cs, true)}
+          ${cmpRow("2.5골 오버", hs.o25, as.o25, null, v => v + "/" + 5)}
+          ${cmpRow("양팀 득점", hs.btts, as.btts, null, v => v + "/" + 5)}
+        </div></div>
+      <div class="sec cols">
+        <div><div class="sec-h"><h3>${esc(ko(m.home.name))} 최근 5경기</h3></div>${short(h5)}</div>
+        <div><div class="sec-h"><h3>${esc(ko(m.away.name))} 최근 5경기</h3></div>${short(a5)}</div>
+      </div>
+      <div class="sec"><div class="sec-h"><h3>맞대결 기록</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 각 팀 최근 약 25경기 범위</span></div>
+        ${h2h.length ? resList(h2h) : '<div class="card empty">조회 범위 안에 맞대결 기록이 없습니다.</div>'}</div>`);
+  } catch (e) { openModal(head + errBox(e)); }
+}
+
+// ------------------------------------------------------------ 로딩
+async function loadForms(){
+  try { S.forms = await api("/api/forms"); } catch { S.forms = {}; }
+  if (S.tab === "standings") renderStandings();
+}
+async function load(first){
+  $("#upd").textContent = "불러오는 중…";
+  try {
+    const [st, mt] = await Promise.all([api("/api/standings"), api("/api/matches")]);
+    applyStandings(st); S.matches = mt.matches;
+    render();
+    $("#upd").textContent = "업데이트 " + new Date().toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit"});
+    if (first) loadForms();
+    schedulePoll();
+  } catch (e) {
+    $("#upd").textContent = "";
+    if (first) $("#main").innerHTML = errBox(e) + '<button class="btn" onclick="load(true)">다시 시도</button>';
+    else $("#upd").textContent = "업데이트 실패";
+  }
+}
+function schedulePoll(){
+  clearTimeout(S.poll);
+  const now = Date.now();
+  const active = S.matches.some(m => m.state === "in" || (m.state === "pre" && new Date(m.date).getTime() < now + 10 * 60000 && new Date(m.date).getTime() > now - 4 * 3600000));
+  if (active) S.poll = setTimeout(() => load(false), 60000);  // 경기 중에는 1분마다 자동 갱신
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-tab],[data-league],[data-mstatus],[data-match],[data-team]");
+  if (!t) return;
+  if (t.dataset.tab){ S.tab = t.dataset.tab; window.scrollTo(0, 0); render(); }
+  else if (t.dataset.league){ S.league = t.dataset.league; render(); }
+  else if (t.dataset.mstatus){ S.mStatus = t.dataset.mstatus; render(); }
+  else if (t.dataset.match){ openMatch(t.dataset.match); }
+  else if (t.dataset.team){ openTeam(t.dataset.team, Number(t.dataset.n) || 5); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("tr[data-team]")) openTeam(e.target.dataset.team); });
+$("#mclose").onclick = () => modal.close();
+modal.addEventListener("click", e => { if (e.target === modal) modal.close(); });
+$("#refresh").onclick = () => { S.teamCache = {}; S.forms = null; load(true); };
+load(true);
+</script>
+</body>
+</html>
