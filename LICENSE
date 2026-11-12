@@ -1,21 +1,23 @@
-MIT License
+SPORTS LIVE!
+Copyright (c) 2026 gustjrwjs. All rights reserved.
 
-Copyright (c) 2026 UEFA Nations League Dashboard contributors
+이 저장소의 소스 코드, 화면 디자인, 앱 아이콘·이름 "SPORTS LIVE!" 및 관련 문서(이하 "본 저작물")에 대한
+모든 권리는 저작권자 gustjrwjs에게 있습니다.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+저작권자의 사전 서면 허락 없이 본 저작물의 전부 또는 일부를 복제, 수정, 배포, 게시, 전송, 판매,
+2차적 저작물 작성 등에 사용하는 것을 금지합니다.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+허용되는 것
+- 공개된 웹 앱(https://gustjrwjs.github.io/Sports-Dashboard/static/)을 개인적으로 접속·설치해 이용하는 것
+- GitHub 이용 약관이 허용하는 범위에서 이 저장소를 열람하는 것
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+본 저작물 안에서 표시되는 경기 데이터, 리그·팀 명칭, 엠블럼·로고, 선수 사진 등은 각 권리자(ESPN, 각 리그·구단,
+위키미디어 공용 기고자 등)의 소유이며 위 저작권 주장의 대상이 아닙니다.
+
+사용 허락 문의: https://github.com/gustjrwjs/Sports-Dashboard/issues
+
+---
+
+All rights reserved. No part of this software, its design, the "SPORTS LIVE!" name or icon may be copied,
+modified, distributed, published or used to create derivative works without prior written permission from
+the copyright holder. Third-party data, names, logos and images shown in the app belong to their respective owners.

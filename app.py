@@ -1,4 +1,6 @@
-"""스포츠 대시보드 - 로컬 서버
+"""SPORTS LIVE! - 로컬 서버
+Copyright (c) 2026 gustjrwjs. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고).
+
 
 실행:  python app.py          (브라우저가 자동으로 열립니다)
 옵션:  python app.py --no-browser
