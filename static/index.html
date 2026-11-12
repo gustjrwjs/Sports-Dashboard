@@ -35,7 +35,12 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
-header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top)}
+header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top);overflow:hidden}
+header.top>.wrap{position:relative;z-index:1}
+/* 헤더 배경의 리그 로고 (옅게) */
+.lgwm{position:absolute;right:4%;top:50%;width:260px;height:260px;transform:translateY(-50%) rotate(-10deg);background:center/contain no-repeat;opacity:.09;pointer-events:none;z-index:0;transition:background-image .2s}
+.lgwm.dk{display:none}
+@media (prefers-color-scheme: dark){ .lgwm.lt{display:none} .lgwm.dk{display:block;opacity:.12} }
 body{padding-bottom:env(safe-area-inset-bottom)}
 .wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
 #install{border-color:var(--accent);color:var(--accent);font-weight:600}
@@ -413,7 +418,8 @@ ul.news small{font-size:11px}
   .pl .nm{max-width:58px}
   .av{width:38px;height:38px}
   .brand .sub{display:none}
-  header.top{position:static}
+  header.top{position:relative}
+  .lgwm{width:230px;height:230px;right:-30px;top:55%}
   .lgbar{gap:6px;padding-top:10px}
   .lggrp{width:100%}
   .lggrp + .lggrp{padding-left:0;border-left:0}
@@ -425,6 +431,7 @@ ul.news small{font-size:11px}
 </head>
 <body>
 <header class="top">
+  <div class="lgwm lt" id="lgwm" aria-hidden="true"></div><div class="lgwm dk" id="lgwmd" aria-hidden="true"></div>
   <div class="wrap">
     <div class="top-in">
       <div class="brand">
@@ -450,19 +457,25 @@ ul.news small{font-size:11px}
 
 <script>
 // ================================================================ 리그 설정
+// logo: 헤더 배경에 옅게 깔리는 리그 로고 (ESPN 이미지)
+const ESPN_LG = id => ({logo:`https://a.espncdn.com/i/leaguelogos/soccer/500/${id}.png`, logoDark:`https://a.espncdn.com/i/leaguelogos/soccer/500-dark/${id}.png`});
 const LEAGUES = {
-  unl: {name:"UEFA 네이션스리그", short:"네이션스리그", mark:"UNL", color:"#1d4ed8", sport:"soccer", slug:"uefa.nations", sched:"months", scope:"all", national:true, comp:"UEFA Nations League"},
-  epl: {name:"프리미어리그", short:"프리미어리그", mark:"EPL", color:"#3d195b", sport:"soccer", slug:"eng.1", sched:"week", scope:"all", comp:"English Premier League"},
-  laliga: {name:"라리가", short:"라리가", mark:"LL", color:"#e8452c", sport:"soccer", slug:"esp.1", sched:"week", scope:"all", comp:"Spanish LALIGA"},
-  seriea: {name:"세리에 A", short:"세리에 A", mark:"SA", color:"#1b3a8a", sport:"soccer", slug:"ita.1", sched:"week", scope:"all", comp:"Italian Serie A"},
-  bundesliga: {name:"분데스리가", short:"분데스리가", mark:"BL", color:"#d20515", sport:"soccer", slug:"ger.1", sched:"week", scope:"all", comp:"German Bundesliga"},
-  nba: {name:"NBA", short:"NBA", mark:"NBA", color:"#c8102e", sport:"basketball", slug:"nba", sched:"week", scope:"league", wide:true},
-  mlb: {name:"MLB", short:"MLB", mark:"MLB", color:"#0b3d91", sport:"baseball", slug:"mlb", sched:"week", scope:"league", wide:true, standingsQuery:"?level=3"},
+  unl: {name:"UEFA 네이션스리그", short:"네이션스리그", mark:"UNL", color:"#1d4ed8", sport:"soccer", slug:"uefa.nations", sched:"months", scope:"all", national:true, comp:"UEFA Nations League", ...ESPN_LG(2395)},
+  epl: {name:"프리미어리그", short:"프리미어리그", mark:"EPL", color:"#3d195b", sport:"soccer", slug:"eng.1", sched:"week", scope:"all", comp:"English Premier League", ...ESPN_LG(23)},
+  laliga: {name:"라리가", short:"라리가", mark:"LL", color:"#e8452c", sport:"soccer", slug:"esp.1", sched:"week", scope:"all", comp:"Spanish LALIGA", ...ESPN_LG(15)},
+  seriea: {name:"세리에 A", short:"세리에 A", mark:"SA", color:"#1b3a8a", sport:"soccer", slug:"ita.1", sched:"week", scope:"all", comp:"Italian Serie A", ...ESPN_LG(12)},
+  bundesliga: {name:"분데스리가", short:"분데스리가", mark:"BL", color:"#d20515", sport:"soccer", slug:"ger.1", sched:"week", scope:"all", comp:"German Bundesliga", ...ESPN_LG(10)},
+  ucl: {name:"UEFA 챔피언스리그", short:"챔피언스리그", mark:"UCL", color:"#0a1f6b", sport:"soccer", slug:"uefa.champions", sched:"week", scope:"all", comp:"UEFA Champions League", ...ESPN_LG(2)},
+  uel: {name:"UEFA 유로파리그", short:"유로파리그", mark:"UEL", color:"#f26b00", sport:"soccer", slug:"uefa.europa", sched:"week", scope:"all", comp:"UEFA Europa League", ...ESPN_LG(2310)},
+  nba: {name:"NBA", short:"NBA", mark:"NBA", color:"#c8102e", sport:"basketball", slug:"nba", sched:"week", scope:"league", wide:true,
+        logo:"https://a.espncdn.com/i/teamlogos/leagues/500/nba.png", logoDark:"https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500-dark/nba.png&w=500&h=500&transparent=true"},
+  mlb: {name:"MLB", short:"MLB", mark:"MLB", color:"#0b3d91", sport:"baseball", slug:"mlb", sched:"week", scope:"league", wide:true, standingsQuery:"?level=3",
+        logo:"https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png", logoDark:"https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500-dark/mlb.png&w=500&h=500&transparent=true"},
   kbo: {name:"KBO", short:"KBO", mark:"KBO", color:"#0f766e", disabled:true},
 };
 // 리그 선택 메뉴: 종목별로 묶음
 const SPORT_GROUPS = [
-  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "unl"]},
+  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "ucl", "uel", "unl"]},
   {label:"🏀 농구", keys:["nba"]},
   {label:"⚾ 야구", keys:["mlb", "kbo"]},
 ];
@@ -484,7 +497,9 @@ const KO = {
 // 독일 클럽
 "Bayern Munich":"바이에른 뮌헨","Borussia Dortmund":"도르트문트","Bayer Leverkusen":"레버쿠젠","RB Leipzig":"라이프치히","SC Freiburg":"프라이부르크","Werder Bremen":"베르더 브레멘","SV Elversberg":"엘퍼스베르크","VfB Stuttgart":"슈투트가르트","TSG Hoffenheim":"호펜하임","Eintracht Frankfurt":"프랑크푸르트","Hamburg SV":"함부르크","Mainz":"마인츠","SC Paderborn 07":"파더보른","FC Augsburg":"아우크스부르크","FC Cologne":"쾰른","1. FC Union Berlin":"우니온 베를린","Schalke 04":"샬케 04","Borussia Mönchengladbach":"묀헨글라트바흐","VfL Wolfsburg":"볼프스부르크","St. Pauli":"장크트 파울리","FC St. Pauli":"장크트 파울리","1. FC Heidenheim 1846":"하이덴하임","VfL Bochum":"보훔","Holstein Kiel":"홀슈타인 킬","Hertha Berlin":"헤르타 베를린","Darmstadt":"다름슈타트","Fortuna Düsseldorf":"뒤셀도르프","Hannover 96":"하노버 96","1. FC Kaiserslautern":"카이저슬라우테른","Karlsruher SC":"카를스루에","1. FC Nürnberg":"뉘른베르크",
 // 기타 유럽 클럽 (챔피언스리그 등 상대팀)
-"Paris Saint-Germain":"파리 생제르맹","Benfica":"벤피카","Porto":"포르투","Sporting CP":"스포르팅","PSV Eindhoven":"PSV","Ajax":"아약스","Feyenoord":"페예노르트","Celtic":"셀틱","Rangers":"레인저스","Club Brugge":"클뤼프 브뤼허","Galatasaray":"갈라타사라이","Fenerbahce":"페네르바체","Monaco":"모나코","Marseille":"마르세유","Lille":"릴","Lyon":"리옹","Red Bull Salzburg":"잘츠부르크","Shakhtar Donetsk":"샤흐타르","Olympiacos":"올림피아코스","Slavia Prague":"슬라비아 프라하","Copenhagen":"코펜하겐","Bodo/Glimt":"보되/글림트","Union St.-Gilloise":"위니옹 생질루아즈","Qarabag":"카라바흐",
+"Paris Saint-Germain":"파리 생제르맹","LASK Linz":"LASK 린츠","Viking FK":"비킹","FC Porto":"포르투","AEK Athens":"AEK 아테네","Sabah FK":"사바흐","Feyenoord Rotterdam":"페예노르트","Lens":"랑스","Slovan Bratislava":"슬로반 브라티슬라바",
+"Ferencvaros":"페렌츠바로시","Besiktas":"베식타스","Dinamo Zagreb":"디나모 자그레브","Levski Sofia":"레프스키 소피아","NEC Nijmegen":"NEC 네이메헌","AZ Alkmaar":"AZ 알크마르","Anderlecht":"안데를레흐트","OFI Crete":"OFI 크레타","Stade Rennais":"렌","Omonia Nicosia":"오모니아","Torreense":"토렌스",
+"Sparta Prague":"스파르타 프라하","SK Sturm Graz":"슈투름 그라츠","NK Celje":"첼레","RB Salzburg":"잘츠부르크","Jagiellonia Bialystok":"야기엘로니아","Viktoria Plzen":"빅토리아 플젠","Hapoel Be'er":"하포엘 베르셰바","Lillestrom":"릴레스트룀","Lech Poznan":"레흐 포즈난","Ararat-Armenia":"아라라트-아르메니아","Benfica":"벤피카","Porto":"포르투","Sporting CP":"스포르팅","PSV Eindhoven":"PSV","Ajax":"아약스","Feyenoord":"페예노르트","Celtic":"셀틱","Rangers":"레인저스","Club Brugge":"클뤼프 브뤼허","Galatasaray":"갈라타사라이","Fenerbahce":"페네르바체","Monaco":"모나코","Marseille":"마르세유","Lille":"릴","Lyon":"리옹","Red Bull Salzburg":"잘츠부르크","Shakhtar Donetsk":"샤흐타르","Olympiacos":"올림피아코스","Slavia Prague":"슬라비아 프라하","Copenhagen":"코펜하겐","Bodo/Glimt":"보되/글림트","Union St.-Gilloise":"위니옹 생질루아즈","Qarabag":"카라바흐",
 // NBA
 "Atlanta Hawks":"애틀랜타 호크스","Boston Celtics":"보스턴 셀틱스","Brooklyn Nets":"브루클린 네츠","Charlotte Hornets":"샬럿 호니츠","Chicago Bulls":"시카고 불스","Cleveland Cavaliers":"클리블랜드 캐벌리어스","Dallas Mavericks":"댈러스 매버릭스","Denver Nuggets":"덴버 너기츠","Detroit Pistons":"디트로이트 피스톤스","Golden State Warriors":"골든스테이트 워리어스","Houston Rockets":"휴스턴 로키츠","Indiana Pacers":"인디애나 페이서스","LA Clippers":"LA 클리퍼스","Los Angeles Clippers":"LA 클리퍼스","Los Angeles Lakers":"LA 레이커스","Memphis Grizzlies":"멤피스 그리즐리스","Miami Heat":"마이애미 히트","Milwaukee Bucks":"밀워키 벅스","Minnesota Timberwolves":"미네소타 팀버울브스","New Orleans Pelicans":"뉴올리언스 펠리컨스","New York Knicks":"뉴욕 닉스","Oklahoma City Thunder":"오클라호마시티 선더","Orlando Magic":"올랜도 매직","Philadelphia 76ers":"필라델피아 76ers","Phoenix Suns":"피닉스 선스","Portland Trail Blazers":"포틀랜드 트레일블레이저스","Sacramento Kings":"새크라멘토 킹스","San Antonio Spurs":"샌안토니오 스퍼스","Toronto Raptors":"토론토 랩터스","Utah Jazz":"유타 재즈","Washington Wizards":"워싱턴 위저즈",
 // MLB
@@ -496,9 +511,11 @@ const COMP = {"UEFA Nations League":"네이션스리그","FIFA World Cup":"월�
   "NBA":"NBA","National Basketball Association":"NBA","MLB":"MLB","Major League Baseball":"MLB"};
 const NOTE = {"Qualifies for QFs":"8강 진출","Promotion":"승격","Promotion playoffs":"승격 플레이오프","Relegation playoffs":"강등 플레이오프","Relegation":"강등","Relegation or playoffs":"강등 또는 플레이오프",
   "Relegated":"강등","Relegation playoff":"강등 플레이오프",
+  "Qualifies for round of 16":"16강 직행","Knockout phase playoffs - seeded":"녹아웃 PO (시드)","Knockout phase playoffs - unseeded":"녹아웃 PO (비시드)","Eliminated":"탈락",
   "Champions League":"챔피언스리그","Europa League":"유로파리그","Conference League":"콘퍼런스리그","Conference League qualifying":"콘퍼런스리그 예선","Champions League qualifying":"챔피언스리그 예선"};
 // 순위 구간 색 (ESPN 색은 "##B5E7CE"처럼 잘못 오거나 유로파·콘퍼런스가 같은 색이라 직접 지정)
 const ZONE_COLOR = {"챔피언스리그":"#2563eb","챔피언스리그 예선":"#60a5fa","유로파리그":"#f97316","콘퍼런스리그":"#14b8a6","콘퍼런스리그 예선":"#14b8a6",
+  "16강 직행":"#2563eb","녹아웃 PO (시드)":"#14b8a6","녹아웃 PO (비시드)":"#5eead4","탈락":"#ef4444",
   "8강 진출":"#22c55e","승격":"#22c55e","승격 플레이오프":"#86efac","강등 플레이오프":"#fca5a5","강등 또는 플레이오프":"#f87171","강등":"#ef4444"};
 const cleanColor = c => { const m = String(c || "").match(/#?([0-9a-f]{6}|[0-9a-f]{3})$/i); return m ? "#" + m[1] : ""; };
 const RK = {W:"승",D:"무",L:"패"};
@@ -757,6 +774,8 @@ function renderHeader(){
   $("#lgname").textContent = Lg.name;
   $("#season").textContent = Lg.disabled ? "준비 중" : (d.season || "불러오는 중…");
   document.title = Lg.name + " · SPORTS LIVE!";
+  $("#lgwm").style.backgroundImage = Lg.logo ? `url("${Lg.logo}")` : "none";
+  $("#lgwmd").style.backgroundImage = (Lg.logoDark || Lg.logo) ? `url("${Lg.logoDark || Lg.logo}")` : "none";
   $("#lgbar").innerHTML = SPORT_GROUPS.map(g => `<div class="lggrp"><span class="lgcat">${g.label}</span>${g.keys.map(k => { const x = LEAGUES[k]; return `<button class="lgbtn ${k === S.lg ? "on" : ""} ${x.disabled ? "off" : ""}" data-lg="${k}">
     <span class="mk" style="background:${x.color}">${x.mark}</span><span>${esc(x.short)}${x.disabled ? " <small>준비 중</small>" : ""}</span></button>`; }).join("")}</div>`).join("");  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
   $("#tabs").style.display = Lg.disabled && S.tab !== "my" ? "none" : "";
