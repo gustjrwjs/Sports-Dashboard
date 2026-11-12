@@ -35,7 +35,10 @@ header.top{background:var(--surface);border-bottom:1px solid var(--border);posit
 .btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 12px;cursor:pointer}
 .btn:hover{background:var(--surface-2)}
 .btn:disabled{opacity:.5;cursor:default}
-.lgbar{display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:thin}
+.lgbar{display:flex;flex-wrap:wrap;gap:8px 14px;padding:12px 0 4px}
+.lggrp{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.lggrp + .lggrp{padding-left:14px;border-left:1px solid var(--border)}
+.lgcat{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px;white-space:nowrap}
 .lgbtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:5px 12px 5px 5px;cursor:pointer;white-space:nowrap;font-weight:600;font-size:13px}
 .lgbtn .mk{width:26px;height:26px;border-radius:7px;font-size:9px}
 .lgbtn.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
@@ -244,6 +247,13 @@ ul.inj .stt{margin-left:auto;font-size:12px;color:var(--loss);font-weight:600}
   .pl .nm{max-width:58px}
   .av{width:38px;height:38px}
   .brand .sub{display:none}
+  header.top{position:static}
+  .lgbar{gap:6px;padding-top:10px}
+  .lggrp{width:100%}
+  .lggrp + .lggrp{padding-left:0;border-left:0}
+  .lgcat{width:52px;flex:none}
+  .lgbtn{padding:3px 9px 3px 3px;font-size:12px;gap:6px}
+  .lgbtn .mk{width:22px;height:22px;font-size:8px}
 }
 </style>
 </head>
@@ -274,11 +284,20 @@ ul.inj .stt{margin-left:auto;font-size:12px;color:var(--loss);font-weight:600}
 const LEAGUES = {
   unl: {name:"UEFA 네이션스리그", short:"네이션스리그", mark:"UNL", color:"#1d4ed8", sport:"soccer", slug:"uefa.nations", sched:"months", scope:"all", national:true, comp:"UEFA Nations League"},
   epl: {name:"프리미어리그", short:"프리미어리그", mark:"EPL", color:"#3d195b", sport:"soccer", slug:"eng.1", sched:"week", scope:"all", comp:"English Premier League"},
+  laliga: {name:"라리가", short:"라리가", mark:"LL", color:"#e8452c", sport:"soccer", slug:"esp.1", sched:"week", scope:"all", comp:"Spanish LALIGA"},
+  seriea: {name:"세리에 A", short:"세리에 A", mark:"SA", color:"#1b3a8a", sport:"soccer", slug:"ita.1", sched:"week", scope:"all", comp:"Italian Serie A"},
+  bundesliga: {name:"분데스리가", short:"분데스리가", mark:"BL", color:"#d20515", sport:"soccer", slug:"ger.1", sched:"week", scope:"all", comp:"German Bundesliga"},
   nba: {name:"NBA", short:"NBA", mark:"NBA", color:"#c8102e", sport:"basketball", slug:"nba", sched:"week", scope:"league", wide:true},
   mlb: {name:"MLB", short:"MLB", mark:"MLB", color:"#0b3d91", sport:"baseball", slug:"mlb", sched:"week", scope:"league", wide:true, standingsQuery:"?level=3"},
   kbo: {name:"KBO", short:"KBO", mark:"KBO", color:"#0f766e", disabled:true},
 };
-const ORDER = ["unl", "epl", "nba", "mlb", "kbo"];
+// 리그 선택 메뉴: 종목별로 묶음
+const SPORT_GROUPS = [
+  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "unl"]},
+  {label:"🏀 농구", keys:["nba"]},
+  {label:"⚾ 야구", keys:["mlb", "kbo"]},
+];
+const DEFAULT_LG = "epl";
 // 위키데이터 직업 코드 (선수 한국어 이름·사진 조회용)
 const OCC = {soccer:"Q937857", basketball:"Q3665646", baseball:"Q10871364"};
 
@@ -289,17 +308,25 @@ const KO = {
 "Argentina":"아르헨티나","Brazil":"브라질","Uruguay":"우루과이","Colombia":"콜롬비아","Paraguay":"파라과이","Ecuador":"에콰도르","Chile":"칠레","Peru":"페루","Venezuela":"베네수엘라","Bolivia":"볼리비아","Mexico":"멕시코","United States":"미국","USA":"미국","Canada":"캐나다","Panama":"파나마","Costa Rica":"코스타리카","Jamaica":"자메이카","Haiti":"아이티","Curaçao":"퀴라소","Honduras":"온두라스","Morocco":"모로코","Senegal":"세네갈","Ivory Coast":"코트디부아르","Côte d'Ivoire":"코트디부아르","Egypt":"이집트","Algeria":"알제리","Tunisia":"튀니지","Ghana":"가나","Nigeria":"나이지리아","Cameroon":"카메룬","South Africa":"남아프리카공화국","Cape Verde":"카보베르데","Cape Verde Islands":"카보베르데","DR Congo":"콩고민주공화국","Mali":"말리","Burkina Faso":"부르키나파소","Japan":"일본","South Korea":"대한민국","Korea Republic":"대한민국","Australia":"호주","Iran":"이란","Saudi Arabia":"사우디아라비아","Qatar":"카타르","Iraq":"이라크","Jordan":"요르단","Uzbekistan":"우즈베키스탄","United Arab Emirates":"아랍에미리트","China PR":"중국","China":"중국","New Zealand":"뉴질랜드","Oman":"오만",
 // 잉글랜드 클럽
 "Arsenal":"아스널","Aston Villa":"애스턴 빌라","AFC Bournemouth":"본머스","Bournemouth":"본머스","Brentford":"브렌트퍼드","Brighton & Hove Albion":"브라이턴","Burnley":"번리","Chelsea":"첼시","Crystal Palace":"크리스털 팰리스","Everton":"에버턴","Fulham":"풀럼","Ipswich Town":"입스위치 타운","Leeds United":"리즈 유나이티드","Leicester City":"레스터 시티","Liverpool":"리버풀","Luton Town":"루턴 타운","Manchester City":"맨체스터 시티","Manchester United":"맨체스터 유나이티드","Newcastle United":"뉴캐슬 유나이티드","Nottingham Forest":"노팅엄 포레스트","Sheffield United":"셰필드 유나이티드","Southampton":"사우샘프턴","Sunderland":"선덜랜드","Tottenham Hotspur":"토트넘 홋스퍼","West Ham United":"웨스트햄 유나이티드","Wolverhampton Wanderers":"울버햄튼","Coventry City":"코번트리 시티","Hull City":"헐 시티","Middlesbrough":"미들즈브러","Norwich City":"노리치 시티","Watford":"왓퍼드","West Bromwich Albion":"웨스트브로미치","Stoke City":"스토크 시티","Swansea City":"스완지 시티","Birmingham City":"버밍엄 시티","Wrexham":"렉섬","Millwall":"밀월","Bristol City":"브리스톨 시티","Sheffield Wednesday":"셰필드 웬즈데이","Preston North End":"프레스턴","Portsmouth":"포츠머스","Derby County":"더비 카운티","Queens Park Rangers":"퀸스 파크 레인저스","Blackburn Rovers":"블랙번 로버스","Charlton Athletic":"찰턴","Oxford United":"옥스퍼드 유나이티드","Cardiff City":"카디프 시티",
-// 유럽 클럽 (챔피언스리그 등 상대팀)
-"Real Madrid":"레알 마드리드","Barcelona":"바르셀로나","Atlético Madrid":"아틀레티코 마드리드","Atletico Madrid":"아틀레티코 마드리드","Bayern Munich":"바이에른 뮌헨","Borussia Dortmund":"도르트문트","Bayer Leverkusen":"레버쿠젠","RB Leipzig":"라이프치히","Paris Saint-Germain":"파리 생제르맹","Internazionale":"인테르","Inter Milan":"인테르","AC Milan":"AC 밀란","Juventus":"유벤투스","Napoli":"나폴리","Atalanta":"아탈란타","Benfica":"벤피카","Porto":"포르투","Sporting CP":"스포르팅","PSV Eindhoven":"PSV","Ajax":"아약스","Feyenoord":"페예노르트","Celtic":"셀틱","Club Brugge":"클뤼프 브뤼허","Galatasaray":"갈라타사라이","Monaco":"모나코","Marseille":"마르세유","Villarreal":"비야레알","Athletic Club":"아틀레틱 빌바오","Eintracht Frankfurt":"프랑크푸르트",
+// 스페인 클럽
+"Real Madrid":"레알 마드리드","Barcelona":"바르셀로나","Atlético Madrid":"아틀레티코 마드리드","Atletico Madrid":"아틀레티코 마드리드","Real Betis":"레알 베티스","Real Sociedad":"레알 소시에다드","Sevilla":"세비야","Athletic Club":"아틀레틱 빌바오","Villarreal":"비야레알","Deportivo":"데포르티보","Deportivo La Coruña":"데포르티보","Racing Santander":"라싱 산탄데르","Celta Vigo":"셀타 비고","Alavés":"알라베스","Espanyol":"에스파뇰","Rayo Vallecano":"라요 바예카노","Getafe":"헤타페","Osasuna":"오사수나","Levante":"레반테","Elche":"엘체","Valencia":"발렌시아","Málaga":"말라가","Mallorca":"마요르카","Girona":"지로나","Las Palmas":"라스팔마스","Leganés":"레가네스","Real Valladolid":"바야돌리드","Real Oviedo":"레알 오비에도","Granada":"그라나다","Cádiz":"카디스","Almería":"알메리아","Real Zaragoza":"레알 사라고사","Sporting Gijón":"스포르팅 히혼",
+// 이탈리아 클럽
+"Lazio":"라치오","Internazionale":"인테르","Inter Milan":"인테르","AS Roma":"AS 로마","Roma":"AS 로마","AC Milan":"AC 밀란","Como":"코모","Frosinone":"프로시노네","Juventus":"유벤투스","Bologna":"볼로냐","Cagliari":"칼리아리","Napoli":"나폴리","Torino":"토리노","Atalanta":"아탈란타","Genoa":"제노아","Lecce":"레체","Fiorentina":"피오렌티나","Parma":"파르마","Sassuolo":"사수올로","Monza":"몬차","Venezia":"베네치아","Udinese":"우디네세","Empoli":"엠폴리","Hellas Verona":"엘라스 베로나","Pisa":"피사","Cremonese":"크레모네세","Salernitana":"살레르니타나","Palermo":"팔레르모","Sampdoria":"삼프도리아",
+// 독일 클럽
+"Bayern Munich":"바이에른 뮌헨","Borussia Dortmund":"도르트문트","Bayer Leverkusen":"레버쿠젠","RB Leipzig":"라이프치히","SC Freiburg":"프라이부르크","Werder Bremen":"베르더 브레멘","SV Elversberg":"엘퍼스베르크","VfB Stuttgart":"슈투트가르트","TSG Hoffenheim":"호펜하임","Eintracht Frankfurt":"프랑크푸르트","Hamburg SV":"함부르크","Mainz":"마인츠","SC Paderborn 07":"파더보른","FC Augsburg":"아우크스부르크","FC Cologne":"쾰른","1. FC Union Berlin":"우니온 베를린","Schalke 04":"샬케 04","Borussia Mönchengladbach":"묀헨글라트바흐","VfL Wolfsburg":"볼프스부르크","St. Pauli":"장크트 파울리","FC St. Pauli":"장크트 파울리","1. FC Heidenheim 1846":"하이덴하임","VfL Bochum":"보훔","Holstein Kiel":"홀슈타인 킬","Hertha Berlin":"헤르타 베를린","Darmstadt":"다름슈타트","Fortuna Düsseldorf":"뒤셀도르프","Hannover 96":"하노버 96","1. FC Kaiserslautern":"카이저슬라우테른","Karlsruher SC":"카를스루에","1. FC Nürnberg":"뉘른베르크",
+// 기타 유럽 클럽 (챔피언스리그 등 상대팀)
+"Paris Saint-Germain":"파리 생제르맹","Benfica":"벤피카","Porto":"포르투","Sporting CP":"스포르팅","PSV Eindhoven":"PSV","Ajax":"아약스","Feyenoord":"페예노르트","Celtic":"셀틱","Rangers":"레인저스","Club Brugge":"클뤼프 브뤼허","Galatasaray":"갈라타사라이","Fenerbahce":"페네르바체","Monaco":"모나코","Marseille":"마르세유","Lille":"릴","Lyon":"리옹","Red Bull Salzburg":"잘츠부르크","Shakhtar Donetsk":"샤흐타르","Olympiacos":"올림피아코스","Slavia Prague":"슬라비아 프라하","Copenhagen":"코펜하겐","Bodo/Glimt":"보되/글림트","Union St.-Gilloise":"위니옹 생질루아즈","Qarabag":"카라바흐",
 // NBA
 "Atlanta Hawks":"애틀랜타 호크스","Boston Celtics":"보스턴 셀틱스","Brooklyn Nets":"브루클린 네츠","Charlotte Hornets":"샬럿 호니츠","Chicago Bulls":"시카고 불스","Cleveland Cavaliers":"클리블랜드 캐벌리어스","Dallas Mavericks":"댈러스 매버릭스","Denver Nuggets":"덴버 너기츠","Detroit Pistons":"디트로이트 피스톤스","Golden State Warriors":"골든스테이트 워리어스","Houston Rockets":"휴스턴 로키츠","Indiana Pacers":"인디애나 페이서스","LA Clippers":"LA 클리퍼스","Los Angeles Clippers":"LA 클리퍼스","Los Angeles Lakers":"LA 레이커스","Memphis Grizzlies":"멤피스 그리즐리스","Miami Heat":"마이애미 히트","Milwaukee Bucks":"밀워키 벅스","Minnesota Timberwolves":"미네소타 팀버울브스","New Orleans Pelicans":"뉴올리언스 펠리컨스","New York Knicks":"뉴욕 닉스","Oklahoma City Thunder":"오클라호마시티 선더","Orlando Magic":"올랜도 매직","Philadelphia 76ers":"필라델피아 76ers","Phoenix Suns":"피닉스 선스","Portland Trail Blazers":"포틀랜드 트레일블레이저스","Sacramento Kings":"새크라멘토 킹스","San Antonio Spurs":"샌안토니오 스퍼스","Toronto Raptors":"토론토 랩터스","Utah Jazz":"유타 재즈","Washington Wizards":"워싱턴 위저즈",
 // MLB
 "Arizona Diamondbacks":"애리조나 다이아몬드백스","Athletics":"애슬레틱스","Oakland Athletics":"오클랜드 애슬레틱스","Atlanta Braves":"애틀랜타 브레이브스","Baltimore Orioles":"볼티모어 오리올스","Boston Red Sox":"보스턴 레드삭스","Chicago Cubs":"시카고 컵스","Chicago White Sox":"시카고 화이트삭스","Cincinnati Reds":"신시내티 레즈","Cleveland Guardians":"클리블랜드 가디언스","Colorado Rockies":"콜로라도 로키스","Detroit Tigers":"디트로이트 타이거스","Houston Astros":"휴스턴 애스트로스","Kansas City Royals":"캔자스시티 로열스","Los Angeles Angels":"LA 에인절스","Los Angeles Dodgers":"LA 다저스","Miami Marlins":"마이애미 말린스","Milwaukee Brewers":"밀워키 브루어스","Minnesota Twins":"미네소타 트윈스","New York Mets":"뉴욕 메츠","New York Yankees":"뉴욕 양키스","Philadelphia Phillies":"필라델피아 필리스","Pittsburgh Pirates":"피츠버그 파이리츠","San Diego Padres":"샌디에이고 파드리스","San Francisco Giants":"샌프란시스코 자이언츠","Seattle Mariners":"시애틀 매리너스","St. Louis Cardinals":"세인트루이스 카디널스","Tampa Bay Rays":"탬파베이 레이스","Texas Rangers":"텍사스 레인저스","Toronto Blue Jays":"토론토 블루제이스","Washington Nationals":"워싱턴 내셔널스",
 };
 const COMP = {"UEFA Nations League":"네이션스리그","FIFA World Cup":"월드컵","FIFA World Cup Qualifying - UEFA":"월드컵 예선","International Friendly":"친선경기","UEFA European Championship":"유로","UEFA European Championship Qualifying":"유로 예선",
-  "English Premier League":"프리미어리그","UEFA Champions League":"챔피언스리그","UEFA Europa League":"유로파리그","UEFA Conference League":"콘퍼런스리그","UEFA Europa Conference League":"콘퍼런스리그","English Carabao Cup":"카라바오컵","English League Cup":"리그컵","English FA Cup":"FA컵","English FA Community Shield":"커뮤니티 실드","Club Friendly":"친선경기",
+  "English Premier League":"프리미어리그","Spanish LALIGA":"라리가","Spanish LaLiga":"라리가","Italian Serie A":"세리에 A","German Bundesliga":"분데스리가",
+  "Spanish Copa del Rey":"코파 델 레이","Spanish Supercopa":"수페르코파","Coppa Italia":"코파 이탈리아","Italian Supercoppa":"수페르코파 이탈리아나","German Cup":"DFB 포칼","German Supercup":"DFL 슈퍼컵","FIFA Club World Cup":"클럽 월드컵","UEFA Super Cup":"UEFA 슈퍼컵","UEFA Champions League":"챔피언스리그","UEFA Europa League":"유로파리그","UEFA Conference League":"콘퍼런스리그","UEFA Europa Conference League":"콘퍼런스리그","English Carabao Cup":"카라바오컵","English League Cup":"리그컵","English FA Cup":"FA컵","English FA Community Shield":"커뮤니티 실드","Club Friendly":"친선경기",
   "NBA":"NBA","National Basketball Association":"NBA","MLB":"MLB","Major League Baseball":"MLB"};
 const NOTE = {"Qualifies for QFs":"8강 진출","Promotion":"승격","Promotion playoffs":"승격 플레이오프","Relegation playoffs":"강등 플레이오프","Relegation":"강등","Relegation or playoffs":"강등 또는 플레이오프",
+  "Relegated":"강등","Relegation playoff":"강등 플레이오프",
   "Champions League":"챔피언스리그","Europa League":"유로파리그","Conference League":"콘퍼런스리그","Conference League qualifying":"콘퍼런스리그 예선","Champions League qualifying":"챔피언스리그 예선"};
 const RK = {W:"승",D:"무",L:"패"};
 const INJ = {"Out":"결장","Day-To-Day":"출전 불투명","Questionable":"출전 불투명","Doubtful":"출전 어려움","Probable":"출전 유력","Suspension":"출장 정지","Injured List":"부상자 명단","10-Day-IL":"10일 IL","15-Day-IL":"15일 IL","60-Day-IL":"60일 IL"};
@@ -396,7 +423,7 @@ function noteKo(desc, letter){
 const MLB_DIV = {ALE:"AL 동부", ALC:"AL 중부", ALW:"AL 서부", NLE:"NL 동부", NLC:"NL 중부", NLW:"NL 서부"};
 function groupLabel(lg, g){
   if (lg === "unl") return g.name.replace(/^Group\s*/i, "") + "조";
-  if (lg === "epl") return "프리미어리그";
+  if (LEAGUES[lg].sport === "soccer") return LEAGUES[lg].name;  // 단일 리그 표
   if (lg === "mlb") return MLB_DIV[g.abbreviation] || g.name;
   return (g.name || "").replace("Eastern Conference", "동부 콘퍼런스").replace("Western Conference", "서부 콘퍼런스");
 }
@@ -482,7 +509,7 @@ async function teamData(lg, id){
     info = p.team || {};
     past = (p.events || []).map(nEvent);
     upcoming = (f.events || []).map(nEvent);
-    if (!Lg.national) past = past.filter(e => !/Friendly|Emirates Cup/i.test(e.competition));  // 클럽 친선경기 제외
+    if (!Lg.national) past = past.filter(e => !/Friendly|Emirates Cup|Trofeo|Gamper/i.test(e.competition));  // 클럽 친선·프리시즌 경기 제외
   } else {
     const base = `site/v2/sports/${Lg.sport}/${Lg.slug}/teams/${id}/schedule`;
     const p = await espn(base, 600);
@@ -557,9 +584,8 @@ function renderHeader(){
   $("#lgname").textContent = Lg.name;
   $("#season").textContent = Lg.disabled ? "준비 중" : (d.season || "불러오는 중…");
   document.title = Lg.name + " 대시보드";
-  $("#lgbar").innerHTML = ORDER.map(k => { const x = LEAGUES[k]; return `<button class="lgbtn ${k === S.lg ? "on" : ""} ${x.disabled ? "off" : ""}" data-lg="${k}">
-    <span class="mk" style="background:${x.color}">${x.mark}</span><span>${esc(x.short)}${x.disabled ? " <small>준비 중</small>" : ""}</span></button>`; }).join("");
-  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+  $("#lgbar").innerHTML = SPORT_GROUPS.map(g => `<div class="lggrp"><span class="lgcat">${g.label}</span>${g.keys.map(k => { const x = LEAGUES[k]; return `<button class="lgbtn ${k === S.lg ? "on" : ""} ${x.disabled ? "off" : ""}" data-lg="${k}">
+    <span class="mk" style="background:${x.color}">${x.mark}</span><span>${esc(x.short)}${x.disabled ? " <small>준비 중</small>" : ""}</span></button>`; }).join("")}</div>`).join("");  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
   $("#tabs").style.display = Lg.disabled ? "none" : "";
 }
 function render(){
@@ -1106,7 +1132,7 @@ function schedulePoll(){
   }, 60000);
 }
 function setLeague(lg){
-  if (!LEAGUES[lg]) lg = "unl";
+  if (!LEAGUES[lg]) lg = DEFAULT_LG;
   S.lg = lg; S.chip = "ALL"; S.mStatus = "ALL";
   try { localStorage.setItem("league", lg); } catch {}
   if (location.hash.slice(1) !== lg) history.replaceState(null, "", "#" + lg);
@@ -1140,7 +1166,7 @@ $("#refresh").onclick = () => {
 window.addEventListener("hashchange", () => { const k = location.hash.slice(1); if (LEAGUES[k] && k !== S.lg) setLeague(k); });
 
 let start = location.hash.slice(1);
-if (!LEAGUES[start]) { try { start = localStorage.getItem("league") || "unl"; } catch { start = "unl"; } }
+if (!LEAGUES[start]) { try { start = localStorage.getItem("league") || DEFAULT_LG; } catch { start = DEFAULT_LG; } }
 setLeague(start);
 </script>
 </body>
