@@ -218,6 +218,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not tid.isdigit():
                     return self._json({"error": "잘못된 팀 ID"}, 400)
                 return self._json(team(tid))
+            if path.startswith("/api/summary/"):  # 경기 상세(라인업·경기 기록), 화면에서 가공
+                eid = path.rsplit("/", 1)[-1]
+                if not eid.isdigit():
+                    return self._json({"error": "잘못된 경기 ID"}, 400)
+                return self._json(fetch(f"{SITE}/all/summary?event={eid}", TTL_LIVE))
             if path in ("/", "/index.html"):
                 return self._file("index.html")
             self.send_error(404)
