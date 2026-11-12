@@ -97,7 +97,8 @@ table.otbl td.ores.on{color:var(--live)}
 .bleg b{min-width:10px;text-align:center;font-weight:800}
 .bleg .col{color:var(--muted);font-size:10px}
 .bleg .ab{font-size:9px;font-weight:800;color:var(--muted);width:24px;text-align:center;flex:none}
-.bleg .hn{margin-left:auto;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.bleg .hn{margin-left:auto;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px;min-width:0}
+.bleg .hb{flex:none;font-size:9px;font-weight:800;line-height:1;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 3px;margin-right:-1px}
 .bleg.live b{color:var(--live)}
 /* 1·2차전 표 (이전 방식, 미사용) */
 .bracket.two .bcol{width:250px}
@@ -1223,9 +1224,10 @@ function brTieCard(t, kind){
       const played = g.done || g.state === "in";
       const hn = ko(t.teams[String(h.team.id)]?.name || h.team.displayName);
       const em = c => { const u = c.team.logo || t.teams[String(c.team.id)]?.logo; return u ? logo(u) : `<span class="ab">${esc(c.team.abbreviation || "")}</span>`; };
+      const venue = (g.comp.venue || g.ev.venue || {}).fullName || "";
       return `<div class="bleg ${g.state === "in" ? "live" : ""}"><span class="lk">${i + 1}차전</span>
-        ${em(h)}<b>${played ? esc(h.score) : ""}</b><span class="col">${played ? ":" : "vs"}</span><b>${played ? esc(a.score) : ""}</b>${em(a)}
-        <span class="hn">${played ? esc(hn) + " 홈" : esc(md(g.date))}</span></div>`;
+        <span class="hb" title="${esc(hn)} 홈">홈</span>${em(h)}<b>${played ? esc(h.score) : ""}</b><span class="col">${played ? ":" : "vs"}</span><b>${played ? esc(a.score) : ""}</b>${em(a)}
+        <span class="hn" title="${esc(venue)}">${played ? esc(venue) : esc(md(g.date)) + (venue ? " · " + esc(venue) : "")}</span></div>`;
     };
     const info = t.live ? '<span class="live">● 진행 중</span>' : t.pens ? '<span class="muted">승부차기</span>' : "";
     return `<div class="btie legs ${t.live ? "live" : ""}">${top(ids[0])}${top(ids[1])}<div class="blegbox">${t.games.map(leg).join("")}</div>${info ? `<div class="binfo">${info}</div>` : ""}</div>`;
