@@ -28,6 +28,13 @@ STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 SAFE_PATH = re.compile(r"^[A-Za-z0-9._/-]+$")
 SAFE_QUERY = re.compile(r"^[A-Za-z0-9._=&,-]*$")
 
+TYPES = {  # 화면 폴더(static)에서 보내 줄 파일 종류
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".webmanifest": "application/manifest+json; charset=utf-8",
+    ".png": "image/png",
+}
+
 _cache = {}
 _lock = threading.Lock()
 
@@ -70,9 +77,16 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(400, b'{"error":"bad path"}', "application/json")
                 url = ESPN + rest + ("?" + u.query if u.query else "")
                 return self._send(200, fetch(url, ttl_for(rest)), "application/json; charset=utf-8")
-            if u.path in ("/", "/index.html", "/static/", "/static/index.html"):
-                with open(os.path.join(STATIC, "index.html"), "rb") as f:
-                    return self._send(200, f.read(), "text/html; charset=utf-8")
+            if u.path in ("/", "/static/"):
+                rel = "index.html"
+            else:
+                rel = u.path[len("/static/"):] if u.path.startswith("/static/") else u.path.lstrip("/")
+            ext = os.path.splitext(rel)[1].lower()
+            if SAFE_PATH.match(rel) and ".." not in rel and ext in TYPES:
+                full = os.path.join(STATIC, *rel.split("/"))
+                if os.path.isfile(full):
+                    with open(full, "rb") as f:
+                        return self._send(200, f.read(), TYPES[ext])
             self.send_error(404)
         except Exception as e:
             msg = json.dumps({"error": f"데이터를 불러오지 못했습니다: {e}"}, ensure_ascii=False).encode("utf-8")
