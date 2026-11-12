@@ -1,8 +1,8 @@
-// 스포츠 대시보드 - 서비스 워커
+// SPORTS LIVE! - 서비스 워커
 // 화면 파일(앱 껍데기)만 저장해 두고, 항상 인터넷에서 최신 버전을 먼저 받습니다.
 // 인터넷이 안 될 때만 저장해 둔 화면을 보여줍니다. 경기 데이터는 저장하지 않습니다.
-const CACHE = "shell-v1";
-const SHELL = ["./", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
+const CACHE = "shell-v2";  // 아이콘·이름 변경 (2026-11-12)
+const SHELL = ["./", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-64.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

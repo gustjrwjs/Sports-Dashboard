@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>스포츠 대시보드</title>
+<title>SPORTS LIVE!</title>
 <meta name="description" content="축구·농구·야구 순위표, 경기 일정·결과, 라인업을 한곳에서">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151a23" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="스포츠">
+<meta name="apple-mobile-web-app-title" content="SPORTS LIVE!">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{
@@ -428,7 +429,7 @@ ul.news small{font-size:11px}
     <div class="top-in">
       <div class="brand">
         <div class="mk" id="mark">UNL</div>
-        <div><h1 id="lgname">스포츠 대시보드</h1><div class="sub" id="season">불러오는 중…</div></div>
+        <div><h1 id="lgname">SPORTS LIVE!</h1><div class="sub" id="season">불러오는 중…</div></div>
       </div>
       <span class="upd" id="upd"></span>
       <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치">앱 설치</button>
@@ -755,7 +756,7 @@ function renderHeader(){
   $("#mark").textContent = Lg.mark; $("#mark").style.background = Lg.color;
   $("#lgname").textContent = Lg.name;
   $("#season").textContent = Lg.disabled ? "준비 중" : (d.season || "불러오는 중…");
-  document.title = Lg.name + " 대시보드";
+  document.title = Lg.name + " · SPORTS LIVE!";
   $("#lgbar").innerHTML = SPORT_GROUPS.map(g => `<div class="lggrp"><span class="lgcat">${g.label}</span>${g.keys.map(k => { const x = LEAGUES[k]; return `<button class="lgbtn ${k === S.lg ? "on" : ""} ${x.disabled ? "off" : ""}" data-lg="${k}">
     <span class="mk" style="background:${x.color}">${x.mark}</span><span>${esc(x.short)}${x.disabled ? " <small>준비 중</small>" : ""}</span></button>`; }).join("")}</div>`).join("");  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
   $("#tabs").style.display = Lg.disabled && S.tab !== "my" ? "none" : "";
