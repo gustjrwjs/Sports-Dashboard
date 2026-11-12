@@ -42,7 +42,9 @@ _lock = threading.Lock()
 def ttl_for(path):
     if "/schedule" in path:
         return 600   # 팀별 일정
-    return 60        # 순위표·경기 목록·경기 상세
+    if "/scoreboard" in path or "/summary" in path:
+        return 15    # 실시간 점수 (LIVE 탭은 20초마다 갱신)
+    return 60        # 순위표
 
 
 def fetch(url, ttl):
