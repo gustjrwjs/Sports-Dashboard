@@ -1927,7 +1927,9 @@ async function openMyMatch(lg, id){
 // ================================================================ 커뮤니티 (자랑하기 · 문의 · FAQ)
 // Supabase 프로젝트 주소와 공개(anon) 키. 공개 키는 원래 브라우저에서 쓰도록 만든 값이라 넣어도 됩니다.
 // 비어 있으면 게시판은 '준비 중'으로 나오고 FAQ만 보입니다. 설정 방법: supabase_setup.sql 맨 위 설명.
-const SB = {url:"", key:""};
+const SB = {url:"https://tnvpyyuqkzovlvgstira.supabase.co", key:"sb_publishable_vmJqU0x2aypdT4rJk-s_RQ_990WrUta"};
+// 새 형식 키(sb_publishable_)는 apikey 헤더만, 예전 anon 키(eyJ...)는 Authorization도 함께 보냄
+const sbHeaders = () => SB.key.startsWith("eyJ") ? {apikey:SB.key, Authorization:"Bearer " + SB.key} : {apikey:SB.key};
 const TK = {cat:"brag", posts:{}, t:{}, err:null, loading:false};
 const sbOn = () => !!(SB.url && SB.key);
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } };
@@ -1946,7 +1948,7 @@ const RESERVED = /(운영자|관리자|운영진|admin|sportslive|스포츠라�
 
 async function sb(path, opt = {}){
   let r;
-  try { r = await fetch(SB.url.replace(/\/$/, "") + path, {...opt, headers:{apikey:SB.key, Authorization:"Bearer " + SB.key, "Content-Type":"application/json", ...(opt.headers || {})}}); }
+  try { r = await fetch(SB.url.replace(/\/$/, "") + path, {...opt, headers:{...sbHeaders(), "Content-Type":"application/json", ...(opt.headers || {})}}); }
   catch { throw new Error("서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요."); }
   const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch {}
   if (!r.ok) throw new Error((j && (j.message || j.error || j.msg)) || "서버 오류 (" + r.status + ")");
@@ -2052,7 +2054,7 @@ async function submitPost(cat){
       const blob = await shrinkImage(f);
       if (blob.size > 2 * 1024 * 1024) throw new Error("사진이 너무 큽니다 (2MB 이하)");
       const path = `u/${Date.now()}-${mySecret().slice(0, 6)}${Math.random().toString(36).slice(2, 8)}.jpg`;
-      const r = await fetch(`${SB.url.replace(/\/$/, "")}/storage/v1/object/brag/${path}`, {method:"POST", headers:{apikey:SB.key, Authorization:"Bearer " + SB.key, "Content-Type":"image/jpeg"}, body:blob});
+      const r = await fetch(`${SB.url.replace(/\/$/, "")}/storage/v1/object/brag/${path}`, {method:"POST", headers:{...sbHeaders(), "Content-Type":"image/jpeg"}, body:blob});
       if (!r.ok) throw new Error("사진 올리기 실패 (" + r.status + ")");
       url = `${SB.url.replace(/\/$/, "")}/storage/v1/object/public/brag/${path}`;
     }
