@@ -2,8 +2,18 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>스포츠 대시보드</title>
+<meta name="description" content="축구·농구·야구 순위표, 경기 일정·결과, 라인업을 한곳에서">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151a23" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="스포츠">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{
   --bg:#f3f5f9; --surface:#ffffff; --surface-2:#f0f2f7; --text:#131722; --muted:#5f6779;
@@ -24,7 +34,16 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
-header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top)}
+body{padding-bottom:env(safe-area-inset-bottom)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+#install{border-color:var(--accent);color:var(--accent);font-weight:600}
+#install[hidden]{display:none}
+.ios-steps{margin:8px 0 0;padding-left:20px;line-height:1.9}
+@media (max-width:480px){
+  .top-in .btn{padding:5px 9px;font-size:13px}
+  .top-in:has(#install:not([hidden])) .upd{display:none}
+}
 .top-in{display:flex;align-items:center;gap:12px;padding:12px 0 0;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
 .mk{border-radius:9px;color:#fff;display:grid;place-items:center;font-weight:800;letter-spacing:-.4px;flex:none}
@@ -266,6 +285,7 @@ ul.inj .stt{margin-left:auto;font-size:12px;color:var(--loss);font-weight:600}
         <div><h1 id="lgname">스포츠 대시보드</h1><div class="sub" id="season">불러오는 중…</div></div>
       </div>
       <span class="upd" id="upd"></span>
+      <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치">앱 설치</button>
       <button class="btn" id="refresh" title="데이터 새로고침">새로고침</button>
     </div>
     <div class="lgbar" id="lgbar"></div>
@@ -1168,6 +1188,51 @@ window.addEventListener("hashchange", () => { const k = location.hash.slice(1); 
 let start = location.hash.slice(1);
 if (!LEAGUES[start]) { try { start = localStorage.getItem("league") || DEFAULT_LG; } catch { start = DEFAULT_LG; } }
 setLeague(start);
+
+// ================================================================ 앱 설치 (PWA)
+(() => {
+  const btn = $("#install");
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (standalone) return;
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; btn.hidden = false; });
+  window.addEventListener("appinstalled", () => { btn.hidden = true; deferred = null; });
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
+  const isMobile = isIOS || /Android/i.test(ua);
+  if (isMobile && location.protocol !== "file:") btn.hidden = false; // 안내라도 보여줌
+  btn.onclick = async () => {
+    if (deferred) {
+      deferred.prompt();
+      await deferred.userChoice.catch(() => {});
+      deferred = null;
+      return;
+    }
+    let steps;
+    if (inApp) {
+      steps = `<p>카카오톡·네이버 같은 앱 안의 브라우저에서는 설치할 수 없습니다.</p>
+        <ol class="ios-steps"><li>오른쪽 아래(또는 위) <b>⋮ / 공유</b> 메뉴를 누르세요.</li>
+        <li><b>${isIOS ? "Safari로 열기" : "다른 브라우저로 열기(Chrome)"}</b>를 고르세요.</li>
+        <li>열린 화면에서 다시 <b>앱 설치</b>를 누르세요.</li></ol>`;
+    } else if (isIOS) {
+      steps = `<p>아이폰은 Safari에서 이렇게 설치합니다.</p>
+        <ol class="ios-steps"><li>화면 아래(또는 주소창 옆) <b>공유 버튼</b>(네모에 위쪽 화살표)을 누르세요.</li>
+        <li>목록을 내려 <b>홈 화면에 추가</b>를 누르세요.</li>
+        <li>오른쪽 위 <b>추가</b>를 누르면 홈 화면에 앱 아이콘이 생깁니다.</li></ol>`;
+    } else {
+      steps = `<p>브라우저 메뉴에서 설치할 수 있습니다.</p>
+        <ol class="ios-steps"><li>Chrome 오른쪽 위 <b>⋮</b> 메뉴를 누르세요.</li>
+        <li><b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 누르세요.</li></ol>`;
+    }
+    $("#mbody").innerHTML = `<h2 style="margin:4px 0 8px">앱으로 설치하기</h2>${steps}
+      <p class="muted" style="margin-top:12px">설치하면 홈 화면 아이콘으로 바로 열리고, 주소창 없이 앱처럼 보입니다. 업데이트는 자동으로 반영됩니다.</p>`;
+    $("#modal").showModal();
+  };
+})();
 </script>
 </body>
 </html>
