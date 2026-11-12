@@ -43,6 +43,30 @@ header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
 @media (prefers-color-scheme: dark){
   header.top{background:linear-gradient(115deg, color-mix(in srgb, var(--lgc, #1d4ed8) 28%, var(--surface)) 0%, color-mix(in srgb, var(--lgc, #1d4ed8) 10%, var(--surface)) 45%, var(--surface) 75%, color-mix(in srgb, var(--lgc, #1d4ed8) 16%, var(--surface)) 100%)}
 }
+/* 토너먼트 대진표 */
+.stview{max-width:360px;margin:14px 0 12px}
+.bwrap{overflow-x:auto;margin:0 -4px 16px;padding:0 4px 6px;-webkit-overflow-scrolling:touch}
+.bracket{display:flex;gap:26px;min-width:max-content}
+.bcol{display:flex;flex-direction:column;width:210px;flex:none}
+.bhead{height:30px;font-size:12px;font-weight:800;color:var(--lgc, var(--accent));text-align:center;letter-spacing:-.2px}
+.bbody{flex:1;display:flex;flex-direction:column;justify-content:space-around}
+.bpair{flex:1;display:flex;flex-direction:column;justify-content:space-around;position:relative}
+.bpair::after{content:"";position:absolute;right:-14px;top:25%;bottom:25%;width:12px;border:2px solid var(--border);border-left:0;border-radius:0 8px 8px 0}
+.bslot{flex:1;display:flex;align-items:center;position:relative}
+.bcol.lnk .bslot::before{content:"";position:absolute;left:-14px;top:50%;width:14px;border-top:2px solid var(--border)}
+.btie{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:5px 8px;box-shadow:var(--shadow);font-size:12.5px}
+.btie.live{border-color:var(--live)}
+.btie.bye{background:transparent;box-shadow:none;border-style:dashed;text-align:center;padding:10px 6px;font-size:11px}
+.bcol.fin .btie{border:2px solid color-mix(in srgb, #f59e0b 70%, var(--border));box-shadow:0 2px 10px color-mix(in srgb, #f59e0b 25%, transparent)}
+.brow{display:flex;align-items:center;gap:6px;min-width:0;height:24px}
+.brow .lg{width:18px;height:18px;flex:none}
+.brow .bn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.brow .bs{font-weight:800;font-variant-numeric:tabular-nums;min-width:16px;text-align:right}
+.brow.l{color:var(--muted)}
+.brow.l .bs{font-weight:600}
+.brow .wbadge{font-size:9.5px;padding:2px 3px}
+.binfo{font-size:10.5px;text-align:right;margin-top:1px}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px}
 /* 커뮤니티 */
 .nickchip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--text)}
 .nickchip i{font-style:normal;opacity:.6;margin-left:2px}
@@ -157,8 +181,10 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .lcard>.pick{top:0;right:0;transform:none;width:38px;height:38px;font-size:21px}
 .lcard>.pick:active{transform:scale(.88)}
 .lcard>.pick ~ .lmain{padding:0 24px}
-.chip-pick{position:static;display:inline-block;font-size:13px;font-weight:700;border:1px solid var(--border);border-radius:999px;padding:5px 12px;opacity:1;color:var(--text);background:var(--surface)}
-.chip-pick.on{border-color:#f59e0b;color:#b45309;background:#fef3c7}
+/* 경기 상세 창: 경기 정보 카드 왼쪽 위 별 */
+.mh{position:relative}
+.pick.mhpick{top:6px;left:6px;right:auto;transform:none;width:38px;height:38px;font-size:22px}
+.pick.mhpick:active{transform:scale(.88)}
 nav.tabs button.tab-my{display:inline-flex;align-items:center;gap:5px}
 nav.tabs button.tab-my.on{border-bottom-color:#f59e0b}
 .mystar{color:#f59e0b}
@@ -678,7 +704,7 @@ const dedupe = evs => { const seen = new Set(), out = []; for (const e of evs){ 
 
 // ---------------------------------------------------------------- 리그 상태
 const ST = {};
-const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null, myPoll:null};
+const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null, myPoll:null, stView:"table"};
 const L = () => LEAGUES[S.lg];
 const D = (k = S.lg) => ST[k] || (ST[k] = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, teamRes:{}, sumCache:{}, week:null, weekCache:{}, loaded:false, scrolled:false});
 
@@ -986,11 +1012,12 @@ function columns(){
 const streakKo = s => { const m = String(s || "").match(/^([WL])(\d+)$/); return m ? `${m[2]}${m[1] === "W" ? "연승" : "연패"}` : (s || "-"); };
 
 function renderStandings(){
+  if (BR_KIND[S.lg] && S.stView === "bracket") return renderBracket();
   const d = D(), cols = columns();
   const groups = d.groups.filter(g => S.lg !== "unl" || S.chip === "ALL" || g.letter === S.chip);
   const zones = new Map();
   for (const g of groups) for (const r of g.rows) if (r.noteColor && r.zone) zones.set(r.zone, r.noteColor);
-  $("#main").innerHTML = `${nextStrip()}
+  $("#main").innerHTML = `${stViewBar()}${nextStrip()}
     ${chipsBar() ? `<div class="bar">${chipsBar()}</div>` : ""}
     <div class="groups ${L().wide ? "wide" : ""}">${groups.map(g => `
       <section class="card">
@@ -1006,6 +1033,179 @@ function renderStandings(){
       </section>`).join("")}</div>
     <div class="legend">${[...zones].map(([l, c]) => `<span><i style="background:${esc(c)}"></i>${esc(l)}</span>`).join("")}
       <span>최근 5경기: ${L().scope === "all" ? "모든 대회 기준, " : ""}왼쪽이 과거 → 오른쪽이 최근 (마우스를 올리면 상세)</span></div>`;
+}
+
+// ================================================================ 토너먼트 대진표
+// kind별: 받아올 달, 라운드 구분, 라운드 이름
+const BR_KIND = {ucl:"uefa", uel:"uefa", unl:"unl", nba:"nba", mlb:"mlb"};
+const BR_ROUNDS = {
+  uefa:[["round-of-16", "16강"], ["quarterfinals", "8강"], ["semifinals", "4강"], ["final", "결승"]],
+  unl:[["quarterfinals", "8강"], ["semifinals", "4강"], ["final", "결승"]],
+  nba:[["1st Round", "1라운드"], ["Semifinals", "콘퍼런스 준결승"], ["Finals", "콘퍼런스 결승"], ["NBA Finals", "NBA 파이널"]],
+  mlb:[["WC", "와일드카드"], ["DS", "디비전시리즈"], ["CS", "챔피언십시리즈"], ["World Series", "월드시리즈"]],
+};
+const BR = {};  // lg → {state, yr, last, ties, rounds, extra}
+function stViewBar(){
+  if (!BR_KIND[S.lg]) return "";
+  const v = S.stView === "bracket" ? "bracket" : "table";
+  return `<div class="tkseg sm stview"><button class="${v === "table" ? "on" : ""}" data-stview="table">📊 순위표</button><button class="${v === "bracket" ? "on" : ""}" data-stview="bracket">🏆 ${S.lg === "nba" || S.lg === "mlb" ? "플레이오프" : "토너먼트"}</button></div>`;
+}
+// 경기 하나의 라운드 번호 (BR_ROUNDS 순서), 해당 없으면 -1. 'po' = 챔스·유로파 녹아웃 PO
+function brRound(kind, ev){
+  const slug = (ev.season || {}).slug || "", note = ((ev.competitions || [{}])[0].notes || [{}])[0]?.headline || "";
+  if (kind === "uefa" || kind === "unl"){
+    if (slug === "knockout-round-playoffs") return "po";
+    if (slug === "3rd-place-match") return "3rd";
+    return BR_ROUNDS[kind].findIndex(([s]) => s === slug);
+  }
+  const head = note.split(" - ")[0];
+  if (kind === "nba"){
+    if (/^NBA Finals/.test(head)) return 3;
+    if (/Finals$/.test(head)) return 2;
+    if (/Semifinals$/.test(head)) return 1;
+    if (/1st Round$/.test(head)) return 0;
+    return -1;
+  }
+  if (/^World Series/.test(head)) return 3;
+  if (/^(AL|NL)CS$/.test(head)) return 2;
+  if (/^(AL|NL)DS$/.test(head)) return 1;
+  if (/^(AL|NL)WC$/.test(head)) return 0;
+  return -1;
+}
+async function brFetch(lg, yr){
+  const Lg = LEAGUES[lg], kind = BR_KIND[lg];
+  // MLB 와일드카드는 9월 말이라 9월 전체를 받으면 정규시즌에 밀려 잘림 → 9/27~30은 하루씩
+  const months = kind === "uefa" ? ["02", "03", "04", "05"] : kind === "unl" ? ["03", "06"] : kind === "nba" ? ["04", "05", "06"] : ["0927", "0928", "0929", "0930", "10", "11"];
+  const st = kind === "nba" || kind === "mlb" ? "&seasontype=3" : "";
+  const lists = await Promise.all(months.map(m => espn(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${yr}${m}${st}&limit=300`, 600).then(j => j.events || []).catch(() => [])));
+  return lists.flat();
+}
+// 같은 두 팀의 경기(1·2차전 또는 시리즈)를 하나의 '대결'로 묶음
+function brTies(kind, events){
+  const map = new Map();
+  for (const ev of events){
+    const r = brRound(kind, ev); if (r === -1) continue;
+    const comp = (ev.competitions || [{}])[0], cs = comp.competitors || [];
+    if (cs.length !== 2) continue;
+    const ids = cs.map(c => String(c.team.id)).sort(), key = r + "|" + ids.join("-");
+    let t = map.get(key);
+    if (!t){ t = {key, round:r, teams:{}, games:[], order:[]}; map.set(key, t); }
+    for (const c of cs){
+      const id = String(c.team.id);
+      if (!t.teams[id]){ t.teams[id] = {id, name:c.team.displayName, logo:c.team.logo || (c.team.logos || [{}])[0]?.href, goals:0, wins:0, seed:c.curatedRank?.current}; t.order.push(id); }
+    }
+    t.games.push({ev, comp, date:ev.date, done:!!comp.status?.type?.completed, state:comp.status?.type?.state});
+  }
+  for (const t of map.values()){
+    t.games.sort((a, b) => a.date.localeCompare(b.date));
+    const last = t.games[t.games.length - 1];
+    for (const g of t.games) if (g.done || g.state === "in") for (const c of g.comp.competitors) t.teams[String(c.team.id)].goals += Number(c.score) || 0;
+    const ser = last.comp.series;
+    if (ser && Array.isArray(ser.competitors)){
+      for (const sc of ser.competitors){ const tm = t.teams[String(sc.id)]; if (!tm) continue; if (sc.wins != null) tm.wins = sc.wins; if (sc.aggregateScore != null) tm.agg = sc.aggregateScore; if (sc.winner) t.winner = String(sc.id); }
+      if (ser.completed && !t.winner && (kind === "nba" || kind === "mlb")){ const [a, b] = t.order.map(id => t.teams[id]); t.winner = a.wins > b.wins ? a.id : b.id; }
+    }
+    if (!t.winner){
+      const adv = last.comp.competitors.find(c => c.advance === true) || (last.done && (t.games.length === 1 || kind === "uefa" || kind === "unl") ? last.comp.competitors.find(c => c.winner === true) : null);
+      if (adv && last.done && (t.games.length === 1 || adv.advance === true || (ser && ser.completed))) t.winner = String(adv.team.id);
+    }
+    t.done = !!t.winner;
+    t.live = t.games.some(g => g.state === "in");
+    t.series = kind === "nba" || kind === "mlb";
+    const note = ((last.comp.notes || [{}])[0] || {}).headline || "";
+    t.pens = /penalt/i.test(note);
+    t.next = t.games.find(g => !g.done);
+  }
+  return [...map.values()];
+}
+// 결승에서 거꾸로 따라가며 대진표 트리를 만듦 (부전승 자리는 null)
+function brTree(ties, nRounds){
+  const byRound = r => ties.filter(t => t.round === r);
+  const finals = byRound(nRounds - 1);
+  const build = (tie, r) => {
+    if (!tie) return null;
+    const kids = r === 0 ? [] : tie.order.map(id => build(byRound(r - 1).find(t => t.teams[id]) || null, r - 1));
+    return {tie, kids};
+  };
+  if (finals.length === 1) return build(finals[0], nRounds - 1);
+  // 결승 전이면: 가장 늦은 라운드의 대결들을 맨 오른쪽에 놓고 앞 라운드를 붙임
+  for (let r = nRounds - 1; r >= 0; r--){
+    const cur = byRound(r);
+    if (!cur.length) continue;
+    return {tie:null, kids:cur.map(t => build(t, r)), partial:r};
+  }
+  return null;
+}
+async function loadBracket(lg){
+  const kind = BR_KIND[lg], d = D(lg);
+  const y = Number(d.year) || new Date().getFullYear();
+  const cands = kind === "uefa" ? [y + 1, y] : kind === "unl" ? [y + 1, y - 1] : [y, y - 1];
+  if (BR[lg] && BR[lg].loading) return;
+  const prev = BR[lg];
+  BR[lg] = prev && prev.state === "ok" ? {...prev, loading:true} : {state:"loading", loading:true};
+  let found = false;
+  for (let i = 0; i < cands.length; i++){
+    const evs = await brFetch(lg, cands[i]);
+    const ties = brTies(kind, evs);
+    if (ties.some(t => t.round !== "po" && t.round !== "3rd")){
+      BR[lg] = {state:"ok", yr:cands[i], last:i > 0, ties, nextYr:i > 0 ? cands[0] : null, t:Date.now()};
+      found = true;
+      break;
+    }
+  }
+  if (!found) BR[lg] = prev && prev.state === "ok" ? {...prev, loading:false, t:Date.now()} : {state:"empty", nextYr:cands[0]};
+  if (S.lg === lg && S.tab === "standings" && S.stView === "bracket") renderBracket();
+}
+function brTieCard(t, kind){
+  if (!t) return `<div class="btie bye"><span class="muted">부전승·시드</span></div>`;
+  const ids = t.order, sc = id => { const tm = t.teams[id]; return t.series ? tm.wins : (tm.agg ?? tm.goals); };
+  const started = t.games.some(g => g.done || g.state === "in");
+  const row = id => { const tm = t.teams[id], w = t.winner === id, l = t.winner && !w;
+    return `<div class="brow ${w ? "w" : ""} ${l ? "l" : ""}">${logo(tm.logo)}<span class="bn">${esc(ko(tm.name))}</span>${w ? '<em class="wbadge">승</em>' : ""}<b class="bs">${started ? sc(id) : ""}</b></div>`; };
+  const info = t.live ? '<span class="live">● 진행 중</span>' : !t.done && t.next ? `<span class="muted">${esc(md(t.next.date))} ${t.series ? `${t.games.filter(g => g.done).length + 1}차전` : t.games.length > 1 ? `${t.games.indexOf(t.next) + 1}차전` : ""}</span>` :
+    t.done ? `<span class="muted">${t.series ? `${t.games.length}경기` : t.games.length > 1 ? "합계" : ""}${t.pens ? " · 승부차기" : ""}</span>` : "";
+  return `<div class="btie ${t.live ? "live" : ""}">${row(ids[0])}${row(ids[1])}${info ? `<div class="binfo">${info}</div>` : ""}</div>`;
+}
+function renderBracket(){
+  const lg = S.lg, kind = BR_KIND[lg], b = BR[lg], rounds = BR_ROUNDS[kind];
+  let html = stViewBar();
+  if (!b || b.state === "loading"){ if (!b) loadBracket(lg); $("#main").innerHTML = html + '<div class="loading">대진표를 불러오는 중…</div>'; return; }
+  if (b.t && !b.last && Date.now() - b.t > 300000) setTimeout(() => loadBracket(lg), 0);  // 진행 중인 토너먼트는 5분마다 새로
+  if (b.state === "empty"){ $("#main").innerHTML = html + `<div class="card live-empty"><b>아직 토너먼트 경기가 없습니다</b><span class="muted">${b.nextYr}년에 토너먼트가 시작되면 여기에 대진표가 나옵니다.</span></div>`; return; }
+  const seasonLabel = kind === "uefa" ? `${b.yr - 1}-${String(b.yr).slice(2)} 시즌` : kind === "unl" ? `${b.yr - 1}-${String(b.yr).slice(2)} 네이션스리그` : `${b.yr} ${kind === "nba" ? "플레이오프" : "포스트시즌"}`;
+  html += `<div class="live-bar"><h2>🏆 ${esc(seasonLabel)}</h2>${b.last ? `<span class="auto">지난 시즌 · 이번 시즌 ${kind === "nba" ? "플레이오프" : kind === "mlb" ? "포스트시즌" : "토너먼트"}는 ${b.nextYr}년 시작</span>` : ""}</div>`;
+  const tree = brTree(b.ties.filter(t => typeof t.round === "number"), rounds.length);
+  if (tree){
+    // 트리를 라운드별 열로 펼침 (왼쪽 = 첫 라운드). 깊이 우선으로 돌면 각 열의 위→아래 순서가 맞음
+    const nCols = tree.tie ? rounds.length : tree.partial + 1;
+    const cols = [...Array(nCols)].map(() => []);
+    const collect = (n, col) => {
+      cols[col].push(n ? n.tie : null);
+      if (col === 0) return;
+      const kids = n && n.kids.length === 2 ? n.kids : [null, null];
+      kids.forEach(k => collect(k, col - 1));
+    };
+    if (tree.tie) collect(tree, nCols - 1); else tree.kids.forEach(k => collect(k, nCols - 1));
+    // 맨 왼쪽 열이 전부 빈칸(부전승)이면 그 열은 빼기
+    while (cols.length > 1 && cols[0].every(x => !x)) cols.shift();
+    const offset = nCols - cols.length;
+    const slotH = 86, rows = cols[0].length;
+    html += `<div class="bwrap"><div class="bracket" style="height:${rows * slotH + 30}px">${cols.map((c, ci) => {
+      const label = rounds[ci + offset] ? rounds[ci + offset][1] : "";
+      const items = c.map(x => brTieCard(x, kind));
+      let inner = "";
+      if (ci < cols.length - 1) for (let i = 0; i < items.length; i += 2) inner += `<div class="bpair"><div class="bslot">${items[i]}</div><div class="bslot">${items[i + 1] ?? ""}</div></div>`;
+      else inner = items.map(x => `<div class="bslot">${x}</div>`).join("");
+      return `<div class="bcol ${ci ? "lnk" : ""} ${ci === cols.length - 1 && tree.tie ? "fin" : ""}"><div class="bhead">${esc(label)}</div><div class="bbody">${inner}</div></div>`;
+    }).join("")}</div></div>`;
+  }
+  const extra = [];
+  const po = b.ties.filter(t => t.round === "po"), third = b.ties.filter(t => t.round === "3rd");
+  if (third.length) extra.push(`<div class="strip-h"><h3>3·4위전</h3></div><div class="bgrid">${third.map(t => brTieCard(t, kind)).join("")}</div>`);
+  if (po.length) extra.push(`<div class="strip-h"><h3>녹아웃 플레이오프</h3><span class="muted">리그 페이즈 9~24위 · 이긴 팀이 16강 진출</span></div><div class="bgrid">${po.map(t => brTieCard(t, kind)).join("")}</div>`);
+  html += extra.join("");
+  html += `<p class="note">${kind === "nba" || kind === "mlb" ? "숫자는 시리즈 승수입니다." : "두 경기로 치르는 라운드는 1·2차전 합계 점수입니다."} 진행 중인 토너먼트는 경기가 끝날 때마다 자동으로 반영됩니다.</p>`;
+  $("#main").innerHTML = html;
 }
 
 function weekNav(){
@@ -1304,15 +1504,17 @@ async function openMatch(id){
   if (m.state === "pre") center = `<div class="vs" style="font-size:22px">VS</div><div class="when">${dFull(m.date)}</div>`;
   else center = `<div class="sc">${m.home.score ?? "-"} : ${m.away.score ?? "-"}</div><div class="when">${m.state === "in" ? `<span class="live">● ${esc(liveText(m))}</span>` : esc(m.completed ? "경기 종료" : m.detail || "")} · ${dFull(m.date)}</div>`;
   const sub = (info, side) => `${side} · ${esc(rankText(info) || "")}`;
-  const head = `<div class="mh">
+  const head = `<div class="mh">${pickBtn(lg, m.id).replace('class="pick', 'class="pick mhpick')}
       <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>${sub(hi, "홈")}</small></div>
       <div class="ctr">${center}</div>
       <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>${sub(ai, "원정")}</small></div>
-    </div><div class="meta-line">${esc(L().name)}${roundOf(m) ? " " + esc(roundOf(m)) : ""}${S.lg === "unl" ? " " + esc(groupOf(m)) + "조" : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>
-    <div style="text-align:center;margin:-2px 0 10px"><span class="chip-pick pick ${isPicked(lg, m.id) ? "on" : ""}" data-pick="${lg}|${m.id}" role="button">${isPicked(lg, m.id) ? "★ My 경기에 담음" : "☆ My 경기에 담기"}</span></div>`;
+    </div><div class="meta-line">${esc(L().name)}${roundOf(m) ? " " + esc(roundOf(m)) : ""}${S.lg === "unl" ? " " + esc(groupOf(m)) + "조" : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>`;
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
-    const [h, a, sum] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id), getSummary(m).catch(() => null)]);
+    // 경기 상세는 가끔 실패하므로 한 번 더 시도 (실패한 요청은 캐시에서 빠져 있음)
+    const sumP = getSummary(m).catch(() => new Promise(r => setTimeout(r, 800)).then(() => getSummary(m)).catch(() => null));
+    const [h, a, sum] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id), sumP]);
+    m.sumFailed = !sum;
     const occ = OCC[L().sport];
     if (sum) await withTimeout(lookupPlayers(playerNames(sum), occ), 6000);
     if (S.modalMatch !== m.id || S.lg !== lg) return;
@@ -1477,6 +1679,8 @@ function lineupSection(m, lu){
   if (m.state === "pre") return `<div class="sec"><div class="sec-h"><h3>라인업</h3></div>
     <div class="card empty">아직 라인업이 발표되지 않았습니다. 보통 킥오프 약 1시간 전에 발표됩니다.</div>
     <div id="prev-lu" data-mid="${m.id}"><div class="loading">직전 경기 선발 라인업을 불러오는 중…</div></div></div>`;
+  if (m.sumFailed) return `<div class="sec"><div class="sec-h"><h3>라인업</h3></div><div class="card empty">경기 상세 정보를 불러오지 못했습니다.
+    <div style="margin-top:8px"><button class="btn" data-match="${m.id}">↻ 다시 시도</button></div></div></div>`;
   return `<div class="sec"><div class="sec-h"><h3>라인업</h3></div><div class="card empty">이 경기의 라인업 정보가 없습니다.</div></div>`;
 }
 function goalsLine(m, sum){
@@ -1827,7 +2031,7 @@ function togglePick(lg, id){
   document.querySelectorAll(`[data-pick="${lg}|${id}"]`).forEach(el => {
     el.classList.toggle("on", on);
     el.title = on ? "My 경기에서 빼기" : "My 경기에 담기";
-    el.textContent = el.classList.contains("chip-pick") ? (on ? "★ My 경기에 담음" : "☆ My 경기에 담기") : (on ? "★" : "☆");
+    el.textContent = on ? "★" : "☆";
   });
   updateMyBadge();
   if (S.tab === "my") renderMy(true);
@@ -2192,10 +2396,11 @@ function setLeague(lg){
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-pick],[data-mymatch],[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
+  const t = e.target.closest("[data-pick],[data-mymatch],[data-stview],[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
   if (!t) return;
   if (t.dataset.pick){ e.preventDefault(); const [lg, id] = t.dataset.pick.split("|"); togglePick(lg, id); return; }
   if (t.dataset.mymatch){ const [lg, id] = t.dataset.mymatch.split("|"); openMyMatch(lg, id); return; }
+  if (t.dataset.stview){ S.stView = t.dataset.stview; try { localStorage.setItem("stView", S.stView); } catch {} render(); return; }
   if (t.dataset.lg) setLeague(t.dataset.lg);
   else if (t.dataset.tab){ S.tab = t.dataset.tab; window.scrollTo(0, 0); render(); }
   else if (t.dataset.chip){ S.chip = t.dataset.chip; render(); }
