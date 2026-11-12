@@ -86,6 +86,18 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .live-empty{text-align:center;padding:28px 16px}
 .live-empty b{display:block;font-size:16px;margin-bottom:4px;color:var(--text)}
 @media (max-width:640px){ .lgrid{grid-template-columns:1fr} .lc-sc{font-size:26px} }
+/* 배당 */
+.odds{display:grid;gap:6px}
+.odds.compact{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)}
+.orow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ok{width:56px;flex:none;font-size:12px;font-weight:700;color:var(--muted)}
+.oc{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface-2);border:1px solid transparent;border-radius:7px;padding:3px 8px;font-size:12px;font-variant-numeric:tabular-nums}
+.oc small{color:var(--muted)}
+.oc b{font-weight:800}
+.oc.hit{border-color:var(--win);background:var(--win-bg)}
+.oc.hit b{color:var(--win)}
+.onow{font-size:11px;color:var(--live);font-weight:700;margin-left:auto}
+.osrc{font-size:11px;color:var(--muted);text-align:right}
 @media (max-width:480px){
   .top-in .btn{padding:5px 9px;font-size:13px}
   .top-in:has(#install:not([hidden])) .upd{display:none}
@@ -868,11 +880,51 @@ function compareRows(hi, ai, hs, as){
   return rows.join("");
 }
 
+function summaryPath(lg, id){
+  const Lg = LEAGUES[lg];
+  return Lg.sport === "soccer" ? `site/v2/sports/soccer/all/summary?event=${id}` : `site/v2/sports/${Lg.sport}/${Lg.slug}/summary?event=${id}`;
+}
+
+// ---------------------------------------------------------------- 배당 (ESPN 제공: DraftKings 기준)
+const decOdds = ml => { const n = Number(ml); if (ml == null || ml === "" || !isFinite(n) || n === 0) return null; return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n); };
+const fOdds = ml => { const d = decOdds(ml); return d ? d.toFixed(2) : "-"; };
+const sgn = v => { const n = Number(v); return n > 0 ? "+" + n : n === 0 ? "0" : String(n); };
+function pickOdds(sum){
+  const list = [...((sum && sum.pickcenter) || []), ...((sum && sum.odds) || [])].filter(Boolean);
+  return list.find(x => x.overUnder != null || x.spread != null || (x.homeTeamOdds && x.homeTeamOdds.moneyLine != null)) || null;
+}
+function oddsBlock(m, o, compact){
+  if (!o) return "";
+  const soccer = L().sport === "soccer", ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
+  const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0, started = m.state !== "pre";
+  const cell = (k, v, hit) => `<span class="oc ${hit ? "hit" : ""}"><small>${k}</small><b>${v}</b></span>`;
+  const rows = [];
+  if (ho.moneyLine != null || ao.moneyLine != null){
+    const lead = !started ? "" : hs > as ? "h" : hs < as ? "a" : "d";
+    rows.push(`<div class="orow"><span class="ok">${soccer ? "승무패" : "승패"}</span>${cell("홈승", fOdds(ho.moneyLine), lead === "h")}${soccer ? cell("무", fOdds((o.drawOdds || {}).moneyLine), lead === "d") : ""}${cell("원정승", fOdds(ao.moneyLine), lead === "a")}</div>`);
+  }
+  if (o.spread != null && !isNaN(Number(o.spread))){
+    const sp = Number(o.spread), adj = hs + sp - as;  // 홈 핸디 적용 후 차이
+    const fin = m.state === "post";
+    const st = started ? `<span class="onow">${fin ? "결과 " : ""}${adj > 0 ? (fin ? "홈" : "홈 우세") : adj < 0 ? (fin ? "원정" : "원정 우세") : "동점"}</span>` : "";
+    rows.push(`<div class="orow"><span class="ok">핸디</span>${cell("홈 " + sgn(sp), fOdds(ho.spreadOdds), started && adj > 0)}${cell("원정 " + sgn(-sp), fOdds(ao.spreadOdds), started && adj < 0)}${st}</div>`);
+  }
+  if (o.overUnder != null && !isNaN(Number(o.overUnder))){
+    const line = Number(o.overUnder), tot = hs + as;
+    const st = !started ? "" : m.state === "post" ? `<span class="onow">결과 ${tot} · ${tot > line ? "오버" : tot < line ? "언더" : "적특"}</span>`
+      : `<span class="onow">현재 ${tot}${tot > line ? " · 오버" : ` · ${+(line - tot).toFixed(1)} 남음`}</span>`;
+    rows.push(`<div class="orow"><span class="ok">언더오버</span>${cell("기준", line, false)}${cell("오버", fOdds(o.overOdds), started && tot > line)}${cell("언더", fOdds(o.underOdds), started && tot < line)}${st}</div>`);
+  }
+  if (!rows.length) return "";
+  const src = `${esc((o.provider || {}).name || "ESPN")} 경기 전 기준 · 소수점 배당`;
+  return compact ? `<div class="odds compact">${rows.join("")}<div class="osrc">${src}</div></div>`
+    : `<div class="sec"><div class="sec-h"><h3>배당·기준점</h3><span class="muted sp">${src} · 프로토 배당과 다를 수 있음</span></div><div class="card odds">${rows.join("")}</div></div>`;
+}
+
 function getSummary(ev, lg = S.lg){
   const d = D(lg), Lg = LEAGUES[lg];
   if (d.sumCache[ev.id]) return d.sumCache[ev.id];
-  const path = Lg.sport === "soccer" ? `site/v2/sports/soccer/all/summary?event=${ev.id}` : `site/v2/sports/${Lg.sport}/${Lg.slug}/summary?event=${ev.id}`;
-  const p = espn(path, ev.completed ? 3600 : 30);
+  const p = espn(summaryPath(lg, ev.id), ev.completed ? 3600 : 30);
   if (ev.completed){ d.sumCache[ev.id] = p; p.catch(() => { delete d.sumCache[ev.id]; }); }
   return p;
 }
@@ -910,8 +962,9 @@ async function openMatch(id){
         <span class="o">${logo(r.op.logo)}<span>${esc(ko(r.op.name))}</span></span>
         <span class="s">${r.gf} - ${r.ga}${r.pk ? `<small>${r.pk}</small>` : ""}</span>${badge(r.r)}</li>`).join("")}</ul>` : '<div class="card empty">기록 없음</div>';
     const sp = L().sport;
-    const detail = sp === "soccer" ? goalsLine(m, sum) + lineupSection(m, sum ? parseLineups(sum) : null)
-                 : sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum);
+    const ob = oddsBlock(m, pickOdds(sum), false);
+    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + lineupSection(m, sum ? parseLineups(sum) : null)
+                 : ob + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
     openModal(head + detail + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
@@ -1206,12 +1259,16 @@ async function loadLive(lg){
     const i = d.matches.findIndex(x => x.id === m.id);
     if (i >= 0) d.matches[i] = m;
   }
+  // 진행 중인 경기 배당 (경기 상세 데이터에 들어 있음, 2분마다만 새로 받기)
+  const odds = {};
+  await withTimeout(Promise.all(events.filter(m => m.state === "in").map(m =>
+    espn(summaryPath(lg, m.id), 120).then(s => { odds[m.id] = pickOdds(s); }).catch(() => {}))), 5000);
   if (Lg.sport === "soccer"){
     const names = [];
     for (const e of Object.values(raw)) for (const x of ((e.competitions || [{}])[0].details || [])) for (const a of x.athletesInvolved || []) names.push(a.displayName);
     if (names.length) await withTimeout(lookupPlayers([...new Set(names)], OCC.soccer), 3000);
   }
-  return {events, raw};
+  return {events, raw, odds};
 }
 
 async function refreshLive(){
@@ -1224,7 +1281,7 @@ async function refreshLive(){
   try {
     const r = await loadLive(lg);
     lv.prev = Object.fromEntries(lv.events.map(m => [m.id, [m.home.score, m.away.score]]));
-    lv.events = r.events; lv.raw = r.raw; lv.t = Date.now(); lv.err = null;
+    lv.events = r.events; lv.raw = r.raw; lv.odds = {...(lv.odds || {}), ...r.odds}; lv.t = Date.now(); lv.err = null;
   } catch (e) { lv.err = e.message; if (!lv.t) lv.t = -1; }
   finally { lv.loading = false; }
   if (S.lg === lg){
@@ -1307,7 +1364,7 @@ function liveCard(m){
       <span class="lc-c"><div class="lc-sc"><b class="${upH ? "up" : ""}">${hs}</b> : <b class="${upA ? "up" : ""}">${as}</b></div>
         <div class="lc-st live">● ${esc(liveText(m))}</div></span>
       <span class="lc-t">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span></span>
-    </div>${liveExtra(m)}</button>`;
+    </div>${liveExtra(m)}${oddsBlock(m, (LV[S.lg].odds || {})[m.id], true)}</button>`;
 }
 
 function renderLive(fromRefresh){
