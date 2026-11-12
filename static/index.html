@@ -157,9 +157,15 @@ ul.res.fx li{grid-template-columns:120px 86px 36px 1fr}
 .pitch::after{content:"";position:absolute;left:28%;right:28%;bottom:7px;height:13%;border:1.5px solid rgba(255,255,255,.3);border-bottom:0;pointer-events:none}
 .prow{display:flex;justify-content:space-around;position:relative;z-index:1}
 .pl{display:flex;flex-direction:column;align-items:center;width:66px;min-width:0;text-align:center;color:#fff}
-.pl .no{width:28px;height:28px;border-radius:50%;background:#fff;color:#111;font-weight:800;font-size:12px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
-.pitch.away .pl .no{background:#1e293b;color:#fff;border:1.5px solid rgba(255,255,255,.8)}
-.pitch .pl.gk .no{background:#facc15;color:#111;border:0}
+.av{position:relative;width:42px;height:42px;border-radius:50%;background:#fff;color:#111;font-weight:800;font-size:13px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.av img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 18%;background:#dfe5ec;border:2px solid #fff;box-sizing:border-box}
+.av.has .n{position:absolute;right:-6px;bottom:-3px;z-index:1;width:18px;height:18px;border-radius:50%;font-size:10px;background:#fff;color:#111;display:grid;place-items:center;border:1.5px solid #111}
+.pitch.away .av,.pitch.away .av.has .n{background:#1e293b;color:#fff}
+.pitch.away .av{border:1.5px solid rgba(255,255,255,.85)}
+.pitch.away .av.has .n{border-color:#fff}
+.pitch.away .av img{border-color:rgba(255,255,255,.85)}
+.pitch .pl.gk .av,.pitch .pl.gk .av.has .n{background:#facc15;color:#111;border-color:#111}
+.pitch .pl.gk .av img{border-color:#facc15}
 .pl .nm{font-size:11px;line-height:1.25;margin-top:3px;max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .pe{display:inline-flex;flex-wrap:wrap;gap:3px;justify-content:center;align-items:center;font-size:10px;line-height:1.2}
 .pl .pe{margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
@@ -173,7 +179,10 @@ ul.subs li{display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:
 ul.subs li:last-child{border-bottom:0}
 ul.subs li.unused{color:var(--muted)}
 ul.subs .no{font-weight:700;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
-ul.subs .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.subs .nm{display:flex;align-items:center;gap:8px;min-width:0}
+ul.subs .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sav{width:26px;height:26px;border-radius:50%;object-fit:cover;object-position:50% 18%;flex:none;background:var(--surface-2)}
+ul.subs li.unused .sav{opacity:.6}
 ul.subs .so{color:var(--loss)}
 .err{background:var(--loss-bg);color:var(--loss);border-radius:10px;padding:12px 14px;margin-bottom:14px}
 .loading{padding:30px;text-align:center;color:var(--muted)}
@@ -182,6 +191,7 @@ ul.subs .so{color:var(--loss)}
 @media (max-width:640px){
   .groups,.mlist,.cols,.lineups{grid-template-columns:1fr}
   .pl{width:58px}
+  .av{width:38px;height:38px}
   .pl .nm{max-width:58px}
   .hide-sm{display:none}
   .match{grid-template-columns:30px 1fr 74px 1fr;padding:9px 8px;gap:6px}
@@ -556,6 +566,45 @@ function getSummary(ev){
   return p;
 }
 const lastName = n => { const p = (n || "").trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(" ") : (n || ""); };
+
+// 선수 한국어 이름·사진: 위키데이터(축구 선수)에서 영어 이름으로 조회, 브라우저에 캐시
+const WD_KEY = "wdPlayers.v1";
+let WD = {};
+try { WD = JSON.parse(localStorage.getItem(WD_KEY) || "{}") || {}; } catch { WD = {}; }
+const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
+const namesIn = sum => (sum && sum.rosters || []).flatMap(r => (r.roster || []).map(p => (p.athlete || {}).displayName)).filter(Boolean);
+async function lookupPlayers(names){
+  const need = [...new Set(names)].filter(n => !(n in WD));
+  for (let i = 0; i < need.length; i += 60){
+    const chunk = need.slice(i, i + 60);
+    const vals = chunk.map(n => JSON.stringify(n) + "@en").join(" ");
+    const q = `SELECT ?name ?ko ?img WHERE { VALUES ?name { ${vals} } ?item rdfs:label|skos:altLabel ?name ; wdt:P106 wd:Q937857 .
+      OPTIONAL { ?item rdfs:label ?ko FILTER(LANG(?ko) = "ko") } OPTIONAL { ?item wdt:P18 ?img } }`;
+    try {
+      const r = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(q));
+      if (!r.ok) continue;
+      const rows = (await r.json()).results.bindings;
+      chunk.forEach(n => { WD[n] = 0; });  // 0 = 조회했지만 정보 없음
+      for (const b of rows){
+        const n = b.name.value, cur = WD[n] || {};
+        if (b.ko && !cur.ko) cur.ko = b.ko.value.replace(/\s*\(.*?\)\s*/g, " ").trim();
+        if (b.img && !cur.img) cur.img = b.img.value;
+        WD[n] = cur;
+      }
+    } catch { /* 위키데이터 실패 시 영어 이름 그대로 */ }
+  }
+  try { localStorage.setItem(WD_KEY, JSON.stringify(WD)); } catch {}
+}
+const koFull = n => (WD[n] && WD[n].ko) || n || "";
+function koShort(n){
+  const ko = WD[n] && WD[n].ko, en = lastName(n);
+  if (!ko) return en;
+  const kt = ko.split(/\s+/);
+  if (kt.length < 2) return ko;
+  return kt.slice(-Math.min(en.split(/\s+/).length, kt.length - 1)).join(" ");  // 성(姓) 부분만
+}
+const imgOf = (n, w = 120) => { const u = WD[n] && WD[n].img; return u ? u.replace(/^http:/, "https:") + "?width=" + w : null; };
+const nameTitle = p => esc(koFull(p.name) === p.name ? p.name : `${koFull(p.name)} (${p.name})`);
 function parseLineups(sum){
   const evs = {};
   const get = id => evs[id] || (evs[id] = {goals:[], og:[], y:[], r:[], in:null, out:null});
@@ -613,13 +662,14 @@ function pitch(t, cls){
   const keys = Object.keys(rows).map(Number).sort((a, b) => a - b);
   return `<div class="pitch ${cls}">${keys.map(k => `<div class="prow">${rows[k]
     .sort((a, b) => sideOf(a.pos) - sideOf(b.pos) || a.place - b.place)
-    .map(p => `<div class="pl ${k === 0 ? "gk" : ""}" title="${esc(p.name)} (${esc(p.pos)})">
-      <span class="no">${esc(p.no || "")}</span><span class="nm">${esc(lastName(p.name))}</span><span class="pe">${evIcons(p.ev, true)}</span></div>`).join("")}</div>`).join("")}</div>`;
+    .map(p => { const img = imgOf(p.name); return `<div class="pl ${k === 0 ? "gk" : ""}" title="${nameTitle(p)} · ${esc(p.pos)}">
+      <span class="av ${img ? "has" : ""}"><span class="n">${esc(p.no || "")}</span>${img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has');this.remove()">` : ""}</span>
+      <span class="nm">${esc(koShort(p.name))}</span><span class="pe">${evIcons(p.ev, true)}</span></div>`; }).join("")}</div>`).join("")}</div>`;
 }
 function subsList(t){
   if (!t.subs.length) return "";
   return `<div class="subs-h">교체 명단</div><ul class="subs">${t.subs.map(p => `<li class="${p.subIn || (p.ev && p.ev.in) ? "" : "unused"}">
-    <span class="no">${esc(p.no || "")}</span><span class="nm" title="${esc(p.pos)}">${esc(p.name)}</span><span class="pe">${evIcons(p.ev, false)}</span></li>`).join("")}</ul>`;
+    <span class="no">${esc(p.no || "")}</span><span class="nm" title="${nameTitle(p)}">${imgOf(p.name, 64) ? `<img class="sav" src="${esc(imgOf(p.name, 64))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<span>${esc(koFull(p.name))}</span></span><span class="pe">${evIcons(p.ev, false)}</span></li>`).join("")}</ul>`;
 }
 function lineupCol(team, t, cls, note = "", withSubs = true){
   t = t || {starters:[], subs:[]};
@@ -642,7 +692,7 @@ function goalsLine(m, sum){
     if (!(t.startsWith("goal") || t === "own-goal")) continue;
     const tid = String((k.team || {}).id), side = tid === m.home.id ? "home" : tid === m.away.id ? "away" : null;
     const who = ((k.participants || [])[0] || {}).athlete?.displayName;
-    if (side && who) gs[side].push(`${esc(lastName(who))} ${esc((k.clock || {}).displayValue || "")}${t === "own-goal" ? " (자책)" : ""}`);
+    if (side && who) gs[side].push(`${esc(koShort(who))} ${esc((k.clock || {}).displayValue || "")}${t === "own-goal" ? " (자책)" : ""}`);
   }
   if (!gs.home.length && !gs.away.length) return "";
   return `<div class="goals"><div>${gs.home.join("<br>")}</div><div>⚽</div><div>${gs.away.join("<br>")}</div></div>`;
@@ -652,6 +702,7 @@ async function fillPrevLineups(m, h, a){
   const prev = t => t.past.find(e => e.id !== m.id && e.date < m.date);
   const ph = prev(h), pa = prev(a);
   const [sh, sa] = await Promise.all([ph ? getSummary(ph).catch(() => null) : null, pa ? getSummary(pa).catch(() => null) : null]);
+  await withTimeout(lookupPlayers([...namesIn(sh), ...namesIn(sa)]), 6000);
   const box = document.querySelector(`#prev-lu[data-mid="${m.id}"]`);
   if (!box || S.modalMatch !== m.id) return;
   const pick = (sum, tid) => { if (!sum) return null; const lu = parseLineups(sum); return [lu.home, lu.away].find(x => x && x.teamId === tid && x.starters.length) || null; };
@@ -678,6 +729,7 @@ async function openMatch(id){
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
     const [h, a, sum] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id), getSummary(m).catch(() => null)]);
+    if (sum) await withTimeout(lookupPlayers(namesIn(sum)), 6000);
     if (S.modalMatch !== m.id) return;
     const lu = sum ? parseLineups(sum) : null;
     const before = (t, tid) => t.past.filter(e => e.id !== m.id && e.date < m.date).map(e => resultFor(e, tid)).filter(Boolean);
