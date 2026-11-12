@@ -144,12 +144,45 @@ ul.res.fx li{grid-template-columns:120px 86px 36px 1fr}
 .cmp .best{font-weight:800;color:var(--accent)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cols ul.res li{grid-template-columns:64px 1fr auto 26px}
+/* 라인업 */
+.goals{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
+.goals>div:first-child{text-align:right}
+.lineups{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.lineups>*{min-width:0}
+.lu-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:700}
+.lu-h .fm{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+.lu-note{margin:0 0 6px}
+.pitch{position:relative;background:linear-gradient(180deg,#2f8f4e,#287a42);border-radius:10px;padding:18px 4px 14px;display:flex;flex-direction:column-reverse;justify-content:space-around;gap:12px;min-height:360px;overflow:hidden}
+.pitch::before{content:"";position:absolute;inset:7px;border:1.5px solid rgba(255,255,255,.3);border-radius:3px;pointer-events:none}
+.pitch::after{content:"";position:absolute;left:28%;right:28%;bottom:7px;height:13%;border:1.5px solid rgba(255,255,255,.3);border-bottom:0;pointer-events:none}
+.prow{display:flex;justify-content:space-around;position:relative;z-index:1}
+.pl{display:flex;flex-direction:column;align-items:center;width:66px;min-width:0;text-align:center;color:#fff}
+.pl .no{width:28px;height:28px;border-radius:50%;background:#fff;color:#111;font-weight:800;font-size:12px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.pitch.away .pl .no{background:#1e293b;color:#fff;border:1.5px solid rgba(255,255,255,.8)}
+.pitch .pl.gk .no{background:#facc15;color:#111;border:0}
+.pl .nm{font-size:11px;line-height:1.25;margin-top:3px;max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.pe{display:inline-flex;flex-wrap:wrap;gap:3px;justify-content:center;align-items:center;font-size:10px;line-height:1.2}
+.pl .pe{margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.card-y,.card-r{display:inline-block;width:7px;height:10px;border-radius:1px;background:#facc15}
+.card-r{background:#ef4444}
+.so{color:#fca5a5;font-weight:700}
+.si{color:var(--win);font-weight:700}
+.subs-h{font-size:12px;color:var(--muted);font-weight:600;margin:10px 0 6px}
+ul.subs{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+ul.subs li{display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);font-size:13px}
+ul.subs li:last-child{border-bottom:0}
+ul.subs li.unused{color:var(--muted)}
+ul.subs .no{font-weight:700;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+ul.subs .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.subs .so{color:var(--loss)}
 .err{background:var(--loss-bg);color:var(--loss);border-radius:10px;padding:12px 14px;margin-bottom:14px}
 .loading{padding:30px;text-align:center;color:var(--muted)}
 .note{font-size:12px;color:var(--muted);margin-top:6px}
 
 @media (max-width:640px){
-  .groups,.mlist,.cols{grid-template-columns:1fr}
+  .groups,.mlist,.cols,.lineups{grid-template-columns:1fr}
+  .pl{width:58px}
+  .pl .nm{max-width:58px}
   .hide-sm{display:none}
   .match{grid-template-columns:30px 1fr 74px 1fr;padding:9px 8px;gap:6px}
   .lg{width:18px;height:18px}
@@ -206,7 +239,7 @@ const timeOnly = iso => new Date(iso).toLocaleTimeString("ko-KR", {hour:"2-digit
 const dShort = iso => new Date(iso).toLocaleDateString("ko-KR", {year:"2-digit", month:"2-digit", day:"2-digit"});
 const dFull = iso => new Date(iso).toLocaleString("ko-KR", {month:"long", day:"numeric", weekday:"short", hour:"2-digit", minute:"2-digit", hour12:false});
 
-const S = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, tab:"standings", league:"ALL", mStatus:"ALL", season:"", poll:null, scrolled:false};
+const S = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, sumCache:{}, modalMatch:null,tab:"standings", league:"ALL", mStatus:"ALL", season:"", poll:null, scrolled:false};
 
 // ------------------------------------------------------------ 데이터 (로컬 서버 → 실패 시 ESPN 직접 호출)
 let MODE = location.protocol.startsWith("http") ? "server" : "direct";
@@ -226,6 +259,7 @@ async function api(p){
     if (p === "/api/matches") return await D.matches();
     if (p === "/api/forms") return await D.forms();
     if (p.startsWith("/api/team/")) return await D.team(p.split("/").pop());
+    if (p.startsWith("/api/summary/")) return await getJSON(`${ESPN_SITE}/all/summary?event=${p.split("/").pop()}`);
   } catch (e) {
     throw new Error("ESPN 데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요. (" + (e.message || e) + ")");
   }
@@ -479,6 +513,7 @@ function kpis(s){
 }
 
 async function openTeam(id, n = 5){
+  S.modalMatch = null;
   const info = S.info[id] || {};
   openModal(`<div class="loading">${esc(ko(info.name))} 데이터를 불러오는 중…</div>`);
   try {
@@ -513,9 +548,124 @@ function cmpRow(label, a, b, higherBetter, fmt = v => v){
   return `<div class="r"><div class="${ca}">${a == null ? "-" : fmt(a)}</div><div class="k">${label}</div><div class="${cb}">${b == null ? "-" : fmt(b)}</div></div>`;
 }
 
+// ------------------------------------------------------------ 라인업
+function getSummary(ev){
+  if (S.sumCache[ev.id]) return S.sumCache[ev.id];
+  const p = api("/api/summary/" + ev.id);
+  if (ev.completed){ S.sumCache[ev.id] = p; p.catch(() => { delete S.sumCache[ev.id]; }); }  // 끝난 경기만 캐시
+  return p;
+}
+const lastName = n => { const p = (n || "").trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(" ") : (n || ""); };
+function parseLineups(sum){
+  const evs = {};
+  const get = id => evs[id] || (evs[id] = {goals:[], og:[], y:[], r:[], in:null, out:null});
+  for (const k of sum.keyEvents || []){
+    const t = (k.type || {}).type || "", min = (k.clock || {}).displayValue || "";
+    const ps = (k.participants || []).map(p => String((p.athlete || {}).id));
+    if (!ps.length) continue;
+    if (t === "own-goal") get(ps[0]).og.push(min);
+    else if (t.startsWith("goal")) get(ps[0]).goals.push(min);
+    else if (t === "yellow-card") get(ps[0]).y.push(min);
+    else if (t === "red-card") get(ps[0]).r.push(min);
+    else if (t === "substitution"){ get(ps[0]).in = min; if (ps[1]) get(ps[1]).out = min; }  // [들어온 선수, 나간 선수]
+  }
+  const out = {};
+  for (const r of sum.rosters || []){
+    const players = (r.roster || []).map(p => {
+      const id = String((p.athlete || {}).id);
+      return {id, name:(p.athlete || {}).displayName, no:p.jersey, pos:(p.position || {}).abbreviation || "",
+              place:Number(p.formationPlace) || 99, starter:!!p.starter, subIn:!!p.subbedIn, ev:evs[id]};
+    });
+    const used = p => !!(p.subIn || (p.ev && p.ev.in));
+    out[r.homeAway] = {teamId:String((r.team || {}).id), formation:r.formation,
+      starters:players.filter(p => p.starter),
+      subs:players.filter(p => !p.starter).sort((a, b) => used(b) - used(a) || (Number(a.no) || 99) - (Number(b.no) || 99))};
+  }
+  return out;
+}
+const hasLineup = lu => !!lu && ((lu.home?.starters.length || 0) + (lu.away?.starters.length || 0)) > 0;
+// 포지션 → 줄(0: GK, 1: 수비, 2: 수비형 MF, 3: MF, 4: 공격형 MF, 5: FW)
+function rowOf(pos){
+  pos = pos.toUpperCase();
+  if (pos === "G" || pos === "GK") return 0;
+  if (/^DM/.test(pos)) return 2;
+  if (/^AM/.test(pos)) return 4;
+  if (/^(CD|CB|LB|RB|LWB|RWB|WB|SW|D)/.test(pos)) return 1;
+  if (/M/.test(pos)) return 3;
+  return 5;
+}
+const sideOf = pos => /(^L|-L$)/i.test(pos) ? 0 : /(^R|-R$)/i.test(pos) ? 2 : 1;
+function evIcons(e, starter){
+  if (!e) return "";
+  const o = [];
+  e.goals.forEach(t => o.push(`<span class="pg" title="득점 ${esc(t)}">⚽${esc(t)}</span>`));
+  e.og.forEach(t => o.push(`<span class="pg og" title="자책골 ${esc(t)}">⚽자책</span>`));
+  e.y.forEach(t => o.push(`<i class="card-y" title="경고 ${esc(t)}"></i>`));
+  e.r.forEach(t => o.push(`<i class="card-r" title="퇴장 ${esc(t)}"></i>`));
+  if (starter && e.out) o.push(`<span class="so" title="교체 아웃">↓${esc(e.out)}</span>`);
+  if (!starter && e.in) o.push(`<span class="si" title="교체 투입">↑${esc(e.in)}</span>`);
+  return o.join("");
+}
+function pitch(t, cls){
+  if (!t.starters.length) return '<div class="card empty">선발 정보 없음</div>';
+  const rows = {};
+  t.starters.forEach(p => (rows[rowOf(p.pos)] = rows[rowOf(p.pos)] || []).push(p));
+  const keys = Object.keys(rows).map(Number).sort((a, b) => a - b);
+  return `<div class="pitch ${cls}">${keys.map(k => `<div class="prow">${rows[k]
+    .sort((a, b) => sideOf(a.pos) - sideOf(b.pos) || a.place - b.place)
+    .map(p => `<div class="pl ${k === 0 ? "gk" : ""}" title="${esc(p.name)} (${esc(p.pos)})">
+      <span class="no">${esc(p.no || "")}</span><span class="nm">${esc(lastName(p.name))}</span><span class="pe">${evIcons(p.ev, true)}</span></div>`).join("")}</div>`).join("")}</div>`;
+}
+function subsList(t){
+  if (!t.subs.length) return "";
+  return `<div class="subs-h">교체 명단</div><ul class="subs">${t.subs.map(p => `<li class="${p.subIn || (p.ev && p.ev.in) ? "" : "unused"}">
+    <span class="no">${esc(p.no || "")}</span><span class="nm" title="${esc(p.pos)}">${esc(p.name)}</span><span class="pe">${evIcons(p.ev, false)}</span></li>`).join("")}</ul>`;
+}
+function lineupCol(team, t, cls, note = "", withSubs = true){
+  t = t || {starters:[], subs:[]};
+  return `<div class="lu"><div class="lu-h">${logo(team.logo)}<span>${esc(ko(team.name))}</span><span class="fm">${esc(t.formation || "")}</span></div>
+    ${note}${pitch(t, cls)}${withSubs ? subsList(t) : ""}</div>`;
+}
+function lineupSection(m, lu){
+  if (hasLineup(lu)) return `<div class="sec"><div class="sec-h"><h3>라인업</h3><span class="muted sp">${m.state === "pre" ? "발표된 선발 명단" : "⚽ 득점 · 🟨 경고 · ↓ 교체 아웃 · ↑ 교체 투입"}</span></div>
+    <div class="lineups">${lineupCol(m.home, lu.home, "home")}${lineupCol(m.away, lu.away, "away")}</div></div>`;
+  if (m.state === "pre") return `<div class="sec"><div class="sec-h"><h3>라인업</h3></div>
+    <div class="card empty">아직 라인업이 발표되지 않았습니다. 보통 킥오프 약 1시간 전에 발표됩니다.</div>
+    <div id="prev-lu" data-mid="${m.id}"><div class="loading">직전 경기 선발 라인업을 불러오는 중…</div></div></div>`;
+  return `<div class="sec"><div class="sec-h"><h3>라인업</h3></div><div class="card empty">이 경기의 라인업 정보가 없습니다.</div></div>`;
+}
+function goalsLine(m, sum){
+  if (!sum || m.state === "pre") return "";
+  const gs = {home:[], away:[]};
+  for (const k of sum.keyEvents || []){
+    const t = (k.type || {}).type || "";
+    if (!(t.startsWith("goal") || t === "own-goal")) continue;
+    const tid = String((k.team || {}).id), side = tid === m.home.id ? "home" : tid === m.away.id ? "away" : null;
+    const who = ((k.participants || [])[0] || {}).athlete?.displayName;
+    if (side && who) gs[side].push(`${esc(lastName(who))} ${esc((k.clock || {}).displayValue || "")}${t === "own-goal" ? " (자책)" : ""}`);
+  }
+  if (!gs.home.length && !gs.away.length) return "";
+  return `<div class="goals"><div>${gs.home.join("<br>")}</div><div>⚽</div><div>${gs.away.join("<br>")}</div></div>`;
+}
+// 라인업 발표 전: 두 팀의 직전 경기 선발을 참고용으로 표시
+async function fillPrevLineups(m, h, a){
+  const prev = t => t.past.find(e => e.id !== m.id && e.date < m.date);
+  const ph = prev(h), pa = prev(a);
+  const [sh, sa] = await Promise.all([ph ? getSummary(ph).catch(() => null) : null, pa ? getSummary(pa).catch(() => null) : null]);
+  const box = document.querySelector(`#prev-lu[data-mid="${m.id}"]`);
+  if (!box || S.modalMatch !== m.id) return;
+  const pick = (sum, tid) => { if (!sum) return null; const lu = parseLineups(sum); return [lu.home, lu.away].find(x => x && x.teamId === tid && x.starters.length) || null; };
+  const th = pick(sh, m.home.id), ta = pick(sa, m.away.id);
+  if (!th && !ta){ box.innerHTML = ""; return; }
+  const note = (ev, tid) => { const r = ev && resultFor(ev, tid); return r ? `<div class="note lu-note">${dShort(ev.date)} vs ${esc(ko(r.op.name))} ${r.gf}-${r.ga} · ${esc(compKo(ev.competition))}</div>` : ""; };
+  box.innerHTML = `<div class="sec-h" style="margin-top:14px"><h3>직전 경기 선발 라인업</h3><span class="muted sp">예상 라인업이 아닌 참고용</span></div>
+    <div class="lineups">${th ? lineupCol(m.home, th, "home", note(ph, m.home.id), false) : '<div class="card empty">정보 없음</div>'}${ta ? lineupCol(m.away, ta, "away", note(pa, m.away.id), false) : '<div class="card empty">정보 없음</div>'}</div>`;
+}
+
 async function openMatch(id){
   const m = S.matches.find(x => x.id === id);
   if (!m) return;
+  S.modalMatch = m.id;
   const hi = S.info[m.home.id] || {}, ai = S.info[m.away.id] || {};
   let center;
   if (m.state === "pre") center = `<div class="vs" style="font-size:22px">VS</div><div class="when">${dFull(m.date)}</div>`;
@@ -527,7 +677,9 @@ async function openMatch(id){
     </div><div class="meta-line">네이션스리그 ${esc(groupOf(m))}조${m.venue ? " · " + esc(m.venue) : ""}</div>`;
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
-    const [h, a] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id)]);
+    const [h, a, sum] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id), getSummary(m).catch(() => null)]);
+    if (S.modalMatch !== m.id) return;
+    const lu = sum ? parseLineups(sum) : null;
     const before = (t, tid) => t.past.filter(e => e.id !== m.id && e.date < m.date).map(e => resultFor(e, tid)).filter(Boolean);
     const hr = before(h, m.home.id), ar = before(a, m.away.id);
     const h5 = hr.slice(0, 5), a5 = ar.slice(0, 5), hs = stats(h5), as = stats(a5);
@@ -541,7 +693,7 @@ async function openMatch(id){
     const short = rs => rs.length ? `<ul class="res">${rs.map(r => `<li><span class="d">${dShort(r.ev.date)}</span>
         <span class="o">${logo(r.op.logo)}<span>${esc(ko(r.op.name))}</span></span>
         <span class="s">${r.gf} - ${r.ga}${r.pk ? `<small>${r.pk}</small>` : ""}</span>${badge(r.r)}</li>`).join("")}</ul>` : '<div class="card empty">기록 없음</div>';
-    openModal(head + `
+    openModal(head + goalsLine(m, sum) + lineupSection(m, lu) + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전, 모든 대회 기준</span></div>
         <div class="cmp">
           <div class="r"><div>${strip(h5)}</div><div class="k">최근 5경기 흐름</div><div>${strip(a5)}</div></div>
@@ -562,6 +714,7 @@ async function openMatch(id){
       </div>
       <div class="sec"><div class="sec-h"><h3>맞대결 기록</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 각 팀 최근 약 25경기 범위</span></div>
         ${h2h.length ? resList(h2h) : '<div class="card empty">조회 범위 안에 맞대결 기록이 없습니다.</div>'}</div>`);
+    if (!hasLineup(lu) && m.state === "pre") fillPrevLineups(m, h, a);
   } catch (e) { openModal(head + errBox(e)); }
 }
 
@@ -604,7 +757,7 @@ document.addEventListener("click", e => {
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("tr[data-team]")) openTeam(e.target.dataset.team); });
 $("#mclose").onclick = () => modal.close();
 modal.addEventListener("click", e => { if (e.target === modal) modal.close(); });
-$("#refresh").onclick = () => { S.teamCache = {}; S.forms = null; load(true); };
+$("#refresh").onclick = () => { S.teamCache = {}; S.sumCache = {}; S.forms = null; load(true); };
 load(true);
 </script>
 </body>
