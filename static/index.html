@@ -98,6 +98,9 @@ table.otbl td.ores.on{color:var(--live)}
 .bleg .col{color:var(--muted);font-size:10px}
 .bleg .ab{font-size:9px;font-weight:800;color:var(--muted);width:24px;text-align:center;flex:none}
 .bleg .hn{margin-left:auto;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px;min-width:0}
+/* 경기 카드: 홈 배지 · 경기장 */
+.match .hb{font-style:normal;flex:none;font-size:9.5px;font-weight:800;line-height:1;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 4px}
+.match .mvenue{grid-column:1/-1;text-align:center;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-2px;line-height:1.2}
 .bleg .hb{flex:none;font-size:9px;font-weight:800;line-height:1;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 3px;margin-right:-1px}
 .bleg.live b{color:var(--live)}
 /* 1·2차전 표 (이전 방식, 미사용) */
@@ -1024,9 +1027,10 @@ function matchCard(m, compact){
   const wb = side => won(side) ? `<em class="wbadge">승</em>` : "";
   return `<button class="match ${g ? "" : "nogrp"}" data-match="${m.id}">${pickBtn(S.lg, m.id)}
     ${g ? `<span class="grp">${esc(groupOf(m))}</span>` : ""}
-    <span class="side home ${won("home")}">${wb("home")}<span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
+    <span class="side home ${won("home")}">${wb("home")}${m.neutral ? "" : '<em class="hb">홈</em>'}<span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
     <span class="mid">${mid}</span>
     <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span>${wb("away")}</span>
+    ${m.venue ? `<span class="mvenue" title="${esc(m.venue)}">${m.neutral ? "중립 · " : ""}${esc(m.venue)}</span>` : ""}
   </button>`;
 }
 function liveText(m, sp = L().sport){
