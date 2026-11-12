@@ -31,6 +31,7 @@
     ESPN이 제공하는 **DraftKings(미국) 경기 전 기준** 값이라 프로토·국내 사이트 배당과 다를 수 있습니다.
   - 오늘 곧 시작하는 경기와 최근 끝난 경기도 함께 표시
 - **★ My 경기**: 경기 카드 오른쪽 위 ☆를 누르면 담깁니다. 여러 리그 경기를 섞어 담을 수 있고, My 경기 탭에서 담은 경기만 진행 중·예정·결과로 나눠 보여줍니다. 진행 중이면 20초마다 자동 갱신, 끝나면 최종 점수와 배당 적중 여부(초록색)를 표시합니다. 담은 목록은 그 기기에만 저장되며 7일 뒤 자동으로 정리됩니다.
+- **💬 커뮤니티**: 🏆 자랑하기 · 🙋 문의 게시판과 ❓ FAQ. 가입 없이 닉네임만 정해서 글·댓글·사진(자랑하기)을 올리고, 추천할 수 있음. 문의에는 운영자가 🛡 운영자 답변을 달 수 있음. 게시판 데이터는 Supabase(무료)에 저장 → 아래 '커뮤니티 게시판 켜기' 참고
 - **끝난 경기 표시**: 이긴 팀에 빨간 **승** 표시, 농구·야구는 합산 점수도 함께 표시
 - **경기 상세**: 경기를 누르면 아래 내용을 보여줍니다.
   - 축구: 라인업과 득점자. 라인업 발표 전에는 두 팀의 직전 경기 선발(참고용)
@@ -80,6 +81,15 @@ Windows에서는 `run.bat`을 더블클릭해도 됩니다. 브라우저가 자�
 | `python app.py --no-browser` | 브라우저를 자동으로 열지 않음 |
 | `PORT=9000 python app.py` | 포트 변경 (기본 8765). Windows PowerShell에서는 `$env:PORT=9000; python app.py` |
 
+### 커뮤니티 게시판 켜기 (Supabase)
+
+게시판 글은 모든 방문자가 같이 봐야 해서 무료 데이터베이스 서비스 [Supabase](https://supabase.com/)를 씁니다. 설정 전에는 게시판이 '준비 중'으로 나오고 FAQ만 보입니다.
+
+1. Supabase에 가입하고 새 프로젝트를 만듭니다 (무료 플랜).
+2. 대시보드 **SQL Editor**에 [`supabase_setup.sql`](supabase_setup.sql) 내용을 붙여넣고, 맨 아래 관리자 비밀번호를 바꾼 뒤 **Run**.
+3. **Project Settings → API**에서 Project URL과 `anon` `public` 키를 복사해 `static/index.html`의 `const SB = {url:"", key:""};`에 넣습니다. (anon 키는 브라우저용 공개 키라 넣어도 됩니다. `service_role` 키는 절대 넣지 마세요.)
+4. 운영자 모드: 커뮤니티 → FAQ 맨 아래 '운영자' → 2번에서 정한 비밀번호.
+
 ## 파일 구성
 
 ```
@@ -87,6 +97,7 @@ app.py             로컬 서버: 화면 제공 + ESPN 요청 전달·캐시 (Py
 static/index.html  화면 전체 (HTML/CSS/JS 한 파일). 리그 설정은 맨 아래 스크립트의 LEAGUES에 있음
 static/manifest.webmanifest, static/sw.js, static/icons/
                    휴대폰 앱 설치(PWA)용 설정·서비스 워커·아이콘
+supabase_setup.sql 커뮤니티 게시판용 Supabase 데이터베이스 설정 (테이블·보안 규칙·함수·사진 저장소)
 run.bat            Windows용 실행 파일
 ```
 
