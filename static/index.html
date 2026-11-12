@@ -37,8 +37,17 @@ button{font:inherit;color:inherit}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
 header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top);overflow:hidden}
 header.top>.wrap{position:relative;z-index:1}
+/* 리그 색 배경 (은은한 그라데이션 + 위쪽 색 띠) */
+header.top{background:linear-gradient(115deg, color-mix(in srgb, var(--lgc, #1d4ed8) 15%, var(--surface)) 0%, color-mix(in srgb, var(--lgc, #1d4ed8) 6%, var(--surface)) 45%, var(--surface) 75%, color-mix(in srgb, var(--lgc, #1d4ed8) 9%, var(--surface)) 100%);transition:background .3s}
+header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--lgc, #1d4ed8);z-index:2}
+@media (prefers-color-scheme: dark){
+  header.top{background:linear-gradient(115deg, color-mix(in srgb, var(--lgc, #1d4ed8) 28%, var(--surface)) 0%, color-mix(in srgb, var(--lgc, #1d4ed8) 10%, var(--surface)) 45%, var(--surface) 75%, color-mix(in srgb, var(--lgc, #1d4ed8) 16%, var(--surface)) 100%)}
+}
+/* 경기 카드 라운드 표시 */
+.mid .rd{font-style:normal;font-size:10px;font-weight:700;color:var(--lgc, var(--accent));line-height:1.1;white-space:nowrap;letter-spacing:-.2px}
+@media (prefers-color-scheme: dark){ .mid .rd{color:color-mix(in srgb, var(--lgc, #7096ff) 45%, #fff)} }
 /* 헤더 배경의 리그 로고 (옅게) */
-.lgwm{position:absolute;right:4%;top:50%;width:260px;height:260px;transform:translateY(-50%) rotate(-10deg);background:center/contain no-repeat;opacity:.09;pointer-events:none;z-index:0;transition:background-image .2s}
+.lgwm{position:absolute;right:4%;top:50%;width:260px;height:260px;transform:translateY(-50%) rotate(-10deg);background:center/contain no-repeat;opacity:.09;pointer-events:none;z-index:0}
 .lgwm.dk{display:none}
 @media (prefers-color-scheme: dark){ .lgwm.lt{display:none} .lgwm.dk{display:block;opacity:.12} }
 body{padding-bottom:env(safe-area-inset-bottom)}
@@ -582,7 +591,7 @@ function nEvent(ev){
   const comp = (ev.competitions || [{}])[0], status = comp.status || ev.status || {}, st = status.type || {};
   let home = null, away = null;
   for (const c of comp.competitors || []) { if (c.homeAway === "home") home = nTeam(c); else away = nTeam(c); }
-  return {id:String(ev.id), date:ev.date, state:st.state, completed:!!st.completed, status:st.name, detail:st.shortDetail || st.detail,
+  return {id:String(ev.id), date:ev.date, stype:(ev.season || {}).slug || "", state:st.state, completed:!!st.completed, status:st.name, detail:st.shortDetail || st.detail,
           clock:status.displayClock, period:status.period, home, away, venue:(comp.venue || {}).fullName, neutral:!!comp.neutralSite,
           competition:(ev.league || {}).name || "", note:((comp.notes || [])[0] || {}).headline || ""};
 }
@@ -592,7 +601,7 @@ const dedupe = evs => { const seen = new Set(), out = []; for (const e of evs){ 
 const ST = {};
 const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null, myPoll:null};
 const L = () => LEAGUES[S.lg];
-const D = (k = S.lg) => ST[k] || (ST[k] = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, sumCache:{}, week:null, weekCache:{}, loaded:false, scrolled:false});
+const D = (k = S.lg) => ST[k] || (ST[k] = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, teamRes:{}, sumCache:{}, week:null, weekCache:{}, loaded:false, scrolled:false});
 
 function lettersInclude(spec, x){
   for (const tok of spec.replace(/\s/g, "").split(",")){
@@ -718,7 +727,7 @@ async function teamData(lg, id){
 }
 function getTeam(id, lg = S.lg){
   const d = D(lg);
-  if (!d.teamCache[id]) d.teamCache[id] = teamData(lg, id).catch(e => { delete d.teamCache[id]; throw e; });
+  if (!d.teamCache[id]) d.teamCache[id] = teamData(lg, id).then(t => { d.teamRes[id] = t; return t; }).catch(e => { delete d.teamCache[id]; throw e; });
   return d.teamCache[id];
 }
 async function loadForms(lg){
@@ -727,6 +736,32 @@ async function loadForms(lg){
     await Promise.all(ids.slice(i, i + 8).map(id => getTeam(id, lg).then(t => { out[id] = t.past.slice(0, 5); }).catch(() => { out[id] = []; })));
   d.forms = out;
   if (S.lg === lg && S.tab === "standings") renderStandings();
+  if (S.lg === lg && S.tab === "matches" && LEAGUES[lg].sport === "soccer") renderMatches();  // 라운드 표시 갱신
+}
+
+// 축구 라운드: 두 팀의 이번 시즌 같은 대회 일정 중 이 경기 전 경기 수 + 1 (ESPN이 라운드 번호를 주지 않아 계산)
+function roundOf(m, lg = S.lg){
+  const Lg = LEAGUES[lg];
+  if (!Lg || Lg.sport !== "soccer" || !m.home || !m.away) return "";
+  const d = D(lg), start = d.start ? d.start.slice(0, 10) : "0000";
+  const phase = lg === "ucl" || lg === "uel";
+  const count = id => {
+    const t = d.teamRes[id]; if (!t) return null;
+    const seen = new Set(); let n = 0;
+    for (const e of [...t.past, ...t.upcoming]){
+      if (seen.has(e.id)) continue; seen.add(e.id);
+      if (e.competition !== Lg.comp || dkey(e.date) < start) continue;
+      if (phase && e.stype && e.stype !== "league-phase") continue;  // 챔스·유로파 예선·토너먼트 제외
+      if (e.date < m.date) n++;
+    }
+    return n + 1;
+  };
+  const a = count(m.home.id), b = count(m.away.id);
+  const n = a == null ? b : b == null ? a : Math.min(a, b);
+  if (!n) return "";
+  if (phase){ if (m.stype && m.stype !== "league-phase") return ""; return n <= 8 ? `리그 페이즈 ${n}차전` : ""; }
+  if (lg === "unl") return `${n}차전`;
+  return `${n}R`;
 }
 
 // ---------------------------------------------------------------- 결과·통계
@@ -771,6 +806,7 @@ const venueKo = (ev, home) => isNeutral(ev) ? "중립" : home ? "홈" : "원정"
 function renderHeader(){
   const Lg = L(), d = D();
   $("#mark").textContent = Lg.mark; $("#mark").style.background = Lg.color;
+  document.documentElement.style.setProperty("--lgc", Lg.color);  // 리그 색: 헤더 배경·라운드 표시
   $("#lgname").textContent = Lg.name;
   $("#season").textContent = Lg.disabled ? "준비 중" : (d.season || "불러오는 중…");
   document.title = Lg.name + " · SPORTS LIVE!";
@@ -809,13 +845,14 @@ const groupOf = m => S.lg === "unl" ? ((infoOf(m.home.id) || infoOf(m.away.id) |
 
 function matchCard(m, compact){
   const won = side => m.state === "post" && m[side].winner ? "won" : "";
+  const rd = roundOf(m), rdTag = rd ? `<em class="rd">${esc(rd)}</em>` : "";
   let mid;
-  if (m.state === "pre") mid = `<span class="vs">${timeOnly(m.date)}</span><small>예정</small>`;
-  else if (m.state === "in") mid = `<span class="sc">${m.home.score ?? 0} : ${m.away.score ?? 0}</span><small class="live">● ${esc(liveText(m))}</small>`;
-  else if (!m.completed) mid = `<span class="vs">-</span><small>${esc(m.detail || "")}</small>`;
+  if (m.state === "pre") mid = `${rdTag}<span class="vs">${timeOnly(m.date)}</span><small>예정</small>`;
+  else if (m.state === "in") mid = `${rdTag}<span class="sc">${m.home.score ?? 0} : ${m.away.score ?? 0}</span><small class="live">● ${esc(liveText(m))}</small>`;
+  else if (!m.completed) mid = `${rdTag}<span class="vs">-</span><small>${esc(m.detail || "")}</small>`;
   else {
     const tot = L().sport === "soccer" ? "" : ` · 합 ${(Number(m.home.score) || 0) + (Number(m.away.score) || 0)}`;
-    mid = `<span class="sc">${m.home.score} : ${m.away.score}</span><small>${/PEN/.test(m.status || "") ? "승부차기" : /OT|SO/.test(m.detail || "") ? esc(m.detail) : "종료"}${tot}</small>`;
+    mid = `${rdTag}<span class="sc">${m.home.score} : ${m.away.score}</span><small>${/PEN/.test(m.status || "") ? "승부차기" : /OT|SO/.test(m.detail || "") ? esc(m.detail) : "종료"}${tot}</small>`;
   }
   const g = !compact && S.lg === "unl";
   const wb = side => won(side) ? `<em class="wbadge">승</em>` : "";
@@ -1185,7 +1222,7 @@ async function openMatch(id){
       <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>${sub(hi, "홈")}</small></div>
       <div class="ctr">${center}</div>
       <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>${sub(ai, "원정")}</small></div>
-    </div><div class="meta-line">${esc(L().name)}${S.lg === "unl" ? " " + esc(groupOf(m)) + "조" : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>
+    </div><div class="meta-line">${esc(L().name)}${roundOf(m) ? " " + esc(roundOf(m)) : ""}${S.lg === "unl" ? " " + esc(groupOf(m)) + "조" : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>
     <div style="text-align:center;margin:-2px 0 10px"><span class="chip-pick pick ${isPicked(lg, m.id) ? "on" : ""}" data-pick="${lg}|${m.id}" role="button">${isPicked(lg, m.id) ? "★ My 경기에 담음" : "☆ My 경기에 담기"}</span></div>`;
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
