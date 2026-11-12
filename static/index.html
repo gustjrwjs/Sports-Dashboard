@@ -79,6 +79,24 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .lmini>*{min-width:0}
 .lmini .match{padding:6px 10px}
 @media (max-width:640px){ .lmini{grid-template-columns:1fr} }
+/* 승 표시, My 경기 */
+.wbadge{font-style:normal;flex:none;display:inline-block;border:1.5px solid var(--live);color:var(--live);background:rgba(225,29,72,.08);border-radius:5px;font-size:11px;font-weight:800;line-height:1;padding:3px 4px}
+.match,.lcard{position:relative}
+.pick{position:absolute;top:2px;right:6px;font-size:15px;line-height:1;color:var(--muted);opacity:.55;cursor:pointer;padding:2px;z-index:1}
+.pick:hover{opacity:1}
+.pick.on{color:#f59e0b;opacity:1}
+.pick.inl{position:static;margin-left:auto;font-size:17px}
+.chip-pick{position:static;display:inline-block;font-size:13px;font-weight:700;border:1px solid var(--border);border-radius:999px;padding:5px 12px;opacity:1;color:var(--text);background:var(--surface)}
+.chip-pick.on{border-color:#f59e0b;color:#b45309;background:#fef3c7}
+nav.tabs button.tab-my{display:inline-flex;align-items:center;gap:5px}
+nav.tabs button.tab-my.on{border-bottom-color:#f59e0b}
+.mystar{color:#f59e0b}
+.tab-my .lcnt{background:#f59e0b}
+.tab-my.has .lcnt{background:var(--live)}
+.myhd{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--muted);margin:-2px 0 4px}
+.myhd .mk{width:20px;height:20px;font-size:7px;border-radius:5px}
+.lcard.fin{border-left-color:var(--muted)}
+.lcard.pre{border-left-color:var(--accent)}
 .otab{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px;font-variant-numeric:tabular-nums;table-layout:fixed}
 .otab th,.otab td{padding:3px 4px;text-align:center;border-top:1px solid var(--border)}
 .otab thead th{border-top:1px dashed var(--border);color:var(--muted);font-weight:600;font-size:11px}
@@ -392,6 +410,7 @@ ul.inj .stt{margin-left:auto;font-size:12px;color:var(--loss);font-weight:600}
       <button data-tab="matches">경기 일정·결과</button>
       <button data-tab="teams">팀 분석</button>
       <button data-tab="live" class="tab-live"><span class="ldot"></span>LIVE<span class="lcnt" id="lcnt"></span></button>
+      <button data-tab="my" class="tab-my"><span class="mystar">★</span>My 경기<span class="lcnt" id="mycnt"></span></button>
     </nav>
   </div>
 </header>
@@ -519,7 +538,7 @@ const dedupe = evs => { const seen = new Set(), out = []; for (const e of evs){ 
 
 // ---------------------------------------------------------------- 리그 상태
 const ST = {};
-const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null};
+const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null, myPoll:null};
 const L = () => LEAGUES[S.lg];
 const D = (k = S.lg) => ST[k] || (ST[k] = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, sumCache:{}, week:null, weekCache:{}, loaded:false, scrolled:false});
 
@@ -705,11 +724,14 @@ function renderHeader(){
   document.title = Lg.name + " 대시보드";
   $("#lgbar").innerHTML = SPORT_GROUPS.map(g => `<div class="lggrp"><span class="lgcat">${g.label}</span>${g.keys.map(k => { const x = LEAGUES[k]; return `<button class="lgbtn ${k === S.lg ? "on" : ""} ${x.disabled ? "off" : ""}" data-lg="${k}">
     <span class="mk" style="background:${x.color}">${x.mark}</span><span>${esc(x.short)}${x.disabled ? " <small>준비 중</small>" : ""}</span></button>`; }).join("")}</div>`).join("");  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
-  $("#tabs").style.display = Lg.disabled ? "none" : "";
+  $("#tabs").style.display = Lg.disabled && S.tab !== "my" ? "none" : "";
   updateLiveBadge();
+  updateMyBadge();
 }
 function render(){
   renderHeader();
+  if (S.tab !== "my") clearTimeout(S.myPoll);
+  if (S.tab === "my") return renderMy();  // My 경기는 리그와 상관없이 표시
   if (L().disabled) return renderSoon();
   if (!D().loaded) { $("#main").innerHTML = '<div class="loading">데이터를 불러오는 중…</div>'; return; }
   if (S.tab !== "live") clearTimeout(S.livePoll);
@@ -737,17 +759,20 @@ function matchCard(m, compact){
   if (m.state === "pre") mid = `<span class="vs">${timeOnly(m.date)}</span><small>예정</small>`;
   else if (m.state === "in") mid = `<span class="sc">${m.home.score ?? 0} : ${m.away.score ?? 0}</span><small class="live">● ${esc(liveText(m))}</small>`;
   else if (!m.completed) mid = `<span class="vs">-</span><small>${esc(m.detail || "")}</small>`;
-  else mid = `<span class="sc">${m.home.score} : ${m.away.score}</span><small>${/PEN/.test(m.status || "") ? "승부차기" : /OT|SO/.test(m.detail || "") ? esc(m.detail) : "종료"}</small>`;
+  else {
+    const tot = L().sport === "soccer" ? "" : ` · 합 ${(Number(m.home.score) || 0) + (Number(m.away.score) || 0)}`;
+    mid = `<span class="sc">${m.home.score} : ${m.away.score}</span><small>${/PEN/.test(m.status || "") ? "승부차기" : /OT|SO/.test(m.detail || "") ? esc(m.detail) : "종료"}${tot}</small>`;
+  }
   const g = !compact && S.lg === "unl";
-  return `<button class="match ${g ? "" : "nogrp"}" data-match="${m.id}">
+  const wb = side => won(side) ? `<em class="wbadge">승</em>` : "";
+  return `<button class="match ${g ? "" : "nogrp"}" data-match="${m.id}">${pickBtn(S.lg, m.id)}
     ${g ? `<span class="grp">${esc(groupOf(m))}</span>` : ""}
-    <span class="side home ${won("home")}"><span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
+    <span class="side home ${won("home")}">${wb("home")}<span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
     <span class="mid">${mid}</span>
-    <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span></span>
+    <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span>${wb("away")}</span>
   </button>`;
 }
-function liveText(m){
-  const sp = L().sport;
+function liveText(m, sp = L().sport){
   if (/HALFTIME/.test(m.status || "")) return "하프타임";
   if (/END_PERIOD/.test(m.status || "") && sp === "basketball") return `${m.period}Q 종료`;
   if (sp === "soccer") return m.clock || "LIVE";
@@ -970,7 +995,7 @@ function getSummary(ev, lg = S.lg){
 }
 
 async function openMatch(id){
-  const lg = S.lg, m = D().matches.find(x => x.id === id) || (LV[lg] ? LV[lg].events.find(x => x.id === id) : null);
+  const lg = S.lg, m = findMatch(lg, id);
   if (!m) return;
   S.modalMatch = m.id;
   const hi = infoOf(m.home.id) || {}, ai = infoOf(m.away.id) || {};
@@ -982,7 +1007,8 @@ async function openMatch(id){
       <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>${sub(hi, "홈")}</small></div>
       <div class="ctr">${center}</div>
       <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>${sub(ai, "원정")}</small></div>
-    </div><div class="meta-line">${esc(L().name)}${S.lg === "unl" ? " " + esc(groupOf(m)) + "조" : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>`;
+    </div><div class="meta-line">${esc(L().name)}${S.lg === "unl" ? " " + esc(groupOf(m)) + "조" : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>
+    <div style="text-align:center;margin:-2px 0 10px"><span class="chip-pick pick ${isPicked(lg, m.id) ? "on" : ""}" data-pick="${lg}|${m.id}" role="button">${isPicked(lg, m.id) ? "★ My 경기에 담음" : "☆ My 경기에 담기"}</span></div>`;
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
     const [h, a, sum] = await Promise.all([getTeam(m.home.id), getTeam(m.away.id), getSummary(m).catch(() => null)]);
@@ -1059,11 +1085,11 @@ async function lookupPlayers(names, occ){
   try { localStorage.setItem(WD_KEY, JSON.stringify(WD)); } catch {}
 }
 const curOcc = () => OCC[L().sport];
-const wd = n => WD[wk(n, curOcc())] || null;
+const wd = (n, occ = curOcc()) => WD[wk(n, occ)] || null;
 const lastName = n => { const p = (n || "").trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(" ") : (n || ""); };
 const koFull = n => (wd(n) && wd(n).ko) || n || "";
-function koShort(n){
-  const ko = wd(n) && wd(n).ko, en = lastName(n);
+function koShort(n, occ){
+  const ko = wd(n, occ) && wd(n, occ).ko, en = lastName(n);
   if (!ko) return en;
   const kt = ko.split(/\s+/);
   if (kt.length < 2) return ko;
@@ -1359,18 +1385,19 @@ function soccerEvents(m, comp){
   for (const x of comp.details || []){
     const id = String((x.team || {}).id), s = id === m.home.id ? 0 : id === m.away.id ? 1 : -1;
     if (s < 0) continue;
-    const who = (x.athletesInvolved || [])[0], nm = who ? koShort(who.displayName) : "", t = (x.clock || {}).displayValue || "";
+    const who = (x.athletesInvolved || [])[0], nm = who ? koShort(who.displayName, OCC.soccer) : "", t = (x.clock || {}).displayValue || "";
     if (x.scoringPlay) cols[s].push(`⚽${esc(nm)} ${esc(t)}${x.penaltyKick ? "(PK)" : ""}${x.ownGoal ? "(자책)" : ""}`);
     else if (x.redCard) cols[s].push(`🟥${esc(nm)} ${esc(t)}`);
   }
   return cols;
 }
 // 배당 한 줄 요약 (LIVE 카드용)
-function oddsLine(m, o){
+function oddsLine(m, o, sp = L().sport){
   if (!o) return "";
-  const soccer = L().sport === "soccer", ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
+  const soccer = sp === "soccer", ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
   const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
-  const td = (txt, hit) => `<td class="${hit ? "hit" : ""}">${txt}</td>`;
+  const live = m.state !== "pre";
+  const td = (txt, hit) => `<td class="${hit && live ? "hit" : ""}">${txt}</td>`;
   const rows = [];
   if (ho.moneyLine != null || ao.moneyLine != null)
     rows.push(`<tr><th>${soccer ? "승무패" : "승패"}</th><td class="ln">-</td>${td(fOdds(ho.moneyLine), hs > as)}${soccer ? td(fOdds((o.drawOdds || {}).moneyLine), hs === as) : ""}${td(fOdds(ao.moneyLine), hs < as)}</tr>`);
@@ -1386,10 +1413,12 @@ function oddsLine(m, o){
   return `<table class="otab"><thead><tr><th></th><th>기준</th><th>홈</th>${soccer ? "<th>무</th>" : ""}<th>원정</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
 }
 
-function liveCard(m){
-  const lv = LV[S.lg], sp = L().sport;
-  const e = lv.raw[m.id], comp = (e && (e.competitions || [{}])[0]) || {};
-  const prev = (lv.prev || {})[m.id];
+// ctx: {lg, raw, odds, prev, my} — My 경기 탭에서는 다른 리그 경기도 그림
+function liveCard(m, ctx){
+  if (!ctx || typeof ctx !== "object"){ const lv = LV[S.lg]; ctx = {lg:S.lg, raw:lv.raw, odds:lv.odds || {}, prev:lv.prev || {}}; }
+  const Lg = LEAGUES[ctx.lg], sp = Lg.sport;
+  const e = ctx.raw[m.id], comp = (e && (e.competitions || [{}])[0]) || {};
+  const prev = (ctx.prev || {})[m.id];
   const up = [prev && prev[0] !== m.home.score, prev && prev[1] !== m.away.score];
   const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
   const cOf = side => (comp.competitors || []).find(c => c.homeAway === side) || {};
@@ -1398,11 +1427,13 @@ function liveCard(m){
   // 좁은 화면에서는 NBA·MLB 팀을 애칭만 (골든스테이트 워리어스 → 워리어스)
   const nm = t => { const full = ko(t.name), parts = full.split(" ");
     return sp !== "soccer" && parts.length > 1 ? `<span class="fulln">${esc(full)}</span><span class="shortn">${esc(parts[parts.length - 1])}</span>` : esc(full); };
+  const fin = m.state === "post", pre = m.state === "pre";
   const team = (t, side, i) => {
-    const q = qs(side), lead = i === 0 ? hs > as : as > hs;
+    const q = qs(side), lead = !pre && (i === 0 ? hs > as : as > hs);
+    const win = fin && lead ? `<em class="wbadge">승</em>` : "";
     const sub = [q.length ? `<span class="lq">${q.join(" ")}</span>` : "", ev[i].length ? `<small>${ev[i].join(" ")}</small>` : ""].join("");
-    return `<div class="lt ${i ? "away" : "home"} ${lead ? "lead" : ""}">
-      <div class="nmrow">${i ? logo(t.logo) : ""}<span class="nm">${nm(t)}</span>${i ? "" : logo(t.logo)}</div>${sub}</div>`;
+    return `<div class="lt ${i ? "away" : "home"} ${lead || pre ? "lead" : ""}">
+      <div class="nmrow">${i ? logo(t.logo) : win}<span class="nm">${nm(t)}</span>${i ? win : logo(t.logo)}</div>${sub}</div>`;
   };
   let extra = "";
   if (sp === "baseball" && comp.situation && m.state === "in"){
@@ -1412,15 +1443,21 @@ function liveCard(m){
     const bat = s.batter?.athlete?.shortName, pit = s.pitcher?.athlete?.shortName;
     extra = `<div class="lx">${dia}${outs}${s.balls != null ? `<span>B-S ${s.balls}-${s.strikes}</span>` : ""}${bat ? `<span>타자 ${esc(bat)}</span>` : ""}${pit ? `<span>투수 ${esc(pit)}</span>` : ""}</div>`;
   }
-  const sum = sp === "soccer" ? "" : `<span class="ltot">합 ${hs + as}</span>`;
-  return `<button class="lcard ${up[0] || up[1] ? "flash" : ""}" data-match="${m.id}">
+  const sum = sp === "soccer" || pre ? "" : `<span class="ltot">합 ${hs + as}</span>`;
+  const center = pre
+    ? `<div class="lsc"><b style="font-size:.8em">${timeOnly(m.date)}</b></div><div class="lclk muted">${esc(new Date(m.date).toLocaleDateString("ko-KR", {month:"numeric", day:"numeric", weekday:"short"}))} 예정</div>`
+    : `<div class="lsc"><b class="${up[0] ? "up" : ""}">${hs}</b><span>:</span><b class="${up[1] ? "up" : ""}">${as}</b>${sum}</div>
+        <div class="lclk ${fin ? "muted" : "live"}">${fin ? "경기 종료" : "● " + esc(liveText(m, sp))}</div>`;
+  const head = ctx.my ? `<div class="myhd"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span>${Lg.short !== Lg.mark ? esc(Lg.short) : ""}${pickBtn(ctx.lg, m.id, true)}</div>` : pickBtn(ctx.lg, m.id);
+  const open = ctx.my ? `data-mymatch="${ctx.lg}|${m.id}"` : `data-match="${m.id}"`;
+  return `<div class="lcard ${fin ? "fin" : pre ? "pre" : ""} ${up[0] || up[1] ? "flash" : ""}" ${open} role="button" tabindex="0">
+    ${head}
     <div class="lmain">
       ${team(m.home, "home", 0)}
-      <div class="lc"><div class="lsc"><b class="${up[0] ? "up" : ""}">${hs}</b><span>:</span><b class="${up[1] ? "up" : ""}">${as}</b>${sum}</div>
-        <div class="lclk live">● ${esc(liveText(m))}</div></div>
+      <div class="lc">${center}</div>
       ${team(m.away, "away", 1)}
     </div>
-    ${extra}${oddsLine(m, (lv.odds || {})[m.id])}</button>`;
+    ${extra}${oddsLine(m, (ctx.odds || {})[m.id], sp)}</div>`;
 }
 
 function renderLive(fromRefresh){
@@ -1459,6 +1496,131 @@ function renderLive(fromRefresh){
   if (!live.length && !soon.length) html += nextStrip();  // 오늘 경기가 없으면 다음 경기 일정
   html += list("최근 끝난 경기", done);
   $("#main").innerHTML = html;
+}
+
+// ================================================================ My 경기 (내가 담은 경기만 따로)
+const MY_KEY = "myPicks.v1";
+let PICKS = [];
+try { PICKS = JSON.parse(localStorage.getItem(MY_KEY)) || []; } catch {}
+// 경기일(또는 담은 날) 기준 7일 지난 경기는 자동 정리
+PICKS = PICKS.filter(p => p && LEAGUES[p.lg] && Date.now() - Math.max(new Date(p.date).getTime() || 0, p.at || 0) < 7 * 864e5);
+const MY = {ev:{}, raw:{}, odds:{}, prev:{}, t:0, loading:false, err:null};
+const savePicks = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); } catch {} };
+const isPicked = (lg, id) => PICKS.some(p => p.lg === lg && p.id === id);
+const pickBtn = (lg, id, inline) => { const on = isPicked(lg, id);
+  return `<span class="pick ${inline ? "inl" : ""} ${on ? "on" : ""}" data-pick="${lg}|${id}" role="button" title="${on ? "My 경기에서 빼기" : "My 경기에 담기"}">${on ? "★" : "☆"}</span>`; };
+function findMatch(lg, id){
+  return D(lg).matches.find(x => x.id === id) || ((LV[lg] || {}).events || []).find(x => x.id === id) || MY.ev[lg + "|" + id] || null;
+}
+function togglePick(lg, id){
+  const i = PICKS.findIndex(p => p.lg === lg && p.id === id);
+  if (i >= 0) PICKS.splice(i, 1);
+  else {
+    const m = findMatch(lg, id);
+    if (!m) return;
+    PICKS.push({lg, id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now()});
+    MY.t = 0;  // 다음에 My 탭을 열 때 새로 받기
+  }
+  savePicks();
+  const on = isPicked(lg, id);
+  document.querySelectorAll(`[data-pick="${lg}|${id}"]`).forEach(el => {
+    el.classList.toggle("on", on);
+    el.title = on ? "My 경기에서 빼기" : "My 경기에 담기";
+    el.textContent = el.classList.contains("chip-pick") ? (on ? "★ My 경기에 담음" : "☆ My 경기에 담기") : (on ? "★" : "☆");
+  });
+  updateMyBadge();
+  if (S.tab === "my") renderMy(true);
+}
+function updateMyBadge(){
+  const el = $("#mycnt"); if (!el) return;
+  el.textContent = PICKS.length ? String(PICKS.length) : "";
+  const liveN = PICKS.filter(p => (MY.ev[p.lg + "|" + p.id] || findMatch(p.lg, p.id) || {}).state === "in").length;
+  document.querySelector("#tabs .tab-my")?.classList.toggle("has", liveN > 0);
+}
+// 미국 동부 날짜 + UTC 날짜 (ESPN 일정 날짜 기준이 리그마다 달라 둘 다 조회)
+const espnDates = iso => { const d = new Date(iso);
+  return [...new Set([d.toLocaleDateString("en-CA", {timeZone:"America/New_York"}), d.toISOString().slice(0, 10)].map(s => s.replace(/-/g, "")))]; };
+
+async function loadMy(){
+  const reqs = new Map();
+  for (const p of PICKS){ const Lg = LEAGUES[p.lg]; for (const dd of espnDates(p.date)) reqs.set(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${dd}`, p.lg); }
+  const raw = {};
+  const res = await Promise.all([...reqs].map(([path, lg]) => espn(path, 15).then(j => { for (const e of j.events || []) raw[lg + "|" + e.id] = e; return true; }).catch(() => false)));
+  if (res.length && !res.some(Boolean)) throw new Error("데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");
+  const ev = {};
+  for (const p of PICKS){ const k = p.lg + "|" + p.id; if (raw[k]){ const n = dedupe([raw[k]])[0]; if (n) ev[k] = n; } }
+  // 다른 화면에도 반영
+  for (const [k, m] of Object.entries(ev)){ const lg = k.split("|")[0], d = D(lg), i = d.matches.findIndex(x => x.id === m.id); if (i >= 0) d.matches[i] = m; }
+  const odds = {};
+  await withTimeout(Promise.all(Object.entries(ev).map(([k, m]) => espn(summaryPath(k.split("|")[0], m.id), m.state === "post" ? 3600 : 120)
+    .then(s => { odds[k] = pickOdds(s); }).catch(() => {}))), 6000);
+  const names = [];
+  for (const [k, e] of Object.entries(raw)) if (ev[k] && LEAGUES[k.split("|")[0]].sport === "soccer")
+    for (const x of ((e.competitions || [{}])[0].details || [])) for (const a of x.athletesInvolved || []) names.push(a.displayName);
+  if (names.length) await withTimeout(lookupPlayers([...new Set(names)], OCC.soccer), 3000);
+  return {ev, raw, odds};
+}
+async function refreshMy(){
+  if (MY.loading) return;
+  if (document.hidden && MY.t){ scheduleMy(); return; }
+  MY.loading = true;
+  try {
+    const r = await loadMy();
+    MY.prev = Object.fromEntries(Object.entries(MY.ev).map(([k, m]) => [k, [m.home.score, m.away.score]]));
+    MY.ev = r.ev; MY.raw = r.raw; MY.odds = {...MY.odds, ...r.odds}; MY.t = Date.now(); MY.err = null;
+  } catch (e) { MY.err = e.message; if (!MY.t) MY.t = -1; }
+  finally { MY.loading = false; }
+  updateMyBadge();
+  if (S.tab === "my") renderMy(true);
+  scheduleMy();
+}
+function scheduleMy(){
+  clearTimeout(S.myPoll);
+  if (S.tab !== "my" || !PICKS.length) return;
+  const now = Date.now();
+  const busy = Object.values(MY.ev).some(m => m.state === "in" || (m.state === "pre" && new Date(m.date) - now < 15 * 60000));
+  S.myPoll = setTimeout(refreshMy, busy ? LIVE_FAST : LIVE_SLOW);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && S.tab === "my" && Date.now() - MY.t > 10000) refreshMy();
+});
+
+function renderMy(fromRefresh){
+  const bar = n => `<div class="live-bar"><h2><span class="mystar">★</span> My 경기 <span class="live">LIVE</span> <span class="muted" style="font-size:14px">${n}경기</span></h2>${MY.t > 0
+    ? `<span class="auto"><i></i>${Object.values(MY.ev).some(m => m.state === "in") ? LIVE_FAST / 1000 : LIVE_SLOW / 1000}초마다 자동 업데이트 · ${new Date(MY.t).toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</span>` : ""}</div>`;
+  if (!PICKS.length){
+    clearTimeout(S.myPoll);
+    $("#main").innerHTML = bar(0) + `<div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
+      <span class="muted">경기 카드 오른쪽 위의 <b class="mystar">☆</b>를 누르면 여기에 모입니다.<br>여러 리그 경기를 섞어서 담을 수 있고, 진행 중인 경기는 점수가 자동으로 바뀝니다.</span></div>`;
+    return;
+  }
+  if (!MY.t){ $("#main").innerHTML = bar(PICKS.length) + '<div class="loading">담은 경기를 불러오는 중…</div>'; refreshMy(); return; }
+  if (!fromRefresh && Date.now() - MY.t > 15000) refreshMy();
+  else if (!fromRefresh) scheduleMy();
+  const items = PICKS.map(p => ({p, k:p.lg + "|" + p.id, m:MY.ev[p.lg + "|" + p.id]}))
+    .sort((a, b) => new Date(a.p.date) - new Date(b.p.date));
+  const card = it => {
+    if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true)}</div>
+      <div class="muted" style="text-align:center;padding:6px 0">${esc(ko(it.p.home))} vs ${esc(ko(it.p.away))} · 정보를 불러오지 못했습니다</div></div>`;
+    const id = it.m.id;
+    return liveCard(it.m, {lg:it.p.lg, raw:{[id]:MY.raw[it.k]}, odds:{[id]:MY.odds[it.k]}, prev:MY.prev[it.k] ? {[id]:MY.prev[it.k]} : {}, my:true});
+  };
+  const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
+  const sec = (title, list) => list.length ? `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div><div class="lgrid">${list.map(card).join("")}</div>` : "";
+  let html = bar(PICKS.length);
+  if (MY.err) html += `<div class="card empty" style="margin-bottom:10px">업데이트 실패: ${esc(MY.err)} · 잠시 후 다시 시도합니다.</div>`;
+  if (done.length){
+    const w = done.filter(x => x.m.home.winner || x.m.away.winner).length;
+    html += `<div class="muted" style="font-size:12px;margin:-4px 0 10px">끝난 경기 ${done.length} · 진행 중 ${live.length} · 예정 ${soon.length}${w < done.length ? ` · 무승부 ${done.length - w}` : ""}</div>`;
+  }
+  html += sec("● 진행 중", live) + sec("예정", soon) + sec("결과", done);
+  html += `<div class="muted" style="font-size:11px;margin:-8px 0 16px">담은 경기는 이 기기에만 저장되고, 경기(또는 담은 날) 후 7일이 지나면 자동으로 빠집니다. ★를 다시 누르면 뺄 수 있습니다.${Object.keys(MY.odds).some(k => MY.odds[k]) ? " · 배당: DraftKings 경기 전 기준 · 초록색은 현재(최종) 점수 기준 맞는 쪽" : ""}</div>`;
+  $("#main").innerHTML = html;
+}
+async function openMyMatch(lg, id){
+  if (S.lg !== lg){ setLeague(lg); }
+  if (!D(lg).loaded){ await (D(lg).loading || loadLeague(lg)); }
+  openMatch(id);
 }
 
 // ================================================================ 로딩
@@ -1505,8 +1667,10 @@ function setLeague(lg){
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
+  const t = e.target.closest("[data-pick],[data-mymatch],[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
   if (!t) return;
+  if (t.dataset.pick){ e.preventDefault(); const [lg, id] = t.dataset.pick.split("|"); togglePick(lg, id); return; }
+  if (t.dataset.mymatch){ const [lg, id] = t.dataset.mymatch.split("|"); openMyMatch(lg, id); return; }
   if (t.dataset.lg) setLeague(t.dataset.lg);
   else if (t.dataset.tab){ S.tab = t.dataset.tab; window.scrollTo(0, 0); render(); }
   else if (t.dataset.chip){ S.chip = t.dataset.chip; render(); }
