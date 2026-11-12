@@ -310,6 +310,9 @@ nav.tabs button.tab-my.on{border-bottom-color:#f59e0b}
   .appbar:has(#install:not([hidden])) .upd{display:none}
 }
 .top-in{display:flex;align-items:center;gap:12px;padding:8px 0 0;flex-wrap:wrap}
+/* 시즌 선택 */
+.seasonsel{font:inherit;font-size:12px;font-weight:700;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:2px 6px;margin-top:2px;cursor:pointer}
+.brand .sub .linkbtn{margin-left:6px;font-size:11.5px}
 /* 맨 위 서비스 이름 줄 */
 .appbar{display:flex;align-items:center;gap:10px;padding:10px 0 0}
 .appname{display:flex;align-items:center;gap:8px;margin-right:auto;font-weight:900;font-style:italic;font-size:19px;letter-spacing:-.4px;white-space:nowrap;color:var(--text)}
@@ -582,7 +585,7 @@ ul.news small{font-size:11px}
   .pl{width:58px}
   .pl .nm{max-width:58px}
   .av{width:38px;height:38px}
-  .brand .sub{display:none}
+  .brand .sub{font-size:11px}
   header.top{position:relative}
   .lgwm{width:230px;height:230px;right:-30px;top:55%}
   .lgbar{gap:8px;padding-top:8px}
@@ -788,7 +791,10 @@ const dedupe = evs => { const seen = new Set(), out = []; for (const e of evs){ 
 const ST = {};
 const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null, myPoll:null, stView:"table"};
 const L = () => LEAGUES[S.lg];
-const D = (k = S.lg) => ST[k] || (ST[k] = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, teamRes:{}, sumCache:{}, week:null, weekCache:{}, loaded:false, scrolled:false});
+// 지난 시즌을 보고 있으면(S.season) 그 리그의 데이터는 "리그@연도" 칸에 따로 보관
+const seasonOf = lg => lg === S.lg ? S.season : null;
+const dkeyOf = k => LEAGUES[k] && seasonOf(k) ? k + "@" + seasonOf(k) : k;
+const D = (k = S.lg) => { const key = dkeyOf(k); return ST[key] || (ST[key] = {groups:[], info:{}, matches:[], forms:null, teamCache:{}, teamRes:{}, sumCache:{}, week:null, weekCache:{}, loaded:false, scrolled:false}); };
 
 function lettersInclude(spec, x){
   for (const tok of spec.replace(/\s/g, "").split(",")){
@@ -810,6 +816,8 @@ const MLB_DIV = {ALE:"AL 동부", ALC:"AL 중부", ALW:"AL 서부", NLE:"NL 동�
 function groupLabel(lg, g){
   if (lg === "unl") return g.name.replace(/^Group\s*/i, "") + "조";
   if (lg === "mls") return /East/i.test(g.name) ? "동부 콘퍼런스" : /West/i.test(g.name) ? "서부 콘퍼런스" : g.name;
+  const gm = (g.name || "").match(/^Group\s+([A-L])$/i);
+  if (gm) return gm[1].toUpperCase() + "조";  // 예전 챔스·유로파 조별리그
   if (LEAGUES[lg].sport === "soccer") return LEAGUES[lg].name;  // 단일 리그 표
   if (lg === "mlb") return MLB_DIV[g.abbreviation] || g.name;
   return (g.name || "").replace("Eastern Conference", "동부 콘퍼런스").replace("Western Conference", "서부 콘퍼런스");
@@ -858,11 +866,17 @@ async function loadStandings(lg, seasonYr, noFallback){
   });
   if (lg === "unl") out.sort((a, b) => a.code.localeCompare(b.code));
   const yr = (season.displayName || "").match(/\d{4}(-\d{2})?/);
-  return {season:yr ? yr[0] + " 시즌" : "", year:season.year, start:season.startDate, groups:out};
+  return {season:yr ? yr[0] + " 시즌" : "", year:season.year, start:season.startDate, end:season.endDate, groups:out};
 }
 function applyStandings(lg, st){
   const d = D(lg);
-  d.season = st.season; d.year = st.year; d.start = st.start; d.groups = st.groups; d.info = {};
+  d.season = st.season; d.year = st.year; d.start = st.start; d.end = st.end; d.groups = st.groups; d.info = {};
+  if (!seasonOf(lg) && st.year) ST[lg].curYear = Number(st.year);  // 시즌 선택 메뉴 기준 연도
+  if (seasonOf(lg)){
+    const y = Number(seasonOf(lg));
+    d.season = seasonLabel(lg, y) + " 시즌"; d.year = y;
+    d.start = lg === "nba" ? `${y - 1}-09-01` : (lg === "mlb" || lg === "mls") ? `${y}-01-01` : `${y}-07-01`;
+  }  // ESPN 시즌 이름이 현재 시즌으로 올 때가 있음
   for (const g of st.groups) for (const r of g.rows) d.info[r.id] = {...r, group:g.code, groupLabel:g.label, letter:g.letter};
 }
 
@@ -892,6 +906,11 @@ async function initialWeek(lg){
 async function loadMatches(lg){
   const d = D(lg);
   if (LEAGUES[lg].sched === "months") { d.matches = await loadSeasonMatches(lg); return; }
+  if (!d.week && seasonOf(lg)){  // 지난 시즌: 시즌 마지막 즈음 주부터 보여줌 (ESPN 종료일은 믿기 어려워 종목별로 지정)
+    const y = Number(seasonOf(lg));
+    const last = lg === "nba" ? `${y}-06-10` : lg === "mlb" ? `${y}-09-26` : lg === "mls" ? `${y}-10-15` : `${y + 1}-05-17`;
+    d.week = weekStart(new Date(last + "T12:00:00"));
+  }
   if (!d.week) d.week = await initialWeek(lg);
   d.matches = await loadWeek(lg, d.week);
 }
@@ -900,20 +919,21 @@ async function loadMatches(lg){
 async function teamData(lg, id){
   const Lg = LEAGUES[lg];
   let past = [], upcoming = [], info = {};
+  const sy = seasonOf(lg), sq = sy ? `?season=${sy}` : "";  // 지난 시즌이면 그 시즌 일정
   if (Lg.scope === "all"){
     const base = `site/v2/sports/${Lg.sport}/all/teams/${id}/schedule`;
-    const [p, f] = await Promise.all([espn(base, 600), espn(base + "?fixture=true", 300).catch(() => ({}))]);
+    const [p, f] = await Promise.all([espn(base + sq, sy ? 3600 : 600), sy ? {} : espn(base + "?fixture=true", 300).catch(() => ({}))]);
     info = p.team || {};
     past = (p.events || []).map(nEvent);
     upcoming = (f.events || []).map(nEvent);
     if (!Lg.national) past = past.filter(e => !/Friendly|Emirates Cup|Trofeo|Gamper/i.test(e.competition));  // 클럽 친선·프리시즌 경기 제외
   } else {
     const base = `site/v2/sports/${Lg.sport}/${Lg.slug}/teams/${id}/schedule`;
-    const p = await espn(base, 600);
+    const p = await espn(base + sq, sy ? 3600 : 600);
     info = p.team || {};
     let evs = (p.events || []).map(nEvent);
     if (Lg.sport === "baseball" || evs.filter(e => e.completed).length < 10){  // 기본 일정이 포스트시즌뿐일 수 있어 정규시즌도 합침
-      const r = await espn(base + "?seasontype=2", 600).catch(() => ({}));
+      const r = await espn(base + (sq ? sq + "&" : "?") + "seasontype=2", 600).catch(() => ({}));
       evs = evs.concat((r.events || []).map(nEvent));
     }
     const seen = new Set(); evs = evs.filter(e => !seen.has(e.id) && seen.add(e.id));
@@ -1006,7 +1026,16 @@ function renderHeader(){
   $("#mark").textContent = Lg.mark; $("#mark").style.background = Lg.color;
   document.documentElement.style.setProperty("--lgc", Lg.color);  // 리그 색: 헤더 배경·라운드 표시
   $("#lgname").textContent = Lg.name;
-  $("#season").textContent = Lg.disabled ? "준비 중" : (d.season || "불러오는 중…");
+  // 시즌 선택 메뉴 (현재 + 지난 시즌들)
+  const cur = (ST[S.lg] || {}).curYear;
+  if (Lg.disabled) $("#season").textContent = "준비 중";
+  else if (!cur) $("#season").textContent = d.season || "불러오는 중…";
+  else {
+    const step = S.lg === "unl" ? 2 : 1, yrs = [];
+    for (let y = cur, i = 0; i < 12; y -= step, i++) yrs.push(y);
+    const sel = S.season || cur;
+    $("#season").innerHTML = `<select id="seasonSel" class="seasonsel" aria-label="시즌 선택">${yrs.map(y => `<option value="${y}" ${y === Number(sel) ? "selected" : ""}>${esc(seasonLabel(S.lg, y))}${y === cur ? " (현재)" : ""}</option>`).join("")}</select>${S.season ? '<button class="linkbtn" data-season="">현재 시즌으로</button>' : ""}`;
+  }
   document.title = Lg.name + " · SPORTS LIVE!";
   $("#lgwm").style.backgroundImage = Lg.logo ? `url("${Lg.logo}")` : "none";
   $("#lgwmd").style.backgroundImage = (Lg.logoDark || Lg.logo) ? `url("${Lg.logoDark || Lg.logo}")` : "none";
@@ -1169,7 +1198,7 @@ function brRound(kind, ev){
 async function brFetch(lg, yr){
   const Lg = LEAGUES[lg], kind = BR_KIND[lg];
   // MLB 와일드카드는 9월 말이라 9월 전체를 받으면 정규시즌에 밀려 잘림 → 9/27~30은 하루씩
-  const months = kind === "uefa" ? ["02", "03", "04", "05"] : kind === "unl" ? ["03", "06"] : kind === "nba" ? ["04", "05", "06"] : ["0927", "0928", "0929", "0930", "10", "11"];
+  const months = kind === "uefa" ? ["02", "03", "04", "05", "06"] : kind === "unl" ? ["03", "06"] : kind === "nba" ? ["04", "05", "06"] : ["0927", "0928", "0929", "0930", "10", "11"];
   const st = kind === "nba" || kind === "mlb" ? "&seasontype=3" : "";
   const lists = await Promise.all(months.map(m => espn(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${yr}${m}${st}&limit=300`, 600).then(j => j.events || []).catch(() => [])));
   return lists.flat();
@@ -1231,23 +1260,24 @@ function brTree(ties, nRounds){
   return null;
 }
 async function loadBracket(lg){
-  const kind = BR_KIND[lg], d = D(lg);
+  const kind = BR_KIND[lg], d = D(lg), bk = dkeyOf(lg), past = !!seasonOf(lg);
   const y = Number(d.year) || new Date().getFullYear();
-  const cands = kind === "uefa" ? [y + 1, y] : kind === "unl" ? [y + 1, y - 1] : [y, y - 1];
-  if (BR[lg] && BR[lg].loading) return;
-  const prev = BR[lg];
-  BR[lg] = prev && prev.state === "ok" ? {...prev, loading:true} : {state:"loading", loading:true};
+  // 지난 시즌을 고른 경우엔 그 시즌 대진표만
+  const cands = kind === "uefa" ? (past ? [y + 1] : [y + 1, y]) : kind === "unl" ? (past ? [y + 1] : [y + 1, y - 1]) : (past ? [y] : [y, y - 1]);
+  if (BR[bk] && BR[bk].loading) return;
+  const prev = BR[bk];
+  BR[bk] = prev && prev.state === "ok" ? {...prev, loading:true} : {state:"loading", loading:true};
   let found = false;
   for (let i = 0; i < cands.length; i++){
     const evs = await brFetch(lg, cands[i]);
     const ties = brTies(kind, evs);
     if (ties.some(t => t.round !== "po" && t.round !== "3rd")){
-      BR[lg] = {state:"ok", yr:cands[i], last:i > 0, ties, nextYr:i > 0 ? cands[0] : null, t:Date.now()};
+      BR[bk] = {state:"ok", yr:cands[i], last:i > 0, ties, nextYr:i > 0 ? cands[0] : null, t:Date.now(), past};
       found = true;
       break;
     }
   }
-  if (!found) BR[lg] = prev && prev.state === "ok" ? {...prev, loading:false, t:Date.now()} : {state:"empty", nextYr:cands[0]};
+  if (!found) BR[bk] = prev && prev.state === "ok" ? {...prev, loading:false, t:Date.now()} : {state:"empty", nextYr:cands[0], past};
   if (S.lg === lg && S.tab === "standings" && S.stView === "bracket") renderBracket();
 }
 function brTieCard(t, kind){
@@ -1279,11 +1309,12 @@ function brTieCard(t, kind){
   return `<div class="btie ${t.live ? "live" : ""}">${row(ids[0])}${row(ids[1])}${info ? `<div class="binfo">${info}</div>` : ""}</div>`;
 }
 function renderBracket(){
-  const lg = S.lg, kind = BR_KIND[lg], b = BR[lg], rounds = BR_ROUNDS[kind];
+  const lg = S.lg, kind = BR_KIND[lg], b = BR[dkeyOf(lg)], rounds = BR_ROUNDS[kind];
   let html = stViewBar();
   if (!b || b.state === "loading"){ if (!b) loadBracket(lg); $("#main").innerHTML = html + '<div class="loading">대진표를 불러오는 중…</div>'; return; }
   if (b.t && !b.last && Date.now() - b.t > 300000) setTimeout(() => loadBracket(lg), 0);  // 진행 중인 토너먼트는 5분마다 새로
-  if (b.state === "empty"){ $("#main").innerHTML = html + `<div class="card live-empty"><b>아직 토너먼트 경기가 없습니다</b><span class="muted">${b.nextYr}년에 토너먼트가 시작되면 여기에 대진표가 나옵니다.</span></div>`; return; }
+  if (b.state === "empty"){ $("#main").innerHTML = html + (b.past ? `<div class="card live-empty"><b>이 시즌의 토너먼트 기록이 ESPN에 없습니다</b><span class="muted">다른 시즌을 골라 보세요.</span></div>`
+    : `<div class="card live-empty"><b>아직 토너먼트 경기가 없습니다</b><span class="muted">${b.nextYr}년에 토너먼트가 시작되면 여기에 대진표가 나옵니다.</span></div>`); return; }
   const seasonLabel = kind === "uefa" ? `${b.yr - 1}-${String(b.yr).slice(2)} 시즌` : kind === "unl" ? `${b.yr - 1}-${String(b.yr).slice(2)} 네이션스리그` : `${b.yr} ${kind === "nba" ? "플레이오프" : "포스트시즌"}`;
   html += `<div class="live-bar"><h2>🏆 ${esc(seasonLabel)}</h2>${b.last ? `<span class="auto">지난 시즌 · 이번 시즌 ${kind === "nba" ? "플레이오프" : kind === "mlb" ? "포스트시즌" : "토너먼트"}는 ${b.nextYr}년 시작</span>` : ""}</div>`;
   const tree = brTree(b.ties.filter(t => typeof t.round === "number"), rounds.length);
@@ -1512,6 +1543,10 @@ async function teamInjuries(lg, id, roster, t){
 async function fillIntel(lg, id, t){
   const Lg = LEAGUES[lg], sp = Lg.sport;
   const box = () => { const el = $("#intel"); return el && el.dataset.tid === String(id) && modal.open ? el : null; };
+  if (seasonOf(lg)){  // 지난 시즌: 현재 선수단·부상·뉴스는 맞지 않으므로 생략
+    const el = box(); if (el) el.innerHTML = `<div class="card empty" style="margin-bottom:12px">${esc(seasonLabel(lg, seasonOf(lg)))} 시즌 기록을 보고 있습니다. 주목할 선수·부상·뉴스는 현재 시즌에서만 나옵니다.</div>`;
+    return;
+  }
   const [roster, news] = await Promise.all([
     espn(`site/v2/sports/${sp}/${Lg.slug}/teams/${id}/roster`, 1800).catch(() => null),
     espn(`site/v2/sports/${sp}/${Lg.slug}/news?team=${id}&limit=6`, 600).catch(() => null)]);
@@ -2496,7 +2531,9 @@ async function loadLeague(lg, force){
   d.loading = (async () => {
     $("#upd").textContent = "불러오는 중…";
     try {
-      applyStandings(lg, await loadStandings(lg));
+      const st = await loadStandings(lg, seasonOf(lg) || undefined);
+      if (seasonOf(lg) && !st.groups.length) throw new Error("이 시즌의 기록이 ESPN에 없습니다. 다른 시즌을 골라 주세요.");
+      applyStandings(lg, st);
       await loadMatches(lg);
       d.loaded = true;
       if (S.lg === lg) render();
@@ -2516,13 +2553,32 @@ function schedulePoll(){
   const now = Date.now(), lg = S.lg;
   const active = D().matches.some(m => m.state === "in" || (m.state === "pre" && new Date(m.date).getTime() < now + 10 * 60000 && new Date(m.date).getTime() > now - 4 * 3600000));
   if (active) S.poll = setTimeout(async () => {  // 경기 중에는 1분마다 자동 갱신
-    if (S.lg !== lg) return;
+    if (S.lg !== lg || S.season) return;  // 지난 시즌은 자동 갱신 안 함
     try { applyStandings(lg, await loadStandings(lg)); await loadMatches(lg); if (S.lg === lg && !modal.open) render(); } catch {}
     schedulePoll();
   }, 60000);
 }
+// 시즌 이름: 축구(가을~봄) 2025-26, NBA 2025-26(연도는 끝나는 해), MLB·MLS 2025
+function seasonLabel(lg, y){
+  y = Number(y);
+  if (lg === "nba") return `${y - 1}-${String(y).slice(2)}`;
+  if (lg === "mlb" || lg === "mls") return String(y);
+  return `${y}-${String(y + 1).slice(2)}`;
+}
+function setSeason(y){
+  const cur = (ST[S.lg] || {}).curYear;
+  S.season = !y || Number(y) === cur ? null : Number(y);
+  S.chip = "ALL"; S.mStatus = "ALL";
+  if (S.tab === "live" || S.tab === "my" || S.tab === "talk") S.tab = "standings";  // 지난 시즌엔 실시간 탭 대신 순위표
+  window.scrollTo(0, 0);
+  render();
+  if (!D().loaded) loadLeague(S.lg);
+}
+document.addEventListener("change", e => { if (e.target.id === "seasonSel") setSeason(e.target.value); });
+
 function setLeague(lg){
   if (!LEAGUES[lg]) lg = DEFAULT_LG;
+  if (S.lg !== lg) S.season = null;  // 리그를 바꾸면 현재 시즌으로
   S.lg = lg; S.chip = "ALL"; S.mStatus = "ALL";
   try { localStorage.setItem("league", lg); } catch {}
   if (location.hash.slice(1) !== lg) history.replaceState(null, "", "#" + lg);
@@ -2533,10 +2589,11 @@ function setLeague(lg){
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-pick],[data-mymatch],[data-stview],[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
+  const t = e.target.closest("[data-pick],[data-mymatch],[data-season],[data-stview],[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
   if (!t) return;
   if (t.dataset.pick){ e.preventDefault(); const [lg, id] = t.dataset.pick.split("|"); togglePick(lg, id); return; }
   if (t.dataset.mymatch){ const [lg, id] = t.dataset.mymatch.split("|"); openMyMatch(lg, id); return; }
+  if (t.dataset.season !== undefined){ setSeason(t.dataset.season); return; }
   if (t.dataset.stview){ S.stView = t.dataset.stview; try { localStorage.setItem("stView", S.stView); } catch {} render(); return; }
   if (t.dataset.lg) setLeague(t.dataset.lg);
   else if (t.dataset.tab){ S.tab = t.dataset.tab; window.scrollTo(0, 0); render(); }
