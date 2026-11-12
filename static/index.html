@@ -43,6 +43,55 @@ header.top::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
 @media (prefers-color-scheme: dark){
   header.top{background:linear-gradient(115deg, color-mix(in srgb, var(--lgc, #1d4ed8) 28%, var(--surface)) 0%, color-mix(in srgb, var(--lgc, #1d4ed8) 10%, var(--surface)) 45%, var(--surface) 75%, color-mix(in srgb, var(--lgc, #1d4ed8) 16%, var(--surface)) 100%)}
 }
+/* 커뮤니티 */
+.nickchip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--text)}
+.nickchip i{font-style:normal;opacity:.6;margin-left:2px}
+.adm{font-size:11px;font-weight:800;color:#fff;background:#0f766e;border-radius:6px;padding:2px 6px}
+.tkseg{display:flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);margin-bottom:12px}
+.tkseg button{flex:1;border:0;background:none;border-radius:9px;padding:9px 6px;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer}
+.tkseg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(16,24,40,.14)}
+.tkseg.sm{margin-bottom:10px}.tkseg.sm button{padding:7px 6px;font-size:13px}
+.tkbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12.5px}
+.btn.tkbtn{background:var(--lgc, var(--accent));border-color:var(--lgc, var(--accent));color:#fff;font-weight:700;white-space:nowrap}
+.btn.tkbtn:hover{filter:brightness(1.1);background:var(--lgc, var(--accent))}
+.btn.danger{color:var(--loss);border-color:var(--loss)}
+.btn.on{background:var(--win-bg);color:var(--win);border-color:var(--win)}
+.linkbtn{border:0;background:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;padding:2px 4px}
+.tklist{display:grid;gap:8px;margin-bottom:16px}
+.tkpost{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;box-shadow:var(--shadow);min-width:0}
+.tkpost:hover{border-color:var(--lgc, var(--accent))}
+.tkthumb{width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none;background:var(--surface-2)}
+.tkmain{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.tkt{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tkb{color:var(--muted);font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.tkm{font-size:12px;color:var(--muted)}
+em.me{font-style:normal;font-size:10px;font-weight:800;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 3px}
+.tkin{display:block;width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;margin-bottom:8px;resize:vertical}
+.tkin:focus{outline:2px solid color-mix(in srgb, var(--lgc, var(--accent)) 50%, transparent);border-color:transparent}
+.tkerr{color:var(--loss);font-size:13px;min-height:1em;margin-top:4px}
+.tkfile{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600}
+.tkfile input{display:none}
+.tkprev{display:block;max-width:100%;max-height:220px;border-radius:10px;margin-top:8px}
+.tkhead h2{margin:8px 0 4px;font-size:19px;word-break:break-word}
+.tkimgfull{display:block;max-width:100%;max-height:520px;border-radius:12px;margin:12px 0;object-fit:contain;background:var(--surface-2)}
+.tkbody{white-space:pre-wrap;word-break:break-word;line-height:1.6;margin:12px 0;font-size:14.5px}
+.tkacts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+ul.tkcs{list-style:none;margin:0 0 10px;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+ul.tkcs li{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13.5px;word-break:break-word}
+ul.tkcs li:last-child{border-bottom:0}
+ul.tkcs li div{margin-top:2px;white-space:pre-wrap}
+ul.tkcs li.adm{background:color-mix(in srgb, #0f766e 9%, var(--surface))}
+ul.tkcs li.adm b{color:#0f766e}
+ul.tkcs .linkbtn{float:right}
+.faq{display:grid;gap:6px}
+.faq details{background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.faq summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+.faq summary::-webkit-details-marker{display:none}
+.faq .chev{font-style:normal;color:var(--muted);transition:transform .15s;flex:none}
+.faq details[open] .chev{transform:rotate(180deg)}
+.faq details>div{padding:0 14px 12px;color:var(--muted);line-height:1.6;font-size:13.5px}
+.faq details>div b{color:var(--text)}
+nav.tabs button.tab-talk{white-space:nowrap}
 /* 경기 카드 라운드 표시 */
 .mid .rd{font-style:normal;font-size:10px;font-weight:700;color:var(--lgc, var(--accent));line-height:1.1;white-space:nowrap;letter-spacing:-.2px}
 @media (prefers-color-scheme: dark){ .mid .rd{color:color-mix(in srgb, var(--lgc, #7096ff) 45%, #fff)} }
@@ -458,7 +507,11 @@ ul.news small{font-size:11px}
   .lgchips{gap:5px}
   .lgc{font-size:12.5px;padding:5px 11px;gap:5px}
   .lgc .mk{display:none}
-  nav.tabs button{padding:9px 8px;font-size:13.5px}
+  nav.tabs{gap:0}
+  nav.tabs button{padding:9px 5px;font-size:13px;letter-spacing:-.4px}
+  nav.tabs button.tab-live,nav.tabs button.tab-my{gap:3px}
+  nav.tabs .ldot{width:7px;height:7px}
+  .tkbar{flex-wrap:wrap}
   .tl-long{display:none}
 }
 </style>
@@ -482,7 +535,8 @@ ul.news small{font-size:11px}
       <button data-tab="matches"><span class="tl-long">경기 </span>일정·결과</button>
       <button data-tab="teams">팀 분석</button>
       <button data-tab="live" class="tab-live"><span class="ldot"></span>LIVE<span class="lcnt" id="lcnt"></span></button>
-      <button data-tab="my" class="tab-my"><span class="mystar">★</span>My 경기<span class="lcnt" id="mycnt"></span></button>
+      <button data-tab="my" class="tab-my"><span class="mystar">★</span>My<span class="tl-long"> 경기</span><span class="lcnt" id="mycnt"></span></button>
+      <button data-tab="talk" class="tab-talk">💬 커뮤니티</button>
     </nav>
   </div>
 </header>
@@ -845,7 +899,7 @@ function renderHeader(){
       <span class="mk" style="background:${x.color}">${x.mark}</span>${esc(x.short)}${x.disabled ? "<small>준비 중</small>" : ""}</button>`; }).join("")}</div>`;
   try { localStorage.setItem("last." + grp.keys[0], S.lg); } catch {}
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
-  $("#tabs").style.display = Lg.disabled && S.tab !== "my" ? "none" : "";
+  $("#tabs").style.display = Lg.disabled && S.tab !== "my" && S.tab !== "talk" ? "none" : "";
   updateLiveBadge();
   updateMyBadge();
 }
@@ -853,6 +907,7 @@ function render(){
   renderHeader();
   if (S.tab !== "my") clearTimeout(S.myPoll);
   if (S.tab === "my") return renderMy();  // My 경기는 리그와 상관없이 표시
+  if (S.tab === "talk") return renderTalk();  // 커뮤니티도 리그와 상관없음
   if (L().disabled) return renderSoon();
   if (!D().loaded) { $("#main").innerHTML = '<div class="loading">데이터를 불러오는 중…</div>'; return; }
   if (S.tab !== "live") clearTimeout(S.livePoll);
@@ -1054,7 +1109,7 @@ const statMap = (names, vals) => { const o = {}; (names || []).forEach((k, i) =>
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; };
 const md = iso => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()}`; };
 const timeAgo = iso => { const s = (Date.now() - new Date(iso)) / 1000; if (!isFinite(s)) return "";
-  return s < 3600 ? Math.max(1, Math.round(s / 60)) + "분 전" : s < 86400 ? Math.round(s / 3600) + "시간 전" : Math.round(s / 86400) + "일 전"; };
+  return s < 60 ? "방금 전" : s < 3600 ? Math.round(s / 60) + "분 전" : s < 86400 ? Math.round(s / 3600) + "시간 전" : Math.round(s / 86400) + "일 전"; };
 
 async function keyPlayers(lg, id, roster){
   const sp = LEAGUES[lg].sport, list = flatRoster(roster);
@@ -1868,6 +1923,228 @@ async function openMyMatch(lg, id){
   if (!D(lg).loaded){ await (D(lg).loading || loadLeague(lg)); }
   openMatch(id);
 }
+
+// ================================================================ 커뮤니티 (자랑하기 · 문의 · FAQ)
+// Supabase 프로젝트 주소와 공개(anon) 키. 공개 키는 원래 브라우저에서 쓰도록 만든 값이라 넣어도 됩니다.
+// 비어 있으면 게시판은 '준비 중'으로 나오고 FAQ만 보입니다. 설정 방법: supabase_setup.sql 맨 위 설명.
+const SB = {url:"", key:""};
+const TK = {cat:"brag", posts:{}, t:{}, err:null, loading:false};
+const sbOn = () => !!(SB.url && SB.key);
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+const lsJson = (k, d) => { try { return JSON.parse(lsGet(k, "")) || d; } catch { return d; } };
+function mySecret(){
+  let s = lsGet("tk.secret", "");
+  if (s.length < 32){ const a = new Uint8Array(24); crypto.getRandomValues(a); s = [...a].map(x => x.toString(16).padStart(2, "0")).join(""); lsSet("tk.secret", s); }
+  return s;
+}
+const myNick = () => lsGet("tk.nick", "");
+const isMine = (kind, id) => lsJson("tk.mine." + kind, []).includes(id);
+const addMine = (kind, id) => { const a = lsJson("tk.mine." + kind, []); a.push(id); lsSet("tk.mine." + kind, JSON.stringify(a.slice(-300))); };
+const adminPass = () => { try { return sessionStorage.getItem("tk.admin") || ""; } catch { return ""; } };
+const RESERVED = /(운영자|관리자|운영진|admin|sportslive|스포츠라이브)/i;
+
+async function sb(path, opt = {}){
+  let r;
+  try { r = await fetch(SB.url.replace(/\/$/, "") + path, {...opt, headers:{apikey:SB.key, Authorization:"Bearer " + SB.key, "Content-Type":"application/json", ...(opt.headers || {})}}); }
+  catch { throw new Error("서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요."); }
+  const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch {}
+  if (!r.ok) throw new Error((j && (j.message || j.error || j.msg)) || "서버 오류 (" + r.status + ")");
+  return j;
+}
+const rpc = (fn, args) => sb("/rest/v1/rpc/" + fn, {method:"POST", body:JSON.stringify(args)});
+const imgOk = u => typeof u === "string" && sbOn() && u.startsWith(SB.url.replace(/\/$/, "") + "/storage/v1/object/public/brag/");
+
+async function loadTalk(cat, force){
+  if (!sbOn() || cat === "faq") return;
+  if (!force && TK.t[cat] && Date.now() - TK.t[cat] < 30000) return;
+  TK.loading = true;
+  try {
+    TK.posts[cat] = await sb(`/rest/v1/posts?select=id,created_at,category,nickname,title,body,image_url,likes,comment_count&category=eq.${cat}&order=created_at.desc&limit=60`);
+    TK.t[cat] = Date.now(); TK.err = null;
+  } catch (e) { TK.err = e.message; }
+  finally { TK.loading = false; }
+  if (S.tab === "talk" && TK.cat === cat) renderTalk(true);
+}
+
+const FAQ = [
+  ["휴대폰에 앱으로 설치하려면?", "안드로이드는 Chrome에서 링크를 열고 위쪽 <b>앱 설치</b> 버튼을 누르세요. 아이폰은 Safari에서 <b>공유 → 홈 화면에 추가</b>를 누르면 됩니다. 카카오톡 안에서 열면 설치가 안 되니 <b>다른 브라우저로 열기</b>를 먼저 눌러 주세요."],
+  ["데이터는 어디서 오고, 얼마나 자주 바뀌나요?", "경기·순위·선수 기록은 ESPN 공개 데이터를 씁니다. LIVE·My 경기 탭은 경기 중 <b>20초</b>마다, 다른 화면은 경기 중 1분마다 자동으로 새로 받아옵니다. 오른쪽 위 ↻ 버튼으로 바로 새로고침할 수도 있어요."],
+  ["배당은 프로토 배당인가요?", "아닙니다. ESPN이 제공하는 미국 DraftKings의 <b>경기 전 기준</b> 배당을 소수점으로 바꿔 보여줍니다. 프로토·국내 사이트 배당과 다를 수 있으니 참고용으로만 봐 주세요."],
+  ["KBO는 언제 생기나요?", "KBO는 무료로 쓸 수 있는 공개 데이터가 없어서 준비 중입니다. 쓸 수 있는 출처가 생기면 바로 추가할게요."],
+  ["My 경기에 담은 건 다른 폰에서도 보이나요?", "아니요. 담은 경기는 <b>그 기기에만</b> 저장되고, 경기(또는 담은 날) 후 7일이 지나면 자동으로 정리됩니다."],
+  ["라운드 표시가 공식 라운드와 달라요.", "ESPN이 라운드 번호를 주지 않아서, 두 팀이 이번 시즌 같은 대회에서 치른 경기 수로 계산합니다. 연기됐다가 나중에 치른 경기는 1~2 차이가 날 수 있어요."],
+  ["부상 정보가 정확한가요?", "팀 창을 열 때마다 ESPN 최신 부상 보고를 불러옵니다. NBA·MLB는 자세히 나오지만 <b>축구는 ESPN 부상 정보가 적어서</b> 빠질 수 있습니다. 부상 보고 후 경기에 뛰었으면 '복귀'로 표시해요."],
+  ["선수 이름이 영어로 나와요.", "선수 한국어 이름은 위키데이터에서 찾아오는데, 거기에 한국어 이름이 없는 선수는 영어로 나옵니다."],
+  ["예전 화면이 보여요.", "PC는 <b>Ctrl+F5</b>, 폰 앱은 앱을 완전히 껐다 켜면 새 버전으로 바뀝니다."],
+  ["게시판 이용 규칙", "욕설·비방, 광고, 개인정보(전화번호·계좌 등), <b>불법 사설 도박 사이트 홍보</b>는 금지이며 운영자가 삭제합니다. 글은 가입 없이 닉네임으로 쓰고, 내 글은 같은 기기에서만 지울 수 있어요."],
+];
+
+function renderTalk(fromLoad){
+  const cats = [["brag", "🏆 자랑하기"], ["qna", "🙋 문의"], ["faq", "❓ FAQ"]];
+  const nick = myNick();
+  let html = `<div class="live-bar"><h2>💬 커뮤니티</h2>
+    <span class="auto"><button class="nickchip" data-tk="nick">👤 ${nick ? esc(nick) : "닉네임 정하기"} <i>✏️</i></button>${adminPass() ? '<span class="adm">운영자 모드</span>' : ""}</span></div>
+    <div class="tkseg">${cats.map(([k, l]) => `<button class="${TK.cat === k ? "on" : ""}" data-tk="cat" data-v="${k}">${l}</button>`).join("")}</div>`;
+  if (TK.cat === "faq"){
+    html += `<div class="faq">${FAQ.map(([q, a]) => `<details><summary>${q}<i class="chev">▼</i></summary><div>${a}</div></details>`).join("")}</div>
+      <div class="card live-empty" style="margin-top:12px"><b>원하는 답이 없나요?</b><span class="muted">문의 게시판에 남겨 주시면 운영자가 답변해 드립니다.</span>
+      <div style="margin-top:10px"><button class="btn tkbtn" data-tk="write" data-v="qna">🙋 문의 글 쓰기</button></div></div>
+      <div style="text-align:right;margin:10px 2px 0"><button class="linkbtn" data-tk="admin">${adminPass() ? "운영자 모드 끄기" : "운영자"}</button></div>`;
+    $("#main").innerHTML = html; return;
+  }
+  if (!sbOn()){
+    html += `<div class="card live-empty"><b>게시판 준비 중입니다</b><span class="muted">운영자가 게시판 서버를 연결하면 바로 열립니다. 그동안 FAQ를 확인해 주세요.</span></div>`;
+    $("#main").innerHTML = html; return;
+  }
+  const list = TK.posts[TK.cat];
+  if (!fromLoad) loadTalk(TK.cat);
+  html += `<div class="tkbar"><span class="muted">${TK.cat === "brag" ? "적중 인증, 응원팀 승리 등 자랑하고 싶은 걸 올려 주세요" : "궁금한 점이나 오류를 남겨 주시면 운영자가 답변합니다"}</span>
+    <button class="btn tkbtn" data-tk="write" data-v="${TK.cat}">✏️ 글쓰기</button></div>`;
+  if (TK.err) html += `<div class="card empty" style="margin-bottom:10px">불러오지 못했습니다: ${esc(TK.err)}</div>`;
+  if (!list) html += '<div class="loading">글을 불러오는 중…</div>';
+  else if (!list.length) html += `<div class="card live-empty"><b>아직 글이 없습니다</b><span class="muted">첫 글을 남겨 보세요!</span></div>`;
+  else html += `<div class="tklist">${list.map(p => `<div class="tkpost" data-tk="open" data-v="${p.id}" role="button" tabindex="0">
+      ${imgOk(p.image_url) ? `<img class="tkthumb" src="${esc(p.image_url)}" alt="" loading="lazy">` : ""}
+      <div class="tkmain"><b class="tkt">${esc(p.title)}</b><span class="tkb">${esc(p.body)}</span>
+        <span class="tkm">${esc(p.nickname)}${isMine("p", p.id) ? ' <em class="me">나</em>' : ""} · ${esc(timeAgo(p.created_at))}${p.category === "brag" ? ` · 👍 ${p.likes}` : ""} · 💬 ${p.comment_count}</span></div></div>`).join("")}</div>`;
+  $("#main").innerHTML = html;
+}
+
+function nickForm(after){
+  openModal(`<h2 style="margin:4px 0 6px">닉네임 정하기</h2><p class="muted" style="margin:0 0 10px">게시판에 표시될 이름입니다. 2~12자, 이 기기에 저장됩니다.</p>
+    <input id="tknick" class="tkin" maxlength="12" value="${esc(myNick())}" placeholder="예: 토트넘사랑">
+    <div class="tkerr" id="tkerr"></div><div style="text-align:right;margin-top:10px"><button class="btn tkbtn" data-tk="nicksave" data-v="${after || ""}">저장</button></div>`);
+  setTimeout(() => $("#tknick")?.focus(), 50);
+}
+function writeForm(cat){
+  if (!sbOn()){ alert("게시판이 아직 준비 중입니다."); return; }
+  if (!myNick()) return nickForm("write:" + cat);
+  openModal(`<h2 style="margin:4px 0 10px">✏️ 글쓰기</h2>
+    <div class="tkseg sm">${[["brag", "🏆 자랑하기"], ["qna", "🙋 문의"]].map(([k, l]) => `<button class="${cat === k ? "on" : ""}" data-tk="wcat" data-v="${k}">${l}</button>`).join("")}</div>
+    <input id="tkt" class="tkin" maxlength="60" placeholder="제목 (60자까지)">
+    <textarea id="tkb" class="tkin" rows="6" maxlength="2000" placeholder="${cat === "qna" ? "문의 내용을 적어 주세요. 오류라면 어떤 화면에서 어떻게 됐는지 알려 주시면 빨라요." : "내용 (2000자까지)"}"></textarea>
+    <div id="tkimgrow" style="${cat === "brag" ? "" : "display:none"}"><label class="tkfile">📷 사진 첨부 (선택)<input type="file" id="tkimg" accept="image/*"></label><img id="tkprev" class="tkprev" alt="" hidden></div>
+    <div class="muted" style="font-size:12px;margin-top:6px">닉네임: <b>${esc(myNick())}</b> · 욕설·광고·개인정보·불법 도박 홍보는 삭제됩니다.</div>
+    <div class="tkerr" id="tkerr"></div>
+    <div style="text-align:right;margin-top:10px"><button class="btn tkbtn" id="tksubmit" data-tk="submit" data-v="${cat}">올리기</button></div>`);
+  $("#tkimg")?.addEventListener("change", e => { const f = e.target.files[0], p = $("#tkprev"); if (f){ p.src = URL.createObjectURL(f); p.hidden = false; } else p.hidden = true; });
+}
+// 사진은 긴 변 1280px JPEG로 줄여서 올림
+function shrinkImage(file){
+  return new Promise((res, rej) => {
+    const img = new Image(); img.onload = () => {
+      const s = Math.min(1, 1280 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => b ? res(b) : rej(new Error("사진을 처리하지 못했습니다")), "image/jpeg", .85);
+    };
+    img.onerror = () => rej(new Error("사진을 열지 못했습니다")); img.src = URL.createObjectURL(file);
+  });
+}
+async function submitPost(cat){
+  const t = $("#tkt").value.trim(), b = $("#tkb").value.trim(), f = $("#tkimg")?.files?.[0], err = $("#tkerr"), btn = $("#tksubmit");
+  if (!t || !b){ err.textContent = "제목과 내용을 입력해 주세요."; return; }
+  btn.disabled = true; btn.textContent = "올리는 중…"; err.textContent = "";
+  try {
+    let url = null;
+    if (cat === "brag" && f){
+      const blob = await shrinkImage(f);
+      if (blob.size > 2 * 1024 * 1024) throw new Error("사진이 너무 큽니다 (2MB 이하)");
+      const path = `u/${Date.now()}-${mySecret().slice(0, 6)}${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const r = await fetch(`${SB.url.replace(/\/$/, "")}/storage/v1/object/brag/${path}`, {method:"POST", headers:{apikey:SB.key, Authorization:"Bearer " + SB.key, "Content-Type":"image/jpeg"}, body:blob});
+      if (!r.ok) throw new Error("사진 올리기 실패 (" + r.status + ")");
+      url = `${SB.url.replace(/\/$/, "")}/storage/v1/object/public/brag/${path}`;
+    }
+    const id = await rpc("create_post", {p_category:cat, p_nickname:myNick(), p_title:t, p_body:b, p_image_url:url, p_secret:mySecret()});
+    addMine("p", id);
+    TK.cat = cat; TK.t[cat] = 0;
+    modal.close(); S.tab = "talk"; render(); await loadTalk(cat, true); openPost(id);
+  } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = "올리기"; }
+}
+
+async function openPost(id){
+  S.modalMatch = null;
+  const p = Object.values(TK.posts).flat().find(x => x && x.id === Number(id));
+  if (!p){ return; }
+  openModal(`<div class="loading">불러오는 중…</div>`);
+  let cs = [];
+  try { cs = await sb(`/rest/v1/comments?select=id,post_id,created_at,nickname,body,is_admin&post_id=eq.${p.id}&order=created_at.asc&limit=200`); } catch (e) { TK.err = e.message; }
+  const adm = adminPass(), liked = lsJson("tk.liked", []).includes(p.id);
+  openModal(`<div class="tkview">
+    <div class="tkhead"><span class="pill">${p.category === "brag" ? "🏆 자랑하기" : "🙋 문의"}</span><h2>${esc(p.title)}</h2>
+      <div class="muted">${esc(p.nickname)}${isMine("p", p.id) ? ' <em class="me">나</em>' : ""} · ${esc(new Date(p.created_at).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}))}</div></div>
+    ${imgOk(p.image_url) ? `<a href="${esc(p.image_url)}" target="_blank" rel="noopener"><img class="tkimgfull" src="${esc(p.image_url)}" alt=""></a>` : ""}
+    <div class="tkbody">${esc(p.body)}</div>
+    <div class="tkacts">${p.category === "brag" ? `<button class="btn ${liked ? "on" : ""}" data-tk="like" data-v="${p.id}" ${liked ? "disabled" : ""}>👍 추천 ${p.likes}</button>` : ""}
+      ${isMine("p", p.id) ? `<button class="btn" data-tk="del" data-v="${p.id}">🗑 내 글 삭제</button>` : ""}
+      ${adm ? `<button class="btn danger" data-tk="adel" data-v="${p.id}">운영자 삭제</button>` : ""}</div>
+    <div class="sec"><div class="sec-h"><h3>댓글 ${cs.length}</h3></div>
+      <ul class="tkcs">${cs.map(c => `<li class="${c.is_admin ? "adm" : ""}"><b>${c.is_admin ? "🛡 운영자" : esc(c.nickname)}</b>${isMine("c", c.id) ? ' <em class="me">나</em>' : ""}<small class="muted"> · ${esc(timeAgo(c.created_at))}</small>
+        ${isMine("c", c.id) ? `<button class="linkbtn" data-tk="cdel" data-v="${c.id}" data-p="${p.id}">삭제</button>` : adm ? `<button class="linkbtn" data-tk="acdel" data-v="${c.id}" data-p="${p.id}">운영자 삭제</button>` : ""}
+        <div>${esc(c.body)}</div></li>`).join("") || '<li class="muted">첫 댓글을 남겨 보세요.</li>'}</ul>
+      <textarea id="tkc" class="tkin" rows="2" maxlength="500" placeholder="${adm ? "운영자로 답변" : myNick() ? esc(myNick()) + " (으)로 댓글" : "댓글 (닉네임을 먼저 정해 주세요)"}"></textarea>
+      <div class="tkerr" id="tkerr"></div>
+      <div style="text-align:right;margin-top:6px"><button class="btn tkbtn" data-tk="cmt" data-v="${p.id}">${adm ? "🛡 운영자 답변" : "댓글 등록"}</button></div></div></div>`);
+}
+
+async function tkAction(t){
+  const a = t.dataset.tk, v = t.dataset.v;
+  const err = m => { const e = $("#tkerr"); if (e) e.textContent = m; else alert(m); };
+  try {
+    if (a === "cat"){ TK.cat = v; renderTalk(); }
+    else if (a === "nick") nickForm();
+    else if (a === "nicksave"){
+      const n = $("#tknick").value.trim();
+      if (n.length < 2 || n.length > 12) return err("닉네임은 2~12자로 정해 주세요.");
+      if (RESERVED.test(n.replace(/\s/g, ""))) return err("운영자로 오해될 수 있는 닉네임은 쓸 수 없습니다.");
+      lsSet("tk.nick", n); modal.close();
+      if (v && v.startsWith("write:")) writeForm(v.slice(6)); else if (S.tab === "talk") renderTalk();
+    }
+    else if (a === "write") writeForm(v);
+    else if (a === "wcat"){ document.querySelectorAll('[data-tk="wcat"]').forEach(b => b.classList.toggle("on", b === t)); $("#tksubmit").dataset.v = v; $("#tkimgrow").style.display = v === "brag" ? "" : "none"; }
+    else if (a === "submit") await submitPost(v);
+    else if (a === "open") openPost(v);
+    else if (a === "like"){
+      const n = await rpc("like_post", {p_id:Number(v)});
+      const l = lsJson("tk.liked", []); l.push(Number(v)); lsSet("tk.liked", JSON.stringify(l.slice(-500)));
+      const p = Object.values(TK.posts).flat().find(x => x && x.id === Number(v)); if (p) p.likes = n ?? p.likes + 1;
+      t.disabled = true; t.classList.add("on"); t.textContent = "👍 추천 " + (p ? p.likes : "");
+    }
+    else if (a === "del" || a === "adel"){
+      if (!confirm("이 글을 삭제할까요? 되돌릴 수 없습니다.")) return;
+      const ok = a === "del" ? await rpc("delete_post", {p_id:Number(v), p_secret:mySecret()}) : await rpc("admin_delete_post", {p_id:Number(v), p_pass:adminPass()});
+      if (!ok) return err("삭제하지 못했습니다.");
+      modal.close(); TK.t[TK.cat] = 0; await loadTalk(TK.cat, true);
+    }
+    else if (a === "cmt"){
+      const b = $("#tkc").value.trim(); if (!b) return;
+      if (adminPass()) await rpc("admin_comment", {p_post:Number(v), p_body:b, p_pass:adminPass()});
+      else {
+        if (!myNick()) return nickForm();
+        const id = await rpc("add_comment", {p_post:Number(v), p_nickname:myNick(), p_body:b, p_secret:mySecret()}); addMine("c", id);
+      }
+      const p = Object.values(TK.posts).flat().find(x => x && x.id === Number(v)); if (p) p.comment_count++;
+      openPost(v); if (S.tab === "talk") renderTalk(true);
+    }
+    else if (a === "cdel" || a === "acdel"){
+      if (!confirm("댓글을 삭제할까요?")) return;
+      const ok = a === "cdel" ? await rpc("delete_comment", {p_id:Number(v), p_secret:mySecret()}) : await rpc("admin_delete_comment", {p_id:Number(v), p_pass:adminPass()});
+      if (!ok) return err("삭제하지 못했습니다.");
+      const p = Object.values(TK.posts).flat().find(x => x && x.id === Number(t.dataset.p)); if (p) p.comment_count = Math.max(0, p.comment_count - 1);
+      openPost(t.dataset.p); if (S.tab === "talk") renderTalk(true);
+    }
+    else if (a === "admin"){
+      if (adminPass()){ try { sessionStorage.removeItem("tk.admin"); } catch {} renderTalk(); return; }
+      if (!sbOn()) return alert("게시판 서버가 아직 연결되지 않았습니다.");
+      const pw = prompt("운영자 비밀번호");
+      if (!pw) return;
+      if (await rpc("admin_check", {p_pass:pw})){ try { sessionStorage.setItem("tk.admin", pw); } catch {} alert("운영자 모드가 켜졌습니다. 이 창을 닫으면 꺼집니다."); renderTalk(); }
+      else alert("비밀번호가 틀렸습니다.");
+    }
+  } catch (e) { err(e.message); }
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-tk]"); if (t){ e.preventDefault(); tkAction(t); } });
 
 // ================================================================ 로딩
 async function loadLeague(lg, force){
