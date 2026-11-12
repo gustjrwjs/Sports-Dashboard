@@ -89,7 +89,17 @@ table.otbl td.hit small{color:var(--win)}
 table.otbl td.ln{color:var(--muted);font-weight:700;white-space:nowrap}
 table.otbl td.ores{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
 table.otbl td.ores.on{color:var(--live)}
-/* 1·2차전 표 */
+/* 1·2차전: 차전별 결과 줄 */
+.blegbox{margin-top:5px;padding-top:4px;border-top:1px dashed var(--border);display:grid;gap:2px}
+.bleg{display:flex;align-items:center;gap:5px;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--text)}
+.bleg .lk{color:var(--muted);font-size:10.5px;font-weight:700;width:30px;flex:none}
+.bleg .lg{width:15px;height:15px;flex:none}
+.bleg b{min-width:10px;text-align:center;font-weight:800}
+.bleg .col{color:var(--muted);font-size:10px}
+.bleg .ab{font-size:9px;font-weight:800;color:var(--muted);width:24px;text-align:center;flex:none}
+.bleg .hn{margin-left:auto;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.bleg.live b{color:var(--live)}
+/* 1·2차전 표 (이전 방식, 미사용) */
 .bracket.two .bcol{width:250px}
 table.blegs{width:100%;border-collapse:collapse;table-layout:fixed;font-variant-numeric:tabular-nums}
 table.blegs thead td{font-size:9.5px;color:var(--muted);text-align:center;padding:0 0 2px;font-weight:600}
@@ -1205,17 +1215,20 @@ function brTieCard(t, kind){
   const started = t.games.some(g => g.done || g.state === "in");
   // 1·2차전으로 치르는 대결: 차전별 점수(홈/원정) + 합계
   if (!t.series && t.games.length > 1){
-    const legCell = (g, id) => {
-      const c = g.comp.competitors.find(x => String(x.team.id) === id), home = c && c.homeAway === "home";
-      const sc = g.done || g.state === "in" ? (c ? c.score : "") : "-";
-      return `<td class="${g.state === "in" ? "live" : ""}">${esc(sc ?? "")}<i>${home ? "홈" : "원정"}</i></td>`;
+    // 위: 팀별 합계 / 아래: 차전별 결과를 '홈팀 점수 : 원정팀 점수'로 한 줄씩
+    const top = id => { const tm = t.teams[id], w = t.winner === id, l = t.winner && !w;
+      return `<div class="brow ${w ? "w" : ""} ${l ? "l" : ""}">${logo(tm.logo)}<span class="bn">${esc(ko(tm.name))}</span>${w ? '<em class="wbadge">승</em>' : ""}<b class="bs">${started ? esc(tm.agg ?? tm.goals) : ""}</b></div>`; };
+    const leg = (g, i) => {
+      const cs = g.comp.competitors, h = cs.find(x => x.homeAway === "home") || cs[0], a = cs.find(x => x !== h) || cs[1];
+      const played = g.done || g.state === "in";
+      const hn = ko(t.teams[String(h.team.id)]?.name || h.team.displayName);
+      const em = c => { const u = c.team.logo || t.teams[String(c.team.id)]?.logo; return u ? logo(u) : `<span class="ab">${esc(c.team.abbreviation || "")}</span>`; };
+      return `<div class="bleg ${g.state === "in" ? "live" : ""}"><span class="lk">${i + 1}차전</span>
+        ${em(h)}<b>${played ? esc(h.score) : ""}</b><span class="col">${played ? ":" : "vs"}</span><b>${played ? esc(a.score) : ""}</b>${em(a)}
+        <span class="hn">${played ? esc(hn) + " 홈" : esc(md(g.date))}</span></div>`;
     };
-    const tr = id => { const tm = t.teams[id], w = t.winner === id, l = t.winner && !w;
-      return `<tr class="${w ? "w" : ""} ${l ? "l" : ""}"><th>${logo(tm.logo)}<span class="bn">${esc(ko(tm.name))}</span>${w ? '<em class="wbadge">승</em>' : ""}</th>
-        ${t.games.map(g => legCell(g, id)).join("")}<td class="agg">${started ? esc(tm.agg ?? tm.goals) : ""}</td></tr>`; };
-    const info = t.live ? '<span class="live">● 진행 중</span>' : !t.done && t.next ? `<span class="muted">${esc(md(t.next.date))} ${t.games.indexOf(t.next) + 1}차전</span>` : t.pens ? '<span class="muted">승부차기</span>' : "";
-    return `<div class="btie legs ${t.live ? "live" : ""}"><table class="blegs"><colgroup><col>${t.games.map(() => '<col style="width:36px">').join("")}<col style="width:34px"></colgroup><thead><tr><th></th>${t.games.map((g, i) => `<td>${i + 1}차전</td>`).join("")}<td>합계</td></tr></thead>
-      <tbody>${tr(ids[0])}${tr(ids[1])}</tbody></table>${info ? `<div class="binfo">${info}</div>` : ""}</div>`;
+    const info = t.live ? '<span class="live">● 진행 중</span>' : t.pens ? '<span class="muted">승부차기</span>' : "";
+    return `<div class="btie legs ${t.live ? "live" : ""}">${top(ids[0])}${top(ids[1])}<div class="blegbox">${t.games.map(leg).join("")}</div>${info ? `<div class="binfo">${info}</div>` : ""}</div>`;
   }
   const row = id => { const tm = t.teams[id], w = t.winner === id, l = t.winner && !w;
     return `<div class="brow ${w ? "w" : ""} ${l ? "l" : ""}">${logo(tm.logo)}<span class="bn">${esc(ko(tm.name))}</span>${w ? '<em class="wbadge">승</em>' : ""}<b class="bs">${started ? sc(id) : ""}</b></div>`; };
@@ -1246,7 +1259,7 @@ function renderBracket(){
     // 맨 왼쪽 열이 전부 빈칸(부전승)이면 그 열은 빼기
     while (cols.length > 1 && cols[0].every(x => !x)) cols.shift();
     const offset = nCols - cols.length;
-    const two = kind === "uefa" || kind === "unl", slotH = two ? 100 : 86, rows = cols[0].length;
+    const two = kind === "uefa" || kind === "unl", slotH = two ? 118 : 86, rows = cols[0].length;
     html += `<div class="bwrap"><div class="bracket ${two ? "two" : ""}" style="height:${rows * slotH + 30}px">${cols.map((c, ci) => {
       const label = rounds[ci + offset] ? rounds[ci + offset][1] : "";
       const items = c.map(x => brTieCard(x, kind));
