@@ -880,6 +880,8 @@ ul.news small{font-size:11px}
 // ================================================================ 리그 설정
 // logo: 헤더 배경에 옅게 깔리는 리그 로고 (ESPN 이미지)
 const ESPN_LG = id => ({logo:`https://a.espncdn.com/i/leaguelogos/soccer/500/${id}.png`, logoDark:`https://a.espncdn.com/i/leaguelogos/soccer/500-dark/${id}.png`});
+// 컵대회: 8월 ~ 다음 해 5월 (+ = 다음 해)
+const CUP_MONTHS = ["08", "09", "10", "11", "12", "+01", "+02", "+03", "+04", "+05"];
 const LEAGUES = {
   unl: {name:"UEFA 네이션스리그", short:"네이션스리그", mark:"UNL", color:"#1d4ed8", sport:"soccer", slug:"uefa.nations", sched:"months", scope:"all", national:true, comp:"UEFA Nations League", ...ESPN_LG(2395)},
   cnl: {name:"CONCACAF 네이션스리그", short:"북중미 네이션스리그", mark:"CNL", color:"#0f4c81", sport:"soccer", slug:"concacaf.nations.league", sched:"months", scope:"all", national:true, comp:"Concacaf Nations League", ...ESPN_LG(2406)},
@@ -901,6 +903,10 @@ const LEAGUES = {
         logo:"https://a.espncdn.com/i/teamlogos/leagues/500/nba.png", logoDark:"https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500-dark/nba.png&w=500&h=500&transparent=true"},
   mlb: {name:"MLB", short:"MLB", mark:"MLB", color:"#0b3d91", sport:"baseball", slug:"mlb", sched:"week", scope:"league", wide:true, standingsQuery:"?level=3",
         logo:"https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png", logoDark:"https://a.espncdn.com/combiner/i?img=/i/teamlogos/leagues/500-dark/mlb.png&w=500&h=500&transparent=true"},
+  facup: {name:"잉글랜드 FA컵", short:"FA컵", mark:"FA", color:"#a00d1f", sport:"soccer", slug:"eng.fa", sched:"months", months:CUP_MONTHS, scope:"all", nostand:true, cup:true, comp:"English FA Cup", ...ESPN_LG(40)},
+  dfbpokal: {name:"DFB 포칼 (독일 FA컵)", short:"DFB 포칼", mark:"DFB", color:"#1a1a1a", sport:"soccer", slug:"ger.dfb_pokal", sched:"months", months:CUP_MONTHS, scope:"all", nostand:true, cup:true, comp:"German Cup", ...ESPN_LG(2061)},
+  copadelrey: {name:"코파 델 레이 (스페인 FA컵)", short:"코파 델 레이", mark:"CDR", color:"#b91c1c", sport:"soccer", slug:"esp.copa_del_rey", sched:"months", months:CUP_MONTHS, scope:"all", nostand:true, cup:true, comp:"Spanish Copa del Rey", ...ESPN_LG(80)},
+  coppaitalia: {name:"코파 이탈리아 (이탈리아 FA컵)", short:"코파 이탈리아", mark:"CI", color:"#15803d", sport:"soccer", slug:"ita.coppa_italia", sched:"months", months:CUP_MONTHS, scope:"all", nostand:true, cup:true, comp:"Coppa Italia", ...ESPN_LG(2192)},
   kleague1: {name:"K리그1", short:"K리그1", mark:"K1", color:"#0050a0", disabled:true},
   kleague2: {name:"K리그2", short:"K리그2", mark:"K2", color:"#2f7d32", disabled:true},
   npb: {name:"NPB (일본 프로야구)", short:"NPB", mark:"NPB", color:"#b91c1c", disabled:true},
@@ -908,7 +914,7 @@ const LEAGUES = {
 };
 // 리그 선택 메뉴: 종목별로 묶음
 const SPORT_GROUPS = [
-  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "ucl", "uel", "unl", "cnl", "intfr", "ligue1", "mls", "por", "bel", "tur", "champ", "laliga2", "kleague1", "kleague2"]},
+  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "ucl", "uel", "unl", "cnl", "intfr", "ligue1", "mls", "por", "bel", "tur", "champ", "laliga2", "facup", "dfbpokal", "copadelrey", "coppaitalia", "kleague1", "kleague2"]},
   {label:"🏀 농구", keys:["nba"]},
   {label:"⚾ 야구", keys:["mlb", "npb", "kbo"]},
 ];
@@ -1069,6 +1075,8 @@ function groupLabel(lg, g){
   return (g.name || "").replace("Eastern Conference", "동부 콘퍼런스").replace("Western Conference", "서부 콘퍼런스");
 }
 
+// ESPN 응답의 시즌 정보: 보통 seasons[0], 컵대회 등은 season(단수) 또는 빈 객체
+const seasonOfResp = d => (Array.isArray(d.seasons) && d.seasons[0]) || d.season || {};
 // seasonYr: 시즌 연도(예: 2025). 없으면 현재 시즌
 async function loadStandings(lg, seasonYr, noFallback){
   const Lg = LEAGUES[lg], q = Lg.standingsQuery || "";
@@ -1078,10 +1086,10 @@ async function loadStandings(lg, seasonYr, noFallback){
   if (!seasonYr && !noFallback && Lg.sport === "soccer"){
     const ents = []; (function w(n){ if (n.standings?.entries) ents.push(...n.standings.entries); (n.children || []).forEach(w); })(d);
     const gp = e => Number(((e.stats || []).find(s => s.name === "gamesPlayed") || {}).value) || 0;
-    const y = Number((d.seasons || [{}])[0].year);
+    const y = Number(seasonOfResp(d).year);
     if (ents.length && ents.every(e => gp(e) === 0) && y) { const r = await loadStandings(lg, y - 1, true); r.offseason = true; r.season = `${y - 1} 시즌 최종 순위 (새 시즌 시작 전)`; return r; }
   }
-  const season = (d.seasons || [{}])[0], groups = [];
+  const season = seasonOfResp(d), groups = [];
   (function walk(n){ if (n.standings?.entries?.length) groups.push(n); (n.children || []).forEach(walk); })(d);
   const out = groups.map(g => {
     const cm = lg === "cnl" ? (g.name || "").match(/League\s+([A-D]),\s*Group\s+([A-Z])/i) : null;
@@ -1130,7 +1138,7 @@ function applyStandings(lg, st){
 // ---------------------------------------------------------------- 경기 목록
 async function loadSeasonMatches(lg){
   const Lg = LEAGUES[lg], y = Number(D(lg).year) || new Date().getFullYear();
-  const months = [`${y}09`, `${y}10`, `${y}11`, `${y+1}03`, `${y+1}06`];
+  const months = Lg.months ? Lg.months.map(m => m[0] === "+" ? `${y + 1}${m.slice(1)}` : `${y}${m}`) : [`${y}09`, `${y}10`, `${y}11`, `${y+1}03`, `${y+1}06`];
   const lists = await Promise.all(months.map(m => espn(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${m}&limit=300`, 60).then(j => j.events || []).catch(() => [])));
   return dedupe(lists.flat());
 }
@@ -1302,12 +1310,12 @@ function renderHeader(){
   $("#tabs").hidden = !inLg || !!Lg.disabled;
   if (!inLg){ $("#lgwm").style.backgroundImage = "none"; $("#lgwmd").style.backgroundImage = "none"; document.title = {home:"홈", my:"My 경기", talk:"커뮤니티"}[S.tab] ? `${({home:"홈", my:"My 경기", talk:"커뮤니티"})[S.tab]} · SPORTS LIVE!` : "SPORTS LIVE!"; }
   else S.lastLgTab = S.tab;
-  const stb = document.querySelector('#tabs [data-tab="standings"]'); if (stb) stb.hidden = !!Lg.nostand;
+  const stb = document.querySelector('#tabs [data-tab="standings"]'); if (stb){ stb.hidden = !!Lg.nostand && !Lg.cup; stb.textContent = Lg.cup ? "🏆 대진표" : "순위표"; }
   updateLiveBadge();
   updateMyBadge();
 }
 function render(){
-  if (L().nostand && S.tab === "standings") S.tab = "matches";  // 순위표가 없는 대회(친선경기)
+  if (L().nostand && !L().cup && S.tab === "standings") S.tab = "matches";  // 순위표가 없는 대회(친선경기)
   renderHeader();
   updateFab();
   if (S.tab !== "my"){ clearTimeout(S.myPoll); S.mySel = null; }
@@ -1394,6 +1402,7 @@ function columns(){
 const streakKo = s => { const m = String(s || "").match(/^([WL])(\d+)$/); return m ? `${m[2]}${m[1] === "W" ? "연승" : "연패"}` : (s || "-"); };
 
 function renderStandings(){
+  if (L().cup) return renderBracket();  // 컵대회: 순위표 대신 대진표
   if (BR_KIND[S.lg] && S.stView === "bracket") return renderBracket();
   const d = D(), cols = columns();
   const groups = d.groups.filter(g => !isNL(S.lg) || S.chip === "ALL" || g.letter === S.chip);
@@ -1419,11 +1428,12 @@ function renderStandings(){
 
 // ================================================================ 토너먼트 대진표
 // kind별: 받아올 달, 라운드 구분, 라운드 이름
-const BR_KIND = {ucl:"uefa", uel:"uefa", unl:"unl", cnl:"cnl", nba:"nba", mlb:"mlb", mls:"mls", champ:"promo", laliga2:"promo"};
+const BR_KIND = {facup:"cup", dfbpokal:"cup", copadelrey:"cup", coppaitalia:"cup", ucl:"uefa", uel:"uefa", unl:"unl", cnl:"cnl", nba:"nba", mlb:"mlb", mls:"mls", champ:"promo", laliga2:"promo"};
 const BR_ROUNDS = {
   uefa:[["round-of-16", "16강"], ["quarterfinals", "8강"], ["semifinals", "4강"], ["final", "결승"]],
   unl:[["quarterfinals", "8강"], ["semifinals", "4강"], ["final", "결승"]],
   cnl:[["quarterfinals", "8강"], ["semifinals", "4강"], ["final", "결승"]],
+  cup:[["round-of-16", "16강"], ["quarterfinals", "8강"], ["semifinals", "4강"], ["final", "결승"]],
   nba:[["1st Round", "1라운드"], ["Semifinals", "콘퍼런스 준결승"], ["Finals", "콘퍼런스 결승"], ["NBA Finals", "NBA 파이널"]],
   mlb:[["WC", "와일드카드"], ["DS", "디비전시리즈"], ["CS", "챔피언십시리즈"], ["World Series", "월드시리즈"]],
   mls:[["one", "1라운드"], ["semi", "콘퍼런스 준결승"], ["cf", "콘퍼런스 결승"], ["cup", "MLS컵"]],
@@ -1433,7 +1443,7 @@ const BR_TITLE = {nba:"플레이오프", mlb:"플레이오프", mls:"플레이�
 const PRE_TITLE = {uefa:["녹아웃 플레이오프", "리그 페이즈 9~24위 · 이긴 팀이 16강 진출"], mls:["와일드카드", "8위 vs 9위 단판 · 이긴 팀이 1위와 1라운드"], promo:["엘리미네이터", "5위 vs 8위, 6위 vs 7위 단판 · 이긴 팀이 준결승 진출"]};
 const BR = {};  // lg → {state, yr, last, ties, rounds, extra}
 function stViewBar(){
-  if (!BR_KIND[S.lg]) return "";
+  if (!BR_KIND[S.lg] || L().cup) return "";
   const v = S.stView === "bracket" ? "bracket" : "table";
   return `<div class="tkseg sm stview"><button class="${v === "table" ? "on" : ""}" data-stview="table">📊 순위표</button><button class="${v === "bracket" ? "on" : ""}" data-stview="bracket">🏆 ${BR_TITLE[BR_KIND[S.lg]] || "토너먼트"}</button></div>`;
 }
@@ -1444,6 +1454,10 @@ function brRound(kind, ev){
     if (slug === "knockout-round-playoffs") return "po";
     if (slug === "3rd-place-match") return "3rd";
     return BR_ROUNDS[kind].findIndex(([s]) => s === slug);
+  }
+  if (kind === "cup"){  // FA컵 5라운드 = 16강
+    if (slug === "round-of-16" || slug === "fifth-round") return 0;
+    return ["", "quarterfinals", "semifinals", "final"].indexOf(slug);
   }
   if (kind === "mls"){
     if (/wild-card/.test(slug)) return "po";
@@ -1476,7 +1490,7 @@ function brRound(kind, ev){
 async function brFetch(lg, yr){
   const Lg = LEAGUES[lg], kind = BR_KIND[lg];
   // MLB 와일드카드는 9월 말이라 9월 전체를 받으면 정규시즌에 밀려 잘림 → 9/27~30은 하루씩
-  const months = kind === "uefa" ? ["02", "03", "04", "05", "06"] : kind === "unl" ? ["03", "06"] : kind === "cnl" ? [`${yr - 1}11`, "03", "06"] : kind === "nba" ? ["04", "05", "06"] : kind === "mls" ? ["10", "11", "12"] : kind === "promo" ? ["05", "06"] : ["0927", "0928", "0929", "0930", "10", "11"];
+  const months = kind === "cup" ? [`${yr - 1}12`, "01", "02", "03", "04", "05"] : kind === "uefa" ? ["02", "03", "04", "05", "06"] : kind === "unl" ? ["03", "06"] : kind === "cnl" ? [`${yr - 1}11`, "03", "06"] : kind === "nba" ? ["04", "05", "06"] : kind === "mls" ? ["10", "11", "12"] : kind === "promo" ? ["05", "06"] : ["0927", "0928", "0929", "0930", "10", "11"];
   const st = kind === "nba" || kind === "mlb" ? "&seasontype=3" : "";
   const lists = await Promise.all(months.map(m => espn(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${m.length === 6 ? m : yr + m}${st}&limit=300`, 600).then(j => j.events || []).catch(() => [])));
   return lists.flat();
@@ -1488,6 +1502,7 @@ function brTies(kind, events){
     const r = brRound(kind, ev); if (r === -1) continue;
     const comp = (ev.competitions || [{}])[0], cs = comp.competitors || [];
     if (cs.length !== 2) continue;
+    if (cs.every(c => /^TBD\b/.test(c.team?.displayName || ""))) continue;  // 두 팀 다 미정인 자리는 대진표 빈칸으로
     const ids = cs.map(c => String(c.team.id)).sort(), key = r + "|" + ids.join("-");
     let t = map.get(key);
     if (!t){ t = {key, round:r, teams:{}, games:[], order:[]}; map.set(key, t); }
@@ -1507,7 +1522,7 @@ function brTies(kind, events){
       if (ser.completed && !t.winner && (kind === "nba" || kind === "mlb")){ const [a, b] = t.order.map(id => t.teams[id]); t.winner = a.wins > b.wins ? a.id : b.id; }
     }
     if (!t.winner){
-      const adv = last.comp.competitors.find(c => c.advance === true) || (last.done && (t.games.length === 1 || kind === "uefa" || kind === "unl" || kind === "cnl") ? last.comp.competitors.find(c => c.winner === true) : null);
+      const adv = last.comp.competitors.find(c => c.advance === true) || (last.done && (t.games.length === 1 || kind === "uefa" || kind === "unl" || kind === "cnl" || kind === "cup") ? last.comp.competitors.find(c => c.winner === true) : null);
       if (adv && last.done && (t.games.length === 1 || adv.advance === true || (ser && ser.completed))) t.winner = String(adv.team.id);
     }
     t.done = !!t.winner;
@@ -1548,7 +1563,7 @@ async function loadBracket(lg){
   const kind = BR_KIND[lg], d = D(lg), bk = dkeyOf(lg), past = !!seasonOf(lg);
   const y = Number(d.year) || new Date().getFullYear();
   // 지난 시즌을 고른 경우엔 그 시즌 대진표만
-  const cands = kind === "uefa" || kind === "promo" || kind === "cnl" ? (past ? [y + 1] : [y + 1, y]) : kind === "unl" ? (past ? [y + 1] : [y + 1, y - 1]) : (past ? [y] : [y, y - 1]);
+  const cands = kind === "uefa" || kind === "promo" || kind === "cnl" || kind === "cup" ? (past ? [y + 1] : [y + 1, y]) : kind === "unl" ? (past ? [y + 1] : [y + 1, y - 1]) : (past ? [y] : [y, y - 1]);
   if (BR[bk] && BR[bk].loading) return;
   const prev = BR[bk];
   BR[bk] = prev && prev.state === "ok" ? {...prev, loading:true} : {state:"loading", loading:true};
@@ -1567,7 +1582,7 @@ async function loadBracket(lg){
   const nb = BR[bk];
   if (found && nb.last && !past && !nb.ties.some(t => t.round === BR_ROUNDS[kind].length - 1 && t.done)){ nb.curTies = nb.ties; nb.curYr = nb.yr; nb.ongoing = true; }
   if (!found) BR[bk] = prev && prev.state === "ok" ? {...prev, loading:false, t:Date.now()} : {state:"empty", nextYr:cands[0], curYr:cands[0], curTies, past, t:Date.now()};
-  if (S.lg === lg && S.tab === "standings" && S.stView === "bracket") renderBracket();
+  if (S.lg === lg && S.tab === "standings" && (S.stView === "bracket" || LEAGUES[lg].cup)) renderBracket();
 }
 const brName = n => /^TBD\b/.test(n || "") ? "미정" : ko(n);
 function brTieCard(t, kind){
@@ -1612,7 +1627,7 @@ function renderBracket(){
   if (!b.past && usePlan(lg, b)) return renderPlan(lg, b);
   if (b.state === "empty"){ $("#main").innerHTML = html + (b.past ? `<div class="card live-empty"><b>이 시즌의 토너먼트 기록이 ESPN에 없습니다</b><span class="muted">다른 시즌을 골라 보세요.</span></div>`
     : `<div class="card live-empty"><b>아직 토너먼트 경기가 없습니다</b><span class="muted">${b.nextYr}년에 토너먼트가 시작되면 여기에 대진표가 나옵니다.</span></div>`); return; }
-  const seasonLabel = kind === "promo" ? `${b.yr - 1}-${String(b.yr).slice(2)} 승격 플레이오프` : kind === "mls" ? `${b.yr} MLS컵 플레이오프` : kind === "uefa" || kind === "cnl" ? `${b.yr - 1}-${String(b.yr).slice(2)} 시즌` : kind === "unl" ? `${b.yr - 1}-${String(b.yr).slice(2)} 네이션스리그` : `${b.yr} ${kind === "nba" ? "플레이오프" : "포스트시즌"}`;
+  const seasonLabel = kind === "promo" ? `${b.yr - 1}-${String(b.yr).slice(2)} 승격 플레이오프` : kind === "mls" ? `${b.yr} MLS컵 플레이오프` : kind === "uefa" || kind === "cnl" || kind === "cup" ? `${b.yr - 1}-${String(b.yr).slice(2)} 시즌` : kind === "unl" ? `${b.yr - 1}-${String(b.yr).slice(2)} 네이션스리그` : `${b.yr} ${kind === "nba" ? "플레이오프" : "포스트시즌"}`;
   html += `<div class="live-bar"><h2>🏆 ${esc(seasonLabel)}</h2>${b.last ? `<span class="auto">지난 시즌 · 이번 시즌 ${kind === "nba" ? "플레이오프" : kind === "mlb" ? "포스트시즌" : "토너먼트"}는 ${b.nextYr}년 시작</span>` : ""}</div>`;
   const tree = brTree(b.ties.filter(t => typeof t.round === "number"), rounds.length);
   if (tree){
@@ -1634,7 +1649,7 @@ function renderBracket(){
       const n = Math.max(1, Math.ceil(cols[cols.length - 1].length / 2));
       cols.push([...Array(n)].map(() => ({ph:true, slots:[{label:"승자 대기"}, {label:"승자 대기"}]})));
     }
-    const two = kind === "uefa" || kind === "unl" || kind === "cnl", slotH = two ? 118 : 86, rows = cols[0].length;
+    const two = kind === "uefa" || kind === "unl" || kind === "cnl" || kind === "cup", slotH = two ? 118 : 86, rows = cols[0].length;
     html += `<div class="bwrap"><div class="bracket ${two ? "two" : ""}" style="height:${rows * slotH + 30}px">${cols.map((c, ci) => {
       const label = rounds[ci + offset] ? rounds[ci + offset][1] : "";
       const items = c.map(x => brTieCard(x, kind));
@@ -1759,7 +1774,7 @@ function renderPlan(lg, b){
   const kind = BR_KIND[lg], rounds = BR_ROUNDS[kind], plan = buildPlan(lg), d = D(lg), ties = b.curTies || [];
   const res = planResolve(plan, ties, kind), cy = (ST[lg] || {}).curYear;
   let html = stViewBar();
-  const yl = b.ongoing ? seasonLabel(lg, kind === "uefa" || kind === "unl" || kind === "cnl" || kind === "promo" ? b.curYr - 1 : b.curYr) + " 시즌" : d.season || "";
+  const yl = b.ongoing ? seasonLabel(lg, kind === "uefa" || kind === "unl" || kind === "cnl" || kind === "promo" || kind === "cup" ? b.curYr - 1 : b.curYr) + " 시즌" : d.season || "";
   html += `<div class="live-bar"><h2>🏆 ${esc(yl)} ${esc(BR_TITLE[kind] || "토너먼트")}</h2></div>`;
   html += `<div class="planban"><span>📌 ${ties.length ? "열린 경기는 실제 결과, 나머지는 " : ""}현재 순위 기준 <b>예상 대진</b>입니다. 대진이 확정되면 자동으로 업데이트됩니다.</span>
     ${cy ? `<button class="btn" data-season="${b.ongoing ? b.curYr - 1 : cy - 1}">지난 시즌 대진표 보기</button>` : ""}</div>`;
