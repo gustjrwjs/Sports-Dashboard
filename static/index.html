@@ -211,6 +211,18 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .nmrow{display:flex;align-items:center;gap:6px;max-width:100%;min-width:0}
 .nmrow .lg{width:22px;height:22px;flex:none}
 .nmrow .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lpbp{font-size:12px;line-height:1.35;color:#16a34a;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 26px 4px 0;min-height:16px}
+.lpbp .pt{font-size:10px;font-weight:700;color:color-mix(in srgb, #16a34a 70%, var(--muted));margin-right:6px;font-variant-numeric:tabular-nums}
+.lpbp.big{color:#15803d;font-weight:800}
+.lpbp.new{animation:pbpin .6s ease-out}
+@keyframes pbpin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-color-scheme: dark){ .lpbp{color:#4ade80} .lpbp.big{color:#86efac} .pbpl li.big{color:#86efac} }
+.pbpl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;max-height:340px;overflow:auto}
+.pbpl li{display:flex;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);font-size:13px;line-height:1.4}
+.pbpl li:last-child{border-bottom:0}
+.pbpl li .pt{flex:none;min-width:52px;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;padding-top:1px}
+.pbpl li.big{color:#15803d;font-weight:700;background:color-mix(in srgb, #22c55e 8%, transparent)}
+.pbpmore{margin-top:6px;font-size:12px}
 .ptwrap{overflow-x:auto;margin:8px 0 2px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
 .ptab{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:12.5px;text-align:center}
 .ptab th{font-size:10.5px;font-weight:700;color:var(--muted);padding:5px 3px;background:var(--surface-2);border-bottom:1px solid var(--border)}
@@ -1971,8 +1983,9 @@ async function openMatch(id){
         <span class="s">${r.gf} - ${r.ga}${r.pk ? `<small>${r.pk}</small>` : ""}</span>${badge(r.r)}</li>`).join("")}</ul>` : '<div class="card empty">기록 없음</div>';
     const sp = L().sport;
     const ob = oddsBlock(m, pickOdds(sum), false);
-    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + lineupSection(m, sum ? parseLineups(sum) : null)
-                 : ob + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
+    const pbp = m.state !== "pre" && sum ? pbpSection(lg, m, sum) : "";
+    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + pbp + lineupSection(m, sum ? parseLineups(sum) : null)
+                 : ob + lineScore(m, sum) + pbp + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
     openModal(head + detail + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
@@ -1987,6 +2000,7 @@ async function openMatch(id){
         ${h2h.length ? resList(h2h) : '<div class="card empty">조회 범위 안에 맞대결 기록이 없습니다.</div>'}</div>`);
     if (sp === "soccer" && m.state === "pre" && !hasLineup(sum ? parseLineups(sum) : null)) fillPrevLineups(m, h, a);
     if (sp === "basketball" && document.getElementById("bb-pre")) fillBbPre(m, h, a);
+    if (m.state === "in") pbpLoop(lg, m);
   } catch (e) { openModal(head + errBox(e)); }
 }
 
@@ -2193,7 +2207,7 @@ function basketballSection(m, sum){
       <tbody><tr class="grp-row"><td colspan="${cols.length + 1}">선발</td></tr>${starters.map(row).join("")}
       <tr class="grp-row"><td colspan="${cols.length + 1}">벤치</td></tr>${bench.map(row).join("")}</tbody></table></div></div>`;
   }).join("");
-  return lineScore(m, sum) + `<div class="sec"><div class="sec-h"><h3>선수 기록</h3><span class="muted sp">출전 시간(분) · 득점 최다 선수 굵게</span></div></div>${html}`;
+  return `<div class="sec"><div class="sec-h"><h3>선수 기록</h3><span class="muted sp">출전 시간(분) · 득점 최다 선수 굵게</span></div></div>${html}`;
 }
 
 // 경기 전 농구: 팀 명단(ESPN roster) + 직전 경기 선발로 '예상 선발'을 만들고 나머지는 벤치로
@@ -2284,7 +2298,7 @@ function baseballSection(m, sum){
     };
     return `<div class="sec">${teamHead(m, String(t.team.id))}${table(bat, BAT_COLS, true)}${table(pit, PIT_COLS, false)}</div>`;
   }).join("");
-  return lineScore(m, sum) + `<div class="sec"><div class="sec-h"><h3>타순·투수 기록</h3><span class="muted sp">숫자는 타순, 들여쓴 선수는 교체 출전</span></div></div>${html}`;
+  return `<div class="sec"><div class="sec-h"><h3>타순·투수 기록</h3><span class="muted sp">숫자는 타순, 들여쓴 선수는 교체 출전</span></div></div>${html}`;
 }
 
 // ================================================================ LIVE 탭 (자동 갱신)
@@ -2322,8 +2336,11 @@ async function loadLive(lg){
   }
   // 진행 중인 경기 배당 (경기 상세 데이터에 들어 있음, 2분마다만 새로 받기)
   const odds = {};
+  // + 문자중계(카드 위 초록 글씨)용 플레이 기록: 진행 중 경기는 15초마다 새로
   await withTimeout(Promise.all(events.filter(m => m.state === "in").map(m =>
-    espn(summaryPath(lg, m.id), 120).then(s => { odds[m.id] = pickOdds(s); }).catch(() => {}))), 5000);
+    espn(summaryPath(lg, m.id), 15).then(async s => { odds[m.id] = pickOdds(s);
+      if (Lg.sport !== "soccer") await withTimeout(lookupPlayers(playerNames(s), OCC[Lg.sport]), 2500);
+      PBP[lg + "|" + m.id] = pbpBuild(lg, m, s); }).catch(() => {}))), 6000);
   if (Lg.sport === "soccer"){
     const names = [];
     for (const e of Object.values(raw)) for (const x of ((e.competitions || [{}])[0].details || [])) for (const a of x.athletesInvolved || []) names.push(a.displayName);
@@ -2453,6 +2470,7 @@ function liveCard(m, ctx){
   const open = ctx.my ? `data-mymatch="${ctx.lg}|${m.id}"` : `data-match="${m.id}"`;
   return `<div class="lcard ${fin ? "fin" : pre ? "pre" : ""} ${up[0] || up[1] ? "flash" : ""}" ${open} role="button" tabindex="0">
     ${head}
+    ${pbpTicker(ctx.lg, m)}
     <div class="lmain">
       ${team(m.home, "home", 0)}
       <div class="lc">${center}</div>
@@ -2553,8 +2571,10 @@ async function loadMy(){
   // 다른 화면에도 반영
   for (const [k, m] of Object.entries(ev)){ const lg = k.split("|")[0], d = D(lg), i = d.matches.findIndex(x => x.id === m.id); if (i >= 0) d.matches[i] = m; }
   const odds = {};
-  await withTimeout(Promise.all(Object.entries(ev).map(([k, m]) => espn(summaryPath(k.split("|")[0], m.id), m.state === "post" ? 3600 : 120)
-    .then(s => { odds[k] = pickOdds(s); }).catch(() => {}))), 6000);
+  await withTimeout(Promise.all(Object.entries(ev).map(([k, m]) => espn(summaryPath(k.split("|")[0], m.id), m.state === "post" ? 3600 : m.state === "in" ? 15 : 120)
+    .then(async s => { odds[k] = pickOdds(s); const lg = k.split("|")[0];
+      if (m.state === "in" && LEAGUES[lg].sport !== "soccer") await withTimeout(lookupPlayers(playerNames(s), OCC[LEAGUES[lg].sport]), 2500);
+      if (m.state !== "pre") PBP[k] = pbpBuild(lg, m, s); }).catch(() => {}))), 7000);
   const names = [];
   for (const [k, e] of Object.entries(raw)) if (ev[k] && LEAGUES[k.split("|")[0]].sport === "soccer")
     for (const x of ((e.competitions || [{}])[0].details || [])) for (const a of x.athletesInvolved || []) names.push(a.displayName);
@@ -2847,6 +2867,145 @@ async function tkAction(t){
       else alert("비밀번호가 틀렸습니다.");
     }
   } catch (e) { err(e.message); }
+}
+// ================================================================ 📝 문자중계 (ESPN 플레이 기록 → 신나는 한국어 멘트)
+const PBP = {};  // "리그|경기id" → [{id, t, txt, big}] (오래된 것 → 최신)
+const pickT = (id, arr) => arr[[...String(id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % arr.length];  // 같은 장면은 항상 같은 멘트
+const kp = n => esc(koFull(String(n || "").trim()));
+const tko = n => { n = String(n || "").trim(); const a = ko(n); return a !== n ? a : ko(n.replace(/ and /g, " & ")); };
+function pbpSoccer(sum){
+  const out = [];
+  for (const c of sum?.commentary || []){
+    const tx = c.text || "", ty = (c.play?.type?.type) || "", t = c.time?.displayValue || "", id = c.play?.id || c.sequence;
+    const who = (tx.match(/([^.()]+?) \(([^)]+)\)/) || []), name = who[1] ? kp(who[1]) : "", team = who[2] ? esc(tko(who[2])) : "";
+    let txt = "", big = false, low = false;
+    if (/^Goal!/.test(tx) || /goal/.test(ty)){
+      const sc = tx.match(/^Goal!\s*(.+?) (\d+), (.+?) (\d+)\./), scorer = kp((tx.match(/\d+\.\s*([^.(]+?) \(/) || [])[1] || who[1]);
+      const line = sc ? ` (${esc(tko(sc[1]))} ${sc[2]} : ${sc[4]} ${esc(tko(sc[3]))})` : "";
+      const min = parseInt(t) || 0, eq = sc && sc[2] === sc[4];
+      if (/own goal/i.test(tx)) txt = `😱 자책골!!! ${scorer}… 이게 들어가네요${line}`;
+      else if (/penalty/i.test(tx)) txt = pickT(id, [`⚽ ${scorer} PK 성공!!! 골키퍼 완벽하게 속였습니다${line}`, `⚽ ${scorer} 침착하게 PK 꽂습니다!! 골ㄹㄹㄹㄹ${line}`]);
+      else txt = (min >= 85 ? "🔥 극장골!!! " : "") + pickT(id, [`⚽ ${scorer} 골ㄹㄹㄹㄹㄹㄹㄹㄹㄹ!!!${eq ? " 동점골!!" : ""}${line}`, `⚽ 고오오오오올!!! ${scorer}!!! 미쳤습니다!!${line}`, `⚽ 들어갔습니다아아아!!! ${scorer}의 한 방!!${line}`, `⚽ ${scorer}!!! 골망을 흔듭니다!!! 골ㄹㄹㄹㄹ${line}`]);
+      big = true;
+    }
+    else if (/red-card/.test(ty) || /red card/i.test(tx)) { txt = `🟥 퇴장!!! ${name} 레드카드! 경기가 요동칩니다!!`; big = true; }
+    else if (/yellow-card/.test(ty)) txt = pickT(id, [`🟨 ${name} 옐로카드. 조심해야죠~`, `🟨 ${name} 경고 받습니다`]);
+    else if (/hits the (left |right )?(post|bar|crossbar)/i.test(tx)) { txt = `😱 골대!!! ${name} 슈팅이 골대를 강타합니다!!`; big = true; }
+    else if (/shot-on-target/.test(ty) || /^Attempt saved/.test(tx)) txt = pickT(id, [`🧤 ${name} ${/header/.test(tx) ? "헤더" : "슈팅"}! 키퍼 선방!!`, `🧤 ${name}의 ${/header/.test(tx) ? "헤더" : "슈팅"}~ 골키퍼가 막아냅니다`]);
+    else if (/shot-off-target/.test(ty) || /^Attempt missed/.test(tx)) txt = pickT(id, [`${name} ${/header/.test(tx) ? "헤더" : "슈팅"}~ 아깝게 벗어납니다 😩`, `${name} 때려봤지만 빗나갑니다 😮‍💨`]);
+    else if (/shot-blocked/.test(ty) || /^Attempt blocked/.test(tx)) txt = `🛡️ ${name} 슈팅, 수비가 몸 날려 막아냅니다!`;
+    else if (/^Penalty .*draws a foul/i.test(tx) || /penalty---awarded/.test(ty)) { txt = `🚨 페널티킥!!! ${kp((tx.match(/\. (.+?) draws/) || [])[1])} 얻어냅니다!!`; big = true; }
+    else if (/penalty.*(saved|missed)/i.test(tx) || /penalty---(saved|missed)/.test(ty)) { txt = `😱 PK 실축!!! ${name}… 믿을 수가 없습니다`; big = true; }
+    else if (/substitution/.test(ty) || /^Substitution/.test(tx)){ const s = tx.match(/^Substitution, (.+?)\. (.+?) replaces (.+?)\.?$/); txt = s ? `🔄 ${esc(tko(s[1]))} 교체: ${kp(s[3])} ↘ ${kp(s[2])} ↗` : ""; }
+    else if (/corner/.test(ty) || /^Corner,/.test(tx)) txt = `🚩 ${esc(tko((tx.match(/^Corner, (.+?)\./) || [])[1] || ""))} 코너킥 찬스!`;
+    else if (/offside/.test(ty) || /^Offside/.test(tx)) txt = `🚩 ${kp((tx.match(/\. (.+?) is caught offside/) || [])[1])} 오프사이드~`;
+    else if (/start-delay/.test(ty) || /^Delay in match because of an injury/.test(tx)) txt = `🚑 ${kp((tx.match(/injury (.+?) \(/) || [])[1])} 부상으로 잠시 중단됩니다`;
+    else if (/^VAR Decision/.test(tx)) { txt = `📺 VAR 판독 결과 나왔습니다!`; big = true; }
+    else if (/^First Half begins/.test(tx)) txt = `▶️ 킥오프! 경기 시작합니다!`;
+    else if (/^Second Half begins/.test(tx)) txt = `▶️ 후반전 시작!`;
+    else if (/^(First|Second) Half ends|^Match ends/.test(tx)){ const s = tx.match(/ends, (.+?) (\d+), (.+?) (\d+)\./); const sc = s ? ` ${esc(tko(s[1]))} ${s[2]} : ${s[4]} ${esc(tko(s[3]))}` : "";
+      txt = /^First/.test(tx) ? `⏸️ 전반 종료!${sc}` : /^Match/.test(tx) ? `🏁 경기 종료!${sc}` : `⏱️ 후반 종료!${sc}`; }
+    else if (/minutes? of added time/.test(tx)) txt = `⏳ 추가시간 ${(tx.match(/(\d+)/) || [])[1]}분!`;
+    else if (/^Foul by/.test(tx)) low = true, txt = `${kp((tx.match(/^Foul by (.+?) \(/) || [])[1])} 파울`;
+    else if (/wins a free kick/.test(tx)) low = true, txt = `${name} 프리킥 얻어냅니다`;
+    if (txt) out.push({id:String(id), t, txt, big, low});
+  }
+  // ESPN 문자중계가 없는 대회는 주요 장면(골·카드·교체)만
+  if (!out.length) for (const k of sum?.keyEvents || []){
+    const ty = k.type?.type || "", a = k.participants?.[0]?.athlete?.displayName, t = k.clock?.displayValue || "";
+    if (/goal/.test(ty) || k.scoringPlay) out.push({id:k.id, t, txt:pickT(k.id, [`⚽ ${kp(a)} 골ㄹㄹㄹㄹㄹㄹㄹ!!!`, `⚽ 고오오올!!! ${kp(a)}!!!`]), big:true});
+    else if (/red-card/.test(ty)) out.push({id:k.id, t, txt:`🟥 퇴장!!! ${kp(a)} 레드카드!`, big:true});
+    else if (/yellow-card/.test(ty)) out.push({id:k.id, t, txt:`🟨 ${kp(a)} 옐로카드`});
+    else if (/substitution/.test(ty)) out.push({id:k.id, t, txt:`🔄 교체: ${kp(a)}`});
+  }
+  return out;
+}
+function pbpBasketball(sum, m){
+  const out = [], tn = id => String(id) === m.home.id ? ko(m.home.name).split(" ").pop() : String(id) === m.away.id ? ko(m.away.name).split(" ").pop() : "";
+  let ph = 0, pa = 0, runTeam = null, run = 0;
+  for (const p of sum?.plays || []){
+    const tx = p.text || "", ty = p.type?.text || "", q = p.period?.number, t = `${q > 4 ? "OT" : q + "Q"} ${p.clock?.displayValue || ""}`, id = p.id;
+    const hs = p.homeScore, as = p.awayScore, team = p.team?.id;
+    let txt = "", big = false, low = false;
+    if (p.scoringPlay){
+      const name = kp((tx.match(/^(.+?) makes /) || [])[1]), ast = (tx.match(/\((.+?) assists\)/) || [])[1], pts = p.scoreValue;
+      if (/free throw/i.test(ty)) low = true, txt = `${name} 자유투 성공`;
+      else if (/alley oop/i.test(ty)) { txt = `🚀 앨리웁!!! ${ast ? kp(ast) + " → " : ""}${name} 꽂아버립니다!!`; big = true; }
+      else if (/dunk/i.test(ty)) { txt = pickT(id, [`💥 ${name} 덩크!!! 림이 흔들립니다!!`, `💥 ${name} 쾅!!! 찍어버립니다!!`, `💥 ${name} 슬램덩크!!! 체육관 들썩!!`]); big = true; }
+      else if (pts === 3) { txt = pickT(id, [`🎯 ${name} 쓰리이이이!!! 3점 꽂습니다!`, `🎯 ${name} 3점슛!! 손끝이 뜨겁습니다🔥`, `🎯 ${name} 깊은 곳에서~ 들어갑니다!!! 3점!`]); big = true; }
+      else txt = `🏀 ${name} ${/layup/i.test(ty) ? "레이업" : /hook/i.test(ty) ? "훅슛" : /tip/i.test(ty) ? "팁인" : /float/i.test(ty) ? "플로터" : "점퍼"} 득점!`;
+      if (ast && !/alley oop/i.test(ty)) txt += ` (어시 ${kp(ast)})`;
+      const lead0 = Math.sign(ph - pa), lead1 = Math.sign(hs - as);
+      if (lead1 === 0 && lead0 !== 0) { txt += " 동점!!"; big = true; }
+      else if (lead0 !== 0 && lead1 !== 0 && lead0 !== lead1) { txt += " 역전!!!"; big = true; }
+      const gained = String(team) === m.home.id ? hs - ph : as - pa;
+      if (String(team) === runTeam) run += gained; else { runTeam = String(team); run = gained; }
+      if (run >= 8 && run - gained < 8 || run >= 12 && run - gained < 12){ txt += ` 🔥 ${esc(tn(team))} ${run}-0 런!!`; big = true; }
+      ph = hs; pa = as;
+    }
+    else if (/ blocks /.test(tx)) txt = pickT(id, [`🚫 ${kp((tx.match(/^(.+?) blocks /) || [])[1])} 블록슛!!! 어딜~`, `🚫 ${kp((tx.match(/^(.+?) blocks /) || [])[1])} 쳐냅니다!! 블록!`]);
+    else if (/\((.+?) steals\)/.test(tx)) txt = `🕵️ ${kp(tx.match(/\((.+?) steals\)/)[1])} 스틸!`;
+    else if (/^End of the/.test(tx) || ty === "End Period"){ txt = `⏱️ ${q > 4 ? "연장" : q + "쿼터"} 종료! (${ph} : ${pa})`; }
+    else if (/^End of Game/.test(tx)) { txt = `🏁 경기 종료!!! (${ph} : ${pa})`; big = true; }
+    else if (/timeout/i.test(ty)) low = true, txt = `⏸️ ${esc(tn(team) || "")} 작전타임`;
+    else if (/technical|flagrant/i.test(ty)) { txt = `😤 ${/flagrant/i.test(ty) ? "플래그런트" : "테크니컬"} 파울!`; big = true; }
+    else if (/ejected/i.test(tx)) { txt = `🟥 퇴장!!!`; big = true; }
+    if (txt) out.push({id:String(id), t, txt, big, low});
+  }
+  return out;
+}
+function pbpBaseball(sum){
+  const out = [];
+  const VERB = [[/homered/, "홈런"], [/tripled/, "3루타"], [/doubled/, "2루타"], [/singled/, "안타"], [/sacrifice fly/, "희생플라이"], [/walked/, "볼넷"], [/hit by pitch/, "몸에 맞는 공"], [/grounded out/, "땅볼"], [/reached on .*error/, "실책 출루"]];
+  for (const p of sum?.plays || []){
+    const tx = p.text || "", ty = p.type?.text || "", per = p.period || {}, t = `${per.number}회${per.type === "Top" ? "초" : "말"}`, id = p.id;
+    let txt = "", big = false;
+    const name = kp((tx.match(/^([A-Z][\w.'\- ]*?) (homered|tripled|doubled|singled|hit|walked|struck|grounded|flied|lined|reached|popped)/) || [])[1]);
+    if (/homered/.test(tx)){ const ft = (tx.match(/\((\d+) feet\)/) || [])[1]; txt = pickT(id, [`💣 ${name} 홈런!!!! 넘어갔습니다아아아!!`, `💣 ${name} 쳤습니다~ 담장 밖으로!!! 홈런!!!`]) + (ft ? ` (${Math.round(ft * 0.3048)}m)` : ""); big = true; }
+    else if (p.scoringPlay){ const v = (VERB.find(([r]) => r.test(tx)) || [, "타격"])[1]; const runs = (tx.match(/scored/g) || []).length; txt = `🏃 ${name} ${v}!${runs ? ` ${runs}점 들어옵니다!!` : ""}`; big = runs >= 2; }
+    else if (/struck out swinging/.test(tx)) txt = `🔥 ${name} 헛스윙 삼진!`;
+    else if (/struck out looking/.test(tx)) txt = `🔥 ${name} 루킹 삼진!`;
+    else if (ty === "End Inning"){ const h = /Middle/.test(tx) ? "초" : "말"; txt = `⏱️ ${per.number}회${h} 종료 (원정 ${p.awayScore} : ${p.homeScore} 홈)`; out.push({id:String(id), t:`${per.number}회${h}`, txt, big, low:true}); continue; }
+    if (txt) out.push({id:String(id), t, txt, big});
+  }
+  return out;
+}
+function pbpBuild(lg, m, sum){
+  const sp = sportOf(lg);
+  try { return sp === "soccer" ? pbpSoccer(sum) : sp === "basketball" ? pbpBasketball(sum, m) : pbpBaseball(sum); } catch { return []; }
+}
+// 카드 맨 위 초록 글씨 한 줄 (가장 최근 장면)
+const PBP_SEEN = {};
+function pbpTicker(lg, m){
+  const k = lg + "|" + m.id, L1 = PBP[k]; if (!L1 || !L1.length || m.state === "pre") return "";
+  const recent = L1.slice(-4), x = [...recent].reverse().find(y => !y.low) || L1[L1.length - 1], fresh = PBP_SEEN[k] !== undefined && PBP_SEEN[k] !== x.id;
+  PBP_SEEN[k] = x.id;
+  return `<div class="lpbp ${x.big ? "big" : ""} ${fresh ? "new" : ""}" data-pbpid="${esc(x.id)}" title="${esc(x.t)}"><span class="pt">${esc(x.t)}</span>${x.txt}</div>`;
+}
+// 경기 상세 창이 열려 있는 동안 문자중계를 20초마다 새로
+function pbpLoop(lg, m){
+  clearTimeout(PBP.loop);
+  PBP.loop = setTimeout(async () => {
+    if (!modal.open || S.modalMatch !== m.id) return;
+    try {
+      const s = await espn(summaryPath(lg, m.id), 15);
+      if (sportOf(lg) !== "soccer") await withTimeout(lookupPlayers(playerNames(s), OCC[sportOf(lg)]), 2500);
+      const el = document.getElementById("pbpsec"), html = pbpSection(lg, m, s);
+      if (el && html && modal.open && S.modalMatch === m.id){ const open = el.querySelector("details")?.open; el.outerHTML = html; if (open) document.querySelector("#pbpsec details")?.setAttribute("open", ""); }
+      const st = s?.header?.competitions?.[0]?.status?.type?.state;
+      if (st && st !== "in") return;
+    } catch {}
+    pbpLoop(lg, m);
+  }, 20000);
+}
+// 경기 상세 창: 전체 문자중계 (최신이 위)
+function pbpSection(lg, m, sum){
+  const L1 = pbpBuild(lg, m, sum); if (!L1.length) return "";
+  PBP[lg + "|" + m.id] = L1;
+  const rows = L1.slice().reverse();
+  return `<div class="sec" id="pbpsec"><div class="sec-h"><h3>📝 문자중계</h3><span class="muted sp">${m.state === "in" ? "20초마다 업데이트 · " : ""}최신이 위</span></div>
+    <ul class="pbpl">${rows.slice(0, 80).map(x => `<li class="${x.big ? "big" : ""}"><span class="pt">${esc(x.t)}</span><span>${x.txt}</span></li>`).join("")}</ul>
+    ${rows.length > 80 ? `<details class="pbpmore"><summary>이전 장면 ${rows.length - 80}개 더 보기</summary><ul class="pbpl">${rows.slice(80).map(x => `<li class="${x.big ? "big" : ""}"><span class="pt">${esc(x.t)}</span><span>${x.txt}</span></li>`).join("")}</ul></details>` : ""}</div>`;
 }
 // ================================================================ 전체 리그 경기 목록 (검색 · 캡처 인식 · PiP 공용)
 const IDX = {t:0, p:null, list:[]};

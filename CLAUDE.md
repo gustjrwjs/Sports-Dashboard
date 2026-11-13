@@ -19,6 +19,7 @@
 완료(2026-11-13): 농구 경기 전 예상 선발·명단(`fillBbPre`), CONCACAF 네이션스리그(`cnl`, `isNL()`로 UNL과 공용), 경기 검색(`openSearch`), 미니 라이브 PiP(`openPip`, Document PiP → 안 되면 `#pipbox`), 베팅내역 캡처 인식(`importSlips`: Tesseract.js 5.1.1 jsdelivr에서 필요할 때만 로드, 3배 확대·흑백 전처리, 같은 줄의 두 팀만 짝짓기, 한 글자 차이 표기 허용). 세 기능 모두 `loadIndex()`(전체 리그 이번 달 경기 목록) 공용.
 - 쿼터·이닝별 점수표 `periodTable()`(LIVE 카드·My·경기 상세 공용). 휴대폰은 붙여넣기 칸을 누르면 바로 갤러리(사진 선택) 열림(`TOUCH`).
 - PiP 창 위의 주소 바·창 틀, 창 투명도는 브라우저(OS 창)가 정하는 것이라 웹에서 못 바꿈 — 소유자에게 설명함.
+- 문자중계 `pbpBuild`(축구 commentary·keyEvents / 농구·야구 plays → 한국어 템플릿, `pickT`로 장면마다 고정 멘트), 카드 위 초록 한 줄 `pbpTicker`(작은 장면 low는 뒤로), 상세 창 `pbpSection` + `pbpLoop` 20초 갱신. AI 챗봇 중계는 키 숨길 서버 필요해서 보류.
 - 캡처 이미지는 **절대 서버·저장소로 보내거나 저장하지 않음**(화면에 명시됨, 소유자 요청). 이 원칙 유지.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
