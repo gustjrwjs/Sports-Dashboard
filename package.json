@@ -1,0 +1,11 @@
+{
+  "name": "sports-live",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "SPORTS LIVE! 배포용 빌드 (static → dist, 코드 난독화)",
+  "scripts": { "build": "node build.mjs" },
+  "devDependencies": {
+    "clean-css": "5.3.3",
+    "javascript-obfuscator": "5.8.1"
+  }
+}

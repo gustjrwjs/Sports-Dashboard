@@ -9,9 +9,10 @@
 
 ## 📋 다음 할 일 (소유자가 요청함 · 묻지 말고 순서대로 진행, 끝나면 이 목록에서 지우기)
 
-1. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
-2. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
-3. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+1. **(소유자 요청 2026-11-13, 최우선)** 화면에 영어로 나오는 이름(선수·팀·리그·경기장 등, 예: 코파 델 레이 일정의 "Salamanca …")을 **한국어 발음 표기**로 바꾸기. 위키데이터 한국어 이름이 없으면 영어→한글 발음 변환 규칙/사전(`KO_NAME` 등)으로 표기. 공식 상태 표시 규칙은 유지.
+2. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
+3. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
+4. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 완료(2026-11-12): EFL 챔피언십(`eng.2`) 추가, K리그1·2·NPB "준비 중"(ESPN `baseball` 리그 12개에 NPB 없음, `jpn.npb`/`npb` 빈 응답), 대진표 미리보기.
 
@@ -56,6 +57,14 @@
 2. **수정하면 묻지 말고 GitHub에도 바로 올립니다.** 그 뒤 공개 링크에서 반영됐는지 확인합니다(배포에 30~60초).
 3. **업데이트가 끝나면 항상 마지막에 공개 링크를 줍니다.**
 4. **저작권 표시 유지**: All rights reserved (© 2026 gustjrwjs). MIT/오픈소스로 되돌리지 않습니다.
+
+## 코드 보호·배포 (2026-11-13 소유자 결정: 무료 방법 모두 적용)
+
+- 저장소는 **비공개(Private)** 로 전환 예정(소유자가 GitHub Settings에서 직접). 비공개가 되면 GitHub Pages(무료)는 꺼짐.
+- 배포는 **Cloudflare Pages**(무료, 비공개 저장소 연결 가능): Build command `npm run build`, Output `dist`, main에 push하면 자동 배포.
+- `build.mjs`: `static/` → `dist/`, 스크립트 난독화(javascript-obfuscator 5.8.1, renameGlobals:false), CSS 압축, 주석 제거, `MODE="direct"`(배포 사이트엔 /espn 중계 없음), `_headers`(index·sw no-cache). **원본은 `static/`만 고침**, `dist/`는 커밋하지 않음.
+- 주소가 바뀌면 기기마다 로컬 저장(My·응원팀)이 새로 시작됨 → 기기 연동 코드로 옮기면 됨. 새 주소가 정해지면 이 파일·README·LICENSE의 공개 링크를 바꿀 것.
+- 비공개 전환 뒤엔 `raw.githubusercontent.com` PowerShell 다운로드가 안 됨 → Git(또는 GitHub Desktop)으로 `git pull`.
 
 ## 업로드 방법 (Git 미설치 컴퓨터)
 
