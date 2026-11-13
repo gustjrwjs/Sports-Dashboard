@@ -533,6 +533,11 @@ table.box td.hi{font-weight:800}
 .pn-in .bo{width:16px;text-align:right;color:var(--muted);font-size:12px;font-weight:700}
 .hs{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:50% 15%;background:var(--surface-2);flex:none}
 tr.dnp td{color:var(--muted)}
+.box .bst{font-size:11.5px;font-weight:600;color:#d97706;white-space:nowrap}
+.box .bst.out{color:var(--loss)}
+.box .bst.alt{color:var(--accent)}
+table.bbpre .bst{white-space:normal;display:inline-block;line-height:1.25}
+table.bbpre td.pn .pn-in>span[title]{white-space:normal}
 tr.sub td.pn .pn-in{padding-left:24px}
 tr.grp-row td{background:var(--surface-2);font-size:11px;color:var(--muted);text-align:left;font-weight:700}
 .prob{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -1901,6 +1906,7 @@ async function openMatch(id){
       <div class="sec"><div class="sec-h"><h3>맞대결 기록</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 조회 범위 안의 최근 경기</span></div>
         ${h2h.length ? resList(h2h) : '<div class="card empty">조회 범위 안에 맞대결 기록이 없습니다.</div>'}</div>`);
     if (sp === "soccer" && m.state === "pre" && !hasLineup(sum ? parseLineups(sum) : null)) fillPrevLineups(m, h, a);
+    if (sp === "basketball" && document.getElementById("bb-pre")) fillBbPre(m, h, a);
   } catch (e) { openModal(head + errBox(e)); }
 }
 
@@ -2086,8 +2092,11 @@ function injuriesBlock(m, sum){
 const BB_COLS = [["MIN","출전"],["PTS","득점"],["REB","리바"],["AST","어시"],["STL","스틸"],["BLK","블록"],["TO","턴오버"],["FG","야투"],["3PT","3점"],["FT","자유투"],["+/-","+/-"]];
 function basketballSection(m, sum){
   const teams = orderTeams(m, sum?.boxscore?.players || [], x => x.team?.id).filter(t => (t.statistics?.[0]?.athletes || []).length);
+  if (!teams.length && m.state !== "post")  // 경기 전·기록 나오기 전: 예상 선발 + 전체 명단 (fillBbPre가 채움)
+    return `<div class="sec"><div class="sec-h"><h3>출전 예상 선수</h3><span class="muted sp">예상 선발은 직전 경기 선발 기준 · 실제 선발은 경기 30분 전쯤 확정</span></div>
+      <div id="bb-pre" data-mid="${esc(m.id)}"><div class="card empty">선수 명단을 불러오는 중…</div></div></div>` + injuriesBlock(m, sum);
   if (!teams.length){
-    const msg = m.state === "pre" ? "선수 기록은 경기가 시작되면 나옵니다. 선발 명단은 보통 경기 30분 전쯤 확정됩니다." : "이 경기의 선수 기록이 없습니다.";
+    const msg = "이 경기의 선수 기록이 없습니다.";
     return `<div class="sec"><div class="sec-h"><h3>선수 기록</h3></div><div class="card empty">${msg}</div></div>` + injuriesBlock(m, sum);
   }
   const html = teams.map(t => {
@@ -2105,6 +2114,41 @@ function basketballSection(m, sum){
       <tr class="grp-row"><td colspan="${cols.length + 1}">벤치</td></tr>${bench.map(row).join("")}</tbody></table></div></div>`;
   }).join("");
   return `<div class="sec"><div class="sec-h"><h3>선수 기록</h3><span class="muted sp">출전 시간(분) · 득점 최다 선수 굵게</span></div></div>${html}`;
+}
+
+// 경기 전 농구: 팀 명단(ESPN roster) + 직전 경기 선발로 '예상 선발'을 만들고 나머지는 벤치로
+async function fillBbPre(m, h, a){
+  const Lg = L(), prevOf = t => t.past.find(e => e.id !== m.id && e.date < m.date);
+  const ph = prevOf(h), pa = prevOf(a);
+  const roster = tid => espn(`site/v2/sports/basketball/${Lg.slug}/teams/${tid}/roster`, 1800).catch(() => null);
+  const [rh, ra, sh, sa] = await Promise.all([roster(m.home.id), roster(m.away.id), ph ? getSummary(ph).catch(() => null) : null, pa ? getSummary(pa).catch(() => null) : null]);
+  const flat = r => (r?.athletes || []).flatMap(x => x.items || [x]);
+  await withTimeout(lookupPlayers([...flat(rh), ...flat(ra)].map(x => x.displayName), OCC.basketball), 6000);
+  const box = document.querySelector(`#bb-pre[data-mid="${m.id}"]`);
+  if (!box || S.modalMatch !== m.id) return;
+  const team = (tid, r, psum, pev) => {
+    const pt = (psum?.boxscore?.players || []).find(x => String(x.team?.id) === tid), st = pt?.statistics?.[0], lab = st?.names || [];
+    const pa = st?.athletes || [], prevOfId = id => pa.find(y => String(y.athlete?.id) === id);
+    let list = flat(r).map(p => ({id:String(p.id), name:p.displayName, pos:p.position?.abbreviation || "", no:p.jersey || "", img:p.headshot?.href, inj:(p.injuries || [])[0]?.status || ""}));
+    if (!list.length) list = pa.map(x => ({id:String(x.athlete.id), name:x.athlete.displayName, pos:x.athlete.position?.abbreviation || "", no:x.athlete.jersey || "", img:x.athlete.headshot?.href, inj:""}));
+    if (!list.length) return "";
+    const out = p => /^(Out|Suspension)$|IL/i.test(p.inj);
+    const min = p => { const x = prevOfId(p.id); return x && (x.stats || []).length ? Number(x.stats[lab.indexOf("MIN")]) || 0 : null; };
+    const starters = list.filter(p => prevOfId(p.id)?.starter && !out(p));
+    const rest = list.filter(p => !starters.includes(p)).sort((x, y) => out(x) - out(y) || (min(y) ?? -1) - (min(x) ?? -1));
+    // 직전 선발 중 결장자가 있으면 직전 경기 출전 시간이 가장 긴 벤치 선수로 채움
+    if (starters.length) while (starters.length < 5 && rest.length && !out(rest[0]) && min(rest[0]) != null){ const x = rest.shift(); x.alt = true; starters.push(x); }
+    const row = p => `<tr class="${out(p) ? "dnp" : ""}"><td class="pn"><span class="pn-in">${headImg(p.img || imgOf(p.name, 80))}<span title="${nameTitle(p.name)}">${esc(koFull(p.name))}</span><small>${esc(p.pos)}</small></span></td>
+      <td class="hide-sm">${esc(p.no)}</td><td>${min(p) ?? "-"}</td><td class="tl">${p.inj ? `<span class="bst ${out(p) ? "out" : ""}">${esc(INJ[p.inj] || p.inj)}</span>` : p.alt ? '<span class="bst alt">대체 선발 예상</span>' : ""}</td></tr>`;
+    const r5 = pev && resultFor(pev, tid);
+    const note = r5 ? `<div class="note lu-note">직전 경기: ${dShort(pev.date)} vs ${esc(ko(r5.op.name))} ${r5.gf}-${r5.ga} · '직전 출전'은 그 경기 출전 시간(분)</div>` : "";
+    return `<div class="sec">${teamHead(m, tid)}<div class="box-wrap"><table class="box bbpre">
+      <thead><tr><th class="tl">선수</th><th class="hide-sm">번호</th><th>직전<br>출전</th><th class="tl">상태</th></tr></thead>
+      <tbody><tr class="grp-row"><td colspan="4">예상 선발</td></tr>${starters.length ? starters.map(row).join("") : '<tr><td colspan="4" class="tl muted">직전 경기 정보가 없습니다</td></tr>'}
+      <tr class="grp-row"><td colspan="4">벤치·명단</td></tr>${rest.map(row).join("")}</tbody></table></div>${note}</div>`;
+  };
+  const html = team(m.home.id, rh, sh, ph) + team(m.away.id, ra, sa, pa);
+  box.innerHTML = html || '<div class="card empty">선수 명단 정보가 없습니다.</div>';
 }
 
 // ---------------------------------------------------------------- 야구
