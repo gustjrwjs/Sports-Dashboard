@@ -683,14 +683,24 @@ a.appname:hover{opacity:.85}
 .bsbox small{font-size:10.5px;color:var(--muted)}
 .bsbox b{font-size:18px;color:var(--accent);font-variant-numeric:tabular-nums}
 .bsbox span{font-size:10.5px;color:var(--muted)}
-.betrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:-4px 0 0;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-top:0;border-radius:0 0 12px 12px;font-size:12px}
-.betrow .bl{font-weight:700;margin-right:2px}
-.bchip{font:inherit;font-size:11.5px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:3px 9px;cursor:pointer}
-.bchip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
-.bchip:disabled{cursor:default}
-.bsep{width:1px;height:16px;background:var(--border);margin:0 3px}
-.bhit{color:var(--win)}.bmiss{color:var(--loss)}
-.bst2{margin-left:auto;font-size:11px}
+.betbox{margin:-4px 0 0;padding:8px 10px 10px;background:var(--surface-2);border:1px solid var(--border);border-top:0;border-radius:0 0 12px 12px;display:flex;flex-direction:column;gap:6px}
+.betbox .bh{display:flex;align-items:baseline;gap:8px;font-size:12.5px}
+.betbox .bh small{color:var(--muted);font-size:11px}
+.bgrid{display:grid;gap:6px;align-items:stretch}
+.bgrid.c3{grid-template-columns:62px repeat(3,1fr)}
+.bgrid.c2{grid-template-columns:62px repeat(2,1fr)}
+.bgrid .bk{display:flex;flex-direction:column;justify-content:center;font-size:11.5px;font-weight:700;color:var(--muted);line-height:1.2}
+.bgrid .bk b{color:var(--text);font-size:13px}
+.bcell{position:relative;font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:40px;padding:5px 4px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;cursor:pointer;min-width:0}
+.bcell .bn{font-size:12.5px;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bcell small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bcell:hover:not(:disabled){border-color:var(--accent)}
+.bcell.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.bcell.on small{color:rgba(255,255,255,.85)}
+.bcell:disabled{cursor:default}
+.bcell:disabled:not(.on){opacity:.55}
+.bcell.act{box-shadow:0 0 0 2px var(--win);opacity:1!important}
+.bcell em{position:absolute;top:-8px;right:-6px;font-style:normal;font-size:15px}
 .nsw{display:flex;align-items:center;gap:10px;cursor:pointer;margin:6px 0 10px}
 .nsw input{display:none}
 .nsw .track{width:46px;height:26px;border-radius:999px;background:var(--border);position:relative;transition:.2s;flex:none}
@@ -3525,16 +3535,23 @@ function gradeBets(){
 }
 function betRow(it){
   const p = it.p, m = it.m, k = it.k; if (!m) return "";
-  const sp = sportOf(p.lg), bet = p.bet || {}, pre = m.state === "pre", log = BETLOG.find(b => b.k === k) || {};
-  const nm = t => { const s = ko(t.name).split(" "); return sp === "soccer" ? ko(t.name) : s[s.length - 1]; };
-  const opts = [["home", `${nm(m.home)} 승`], ...(sp === "soccer" ? [["draw", "무"]] : []), ["away", `${nm(m.away)} 승`]];
-  const line = pre ? Number((MY.odds[k] || {}).overUnder) : bet.line;
-  const mark = h => h === true ? '<b class="bhit">✅ 적중</b>' : h === false ? '<b class="bmiss">❌</b>' : "";
-  const chip = (f, v, lab) => `<button class="bchip ${bet[f] === v ? "on" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>${esc(lab)}</button>`;
+  const sp = sportOf(p.lg), bet = p.bet || {}, pre = m.state === "pre", post = m.state === "post", log = BETLOG.find(b => b.k === k) || {};
   if (!pre && !bet.res && !bet.ou) return "";
-  return `<div class="betrow"><span class="bl">🎯 내 예측</span>${pre ? opts.map(([v, l]) => chip("res", v, l)).join("") : bet.res ? `${chip("res", bet.res, (opts.find(o => o[0] === bet.res) || [, ""])[1])}${mark(log.rHit)}` : ""}
-    ${line != null && !isNaN(line) ? (pre ? `<span class="bsep"></span>${chip("ou", "over", `오버 ${line}`)}${chip("ou", "under", `언더 ${line}`)}` : bet.ou ? `<span class="bsep"></span>${chip("ou", bet.ou, `${bet.ou === "over" ? "오버" : "언더"} ${line}`)}${mark(log.oHit)}` : "") : ""}
-    ${!pre && m.state === "in" ? '<span class="muted bst2">경기 중</span>' : ""}</div>`;
+  const o = MY.odds[k] || {}, ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
+  const nm = t => { const s = ko(t.name).split(" "); return sp === "soccer" ? ko(t.name) : s[s.length - 1]; };
+  const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
+  const actual = post ? (hs > as ? "home" : hs < as ? "away" : sp === "soccer" ? "draw" : m.home.winner ? "home" : "away") : null;
+  const line = pre ? Number(o.overUnder) : bet.line;
+  const ouAct = post && line != null && !isNaN(line) && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
+  // 한 칸 = 선택지 이름 + 배당. 고른 칸은 파란색, 끝난 경기는 실제 결과 칸에 테두리 + 내 선택에 ✅/❌
+  const cell = (f, v, lab, odd, act) => { const on = bet[f] === v, hit = f === "res" ? log.rHit : log.oHit;
+    return `<button class="bcell ${on ? "on" : ""} ${act === v ? "act" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>
+      <span class="bn">${esc(lab)}</span>${odd && odd !== "-" ? `<small>${odd}</small>` : ""}${on && post ? `<em>${hit === true ? "✅" : hit === false ? "❌" : ""}</em>` : ""}</button>`; };
+  const res = [["home", `${nm(m.home)} 승`, fOdds(ho.moneyLine)], ...(sp === "soccer" ? [["draw", "무승부", fOdds((o.drawOdds || {}).moneyLine)]] : []), ["away", `${nm(m.away)} 승`, fOdds(ao.moneyLine)]];
+  const hasOU = line != null && !isNaN(line) && (pre || bet.ou);
+  return `<div class="betbox"><div class="bh"><b>🎯 내 예측</b><small>${pre ? "시작 전까지 고르기 · 다시 누르면 취소" : m.state === "in" ? "경기 중 · 끝나면 채점" : "결과 · 테두리 = 실제 결과"}</small></div>
+    <div class="bgrid c${res.length}"><span class="bk">승패</span>${res.map(([v, l, od]) => cell("res", v, l, od, actual)).join("")}</div>
+    ${hasOU ? `<div class="bgrid c2"><span class="bk">언오버<b>${line}</b></span>${cell("ou", "over", "오버", fOdds(o.overOdds), ouAct)}${cell("ou", "under", "언더", fOdds(o.underOdds), ouAct)}</div>` : ""}</div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-bet]"); if (!b || S.mySel) return;
