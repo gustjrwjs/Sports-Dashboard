@@ -211,7 +211,9 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .nmrow{display:flex;align-items:center;gap:6px;max-width:100%;min-width:0}
 .nmrow .lg{width:22px;height:22px;flex:none}
 .nmrow .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.lt .lq{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.5px;white-space:nowrap}
+.lqrow{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px;margin:6px 0 2px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lqrow span{background:var(--surface-2);border-radius:6px;padding:1px 6px;white-space:nowrap}
+.lqrow i{font-style:normal;font-size:9px;font-weight:700;margin-right:3px;opacity:.8}
 .lt small{font-size:10.5px;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lc{text-align:center;padding:0 2px}
 .lsc{position:relative;display:inline-flex;align-items:center;gap:5px;font-size:22px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
@@ -2391,11 +2393,14 @@ function liveCard(m, ctx){
   const team = (t, side, i) => {
     const q = qs(side), lead = !pre && (i === 0 ? hs > as : as > hs);
     const win = fin && lead ? `<em class="wbadge">승</em>` : "";
-    const sub = [q.length ? `<span class="lq">${q.join(" ")}</span>` : "", ev[i].length ? `<small>${ev[i].join(" ")}</small>` : ""].join("");
+    const sub = [ ev[i].length ? `<small>${ev[i].join(" ")}</small>` : ""].join("");
     return `<div class="lt ${i ? "away" : "home"} ${lead || pre ? "lead" : ""}">
       <div class="nmrow">${i ? logo(t.logo) : win}<span class="nm">${nm(t)}</span>${i ? win : logo(t.logo)}</div>${sub}</div>`;
   };
   let extra = "";
+  // 농구 쿼터별 점수: 카드 아래 한 줄 (홈-원정 순). 1쿼터 중엔 총점과 같아서 생략
+  const qh = qs("home"), qa = qs("away");
+  if (qh.length >= 2) extra += `<div class="lqrow" title="쿼터별 점수 (홈-원정)">${qh.map((v, k) => `<span><i>${k < 4 ? k + 1 + "Q" : "OT" + (k > 4 ? k - 3 : "")}</i>${esc(v)}-${esc(qa[k] ?? "")}</span>`).join("")}</div>`;
   if (sp === "baseball" && comp.situation && m.state === "in"){
     const s = comp.situation;
     const dia = `<span class="dia"><i class="${s.onSecond ? "on" : ""}" style="left:10px;top:0"></i><i class="${s.onThird ? "on" : ""}" style="left:2px;top:8px"></i><i class="${s.onFirst ? "on" : ""}" style="left:18px;top:8px"></i></span>`;
