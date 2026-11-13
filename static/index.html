@@ -655,6 +655,43 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.dayp{border:2px solid var(--border);border-radius:16px;background:var(--surface);margin:0 0 16px;overflow:hidden;box-shadow:var(--shadow)}
+.dayp.d0{border-color:var(--accent)}
+.dayp>header{display:flex;align-items:baseline;gap:8px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.dayp.d0>header{background:var(--accent-soft)}
+.dayp>header b{font-size:16px}.dayp.d0>header b{color:var(--accent)}
+.dayp>header span{color:var(--muted);font-size:13px;font-weight:600}.dayp>header em{margin-left:auto;font-style:normal;color:var(--muted);font-size:12.5px}
+.lsl{display:flex;flex-direction:column}
+.lsr{display:grid;grid-template-columns:78px 112px minmax(0,1fr) 64px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:7px 10px 7px 14px;border-bottom:1px solid var(--border);cursor:pointer;min-height:44px;position:relative}
+.lsr:last-child{border-bottom:0}.lsr:hover{background:var(--surface-2)}
+.lsr.is-live{background:color-mix(in srgb, #ef4444 6%, var(--surface))}
+.lsr .lt{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;line-height:1.2;white-space:nowrap;overflow:hidden}
+.lsr .lt b{color:var(--text);font-size:14px;font-variant-numeric:tabular-nums}.lsr .lt b.lv{color:#ef4444;font-size:12.5px}
+.lsr .lt small{color:#ea580c;font-size:11px;font-weight:700}
+.lsr .ll{display:flex;align-items:center;gap:6px;min-width:0}.lsr .ll small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lsr .lh,.lsr .la{display:flex;align-items:center;gap:6px;min-width:0;font-size:14px}
+.lsr .lh{justify-content:flex-end;text-align:right}
+.lsr .lh>span,.lsr .la>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lsr .lh.w,.lsr .la.w{font-weight:800}.lsr.fin .lh:not(.w),.lsr.fin .la:not(.w){color:var(--muted)}
+.lsr .lg{width:20px;height:20px;flex:none}
+.lsr .lsc{display:flex;justify-content:center;align-items:center;gap:4px;font-size:15px;font-variant-numeric:tabular-nums}
+.lsr .lsc i{font-style:normal;color:var(--muted)}.lsr .lsc i.vs{font-size:12px}
+.lsr.is-live .lsc b{color:#ef4444}
+.lsr .pick{position:static;transform:none;width:36px;height:36px}
+.lsr .lmb{display:none}
+@media (max-width:640px){
+  .lsr{grid-template-columns:52px 20px minmax(0,1fr) 32px;gap:8px;padding:6px 4px 6px 10px}
+  .lsr .lh,.lsr .la,.lsr .lsc,.lsr .ll small{display:none}
+  .lsr .lmb{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .lsr .lmb>span{display:flex;align-items:center;gap:6px;min-width:0;font-size:13.5px}
+  .lsr .lmb>span>span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lsr .lmb b{font-variant-numeric:tabular-nums;font-size:14px;min-width:26px;text-align:right}
+  .lsr .lmb .w{font-weight:800}.lsr.fin .lmb>span:not(.w){color:var(--muted)}.lsr.is-live .lmb b{color:#ef4444}
+  .lsr .lg{width:18px;height:18px}
+  .lsr .lt b{font-size:13px}.lsr .lt b.lv{font-size:11px;white-space:normal}.lsr .lt small{font-size:10px;white-space:normal}
+  .lsr .pick{width:30px;height:30px;font-size:19px}
+  .dayp>header{padding:9px 12px}
+}
 .hlrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
 .hlbtn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:99px;background:#ff0033;color:#fff;font-weight:800;font-size:13px;text-decoration:none}
 @media (max-width:520px){.hlbtn{padding:7px 12px;font-size:12.5px}}
@@ -4379,6 +4416,21 @@ const LG_ORDER = SPORT_GROUPS.flatMap(g => g.keys);
 S.homeSport = lsGet("home.sport", "all"); S.homeState = "all";
 const countdown = iso => { const mi = Math.round((new Date(iso) - Date.now()) / 6e4); return mi <= 0 ? "곧 시작" : mi < 60 ? `${mi}분 후` : mi < 180 ? `${Math.floor(mi / 60)}시간 ${mi % 60 ? (mi % 60) + "분 " : ""}후` : ""; };
 const DAYW = {"-1":"어제", "0":"오늘", "1":"내일"};
+// 홈 일정 한 줄: 시간·상태 | 리그 | 홈팀 | 점수 | 원정팀 | ☆
+function lsRow({lg, m}){
+  const Lg = LEAGUES[lg], live = m.state === "in", post = m.state === "post";
+  const t = live ? `<b class="lv">● ${esc(liveText(m, sportOf(lg)))}</b>` : post ? "종료" : `<b>${timeOnly(m.date)}</b>${countdown(m.date) ? `<small>${countdown(m.date).replace(/시간 \d+분 후$/, "시간 후")}</small>` : ""}`;
+  const sc = live || post ? `<b>${m.home.score ?? 0}</b><i>:</i><b>${m.away.score ?? 0}</b>` : `<i class="vs">vs</i>`;
+  const hw = post && Number(m.home.score) > Number(m.away.score) ? "w" : "", aw = post && Number(m.away.score) > Number(m.home.score) ? "w" : "";
+  return `<div class="lsr ${live ? "is-live" : ""} ${post ? "fin" : ""}" data-open="${lg}|${m.id}">
+    <span class="lt">${t}</span>
+    <span class="ll" title="${esc(Lg.name)}"><span class="mk xs" style="background:${Lg.color}">${Lg.mark}</span><small>${esc(Lg.short)}</small></span>
+    <span class="lh ${hw}"><span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
+    <span class="lsc">${sc}</span>
+    <span class="la ${aw}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span></span>
+    <span class="lmb"><span class="${hw}">${logo(m.home.logo)}<span>${esc(ko(m.home.name))}</span><b>${live || post ? m.home.score ?? 0 : ""}</b></span><span class="${aw}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span><b>${live || post ? m.away.score ?? 0 : ""}</b></span></span>
+    ${pickBtn(lg, m.id, true)}</div>`;
+}
 function renderHome(fromTick){
   clearTimeout(S.homePoll);
   if (!IDX.list.length){
@@ -4427,22 +4479,18 @@ function renderHome(fromTick){
   if (soon.length) html += `<div class="strip-h"><h3>⏰ 곧 시작 (1시간 안)</h3><span class="muted">${soon.length}경기</span></div>${grid(soon)}`;
   if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? (dy === "all" ? "어제·오늘·내일" : DAYW[dy]) + " 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
   else {
-    let gi = 0;
-    // 날짜 묶음: 오늘 → 내일 → 어제(결과)
+    // 날짜 상자: 오늘 → 내일 → 어제(결과). 상자 안은 리그 섞어서 시간순 한 줄씩 (왼쪽 끝 리그 표시)
+    let di = 0;
     for (const off of ["0", "1", "-1"].filter(o => dy === "all" || dy === o)){
       const dd = new Date(d0); dd.setDate(dd.getDate() + Number(off));
-      const sub = new Map();
-      for (const [lg, arr] of byLg){ const a = arr.filter(x => String(x.m.state === "in" ? 0 : offOf(x)) === off); if (a.length) sub.set(lg, a); }
-      if (!sub.size) continue;
-      html += `<div class="strip-h hday"><h3>${DAYW[off]} 전체 일정 <span class="muted">${dd.getMonth() + 1}월 ${dd.getDate()}일 (${"일월화수목금토"[dd.getDay()]})</span></h3><span class="muted">${[...sub.values()].reduce((n, a) => n + a.length, 0)}경기</span></div>`;
-    for (const [lg, arr] of sub){
-      const Lg = LEAGUES[lg];
-      if (gi++ === 3) html += adSlot("home");
-      html += `<section class="hlg"><button class="hlgh" data-golg="${lg}"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span><b>${esc(Lg.name)}</b><span class="muted">${arr.length}경기 ›</span></button><div class="hgrid">${arr.map(x => miniRow(x, {today:true, compact:true})).join("")}</div></section>`;
-    }
+      const rows = list.filter(x => String(x.m.state === "in" ? 0 : offOf(x)) === off)
+        .sort((a, b) => (b.m.state === "in") - (a.m.state === "in") || a.m.date.localeCompare(b.m.date) || LG_ORDER.indexOf(a.lg) - LG_ORDER.indexOf(b.lg));
+      if (!rows.length) continue;
+      html += `<section class="dayp d${off.replace("-", "m")}"><header><b>${DAYW[off]}</b><span>${dd.getMonth() + 1}월 ${dd.getDate()}일 (${"일월화수목금토"[dd.getDay()]})</span><em>${rows.length}경기</em></header>
+        <div class="lsl">${rows.map(lsRow).join("")}</div></section>`;
+      if (di++ === 0) html += adSlot("home");
     }
   }
-  if (byLg.size && byLg.size <= 3) html += adSlot("home");
   html += `<p class="note">시간은 이 기기 시간대 기준입니다. ☆를 누르면 My 경기에 담기고, 경기를 누르면 라인업·기록·배당·문자중계를 볼 수 있습니다.</p>`;
   const y = window.scrollY;
   $("#main").innerHTML = html;
