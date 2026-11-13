@@ -622,6 +622,9 @@ tr.dnp td{color:var(--muted)}
 .mmid{display:flex;flex-direction:column;align-items:center;line-height:1.15}
 .msum{font-size:10px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mvs{color:var(--muted);font-size:11px}
+.pill.fifa{background:color-mix(in srgb, #0ea5e9 14%, var(--surface));color:#0369a1;border:1px solid color-mix(in srgb, #0ea5e9 35%, var(--border))}
+@media (prefers-color-scheme: dark){ .pill.fifa{color:#7dd3fc} }
+.fup{color:var(--win);font-size:.85em;font-weight:700}.fdn{color:var(--loss);font-size:.85em;font-weight:700}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -760,6 +763,7 @@ const ESPN_LG = id => ({logo:`https://a.espncdn.com/i/leaguelogos/soccer/500/${i
 const LEAGUES = {
   unl: {name:"UEFA 네이션스리그", short:"네이션스리그", mark:"UNL", color:"#1d4ed8", sport:"soccer", slug:"uefa.nations", sched:"months", scope:"all", national:true, comp:"UEFA Nations League", ...ESPN_LG(2395)},
   cnl: {name:"CONCACAF 네이션스리그", short:"북중미 네이션스리그", mark:"CNL", color:"#0f4c81", sport:"soccer", slug:"concacaf.nations.league", sched:"months", scope:"all", national:true, comp:"Concacaf Nations League", ...ESPN_LG(2406)},
+  intfr: {name:"국가대표 친선경기", short:"A매치 친선", mark:"A매치", color:"#7c2d12", sport:"soccer", slug:"fifa.friendly", sched:"week", scope:"all", national:true, nostand:true, comp:"International Friendly", ...ESPN_LG(53)},
   epl: {name:"프리미어리그", short:"프리미어리그", mark:"EPL", color:"#3d195b", sport:"soccer", slug:"eng.1", sched:"week", scope:"all", comp:"English Premier League", ...ESPN_LG(23)},
   laliga: {name:"라리가", short:"라리가", mark:"LL", color:"#e8452c", sport:"soccer", slug:"esp.1", sched:"week", scope:"all", comp:"Spanish LALIGA", ...ESPN_LG(15)},
   seriea: {name:"세리에 A", short:"세리에 A", mark:"SA", color:"#1b3a8a", sport:"soccer", slug:"ita.1", sched:"week", scope:"all", comp:"Italian Serie A", ...ESPN_LG(12)},
@@ -784,7 +788,7 @@ const LEAGUES = {
 };
 // 리그 선택 메뉴: 종목별로 묶음
 const SPORT_GROUPS = [
-  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "ucl", "uel", "unl", "cnl", "ligue1", "mls", "por", "bel", "tur", "champ", "laliga2", "kleague1", "kleague2"]},
+  {label:"⚽ 축구", keys:["epl", "laliga", "seriea", "bundesliga", "ucl", "uel", "unl", "cnl", "intfr", "ligue1", "mls", "por", "bel", "tur", "champ", "laliga2", "kleague1", "kleague2"]},
   {label:"🏀 농구", keys:["nba"]},
   {label:"⚾ 야구", keys:["mlb", "npb", "kbo"]},
 ];
@@ -795,7 +799,7 @@ const OCC = {soccer:"Q937857", basketball:"Q3665646", baseball:"Q10871364"};
 // ================================================================ 한국어 이름
 const KO = {
 // 국가
-"Albania":"알바니아","Anguilla":"앵귈라","Antigua and Barbuda":"앤티가 바부다","Aruba":"아루바","Bahamas":"바하마","Barbados":"바베이도스","Belize":"벨리즈","Bermuda":"버뮤다","Bonaire":"보네르","British Virgin Islands":"영국령 버진아일랜드","Cayman Islands":"케이맨 제도","Cuba":"쿠바","Dominica":"도미니카 연방","Dominican Republic":"도미니카 공화국","El Salvador":"엘살바도르","French Guiana":"프랑스령 기아나","Grenada":"그레나다","Guadeloupe":"과들루프","Guatemala":"과테말라","Guyana":"가이아나","Martinique":"마르티니크","Montserrat":"몬트세랫","Nicaragua":"니카라과","Puerto Rico":"푸에르토리코","Sint Maarten":"신트마르턴","St. Kitts and Nevis":"세인트키츠 네비스","St. Lucia":"세인트루시아","St. Martin":"생마르탱","St. Vincent and the Grenadines":"세인트빈센트 그레나딘","Suriname":"수리남","Trinidad and Tobago":"트리니다드 토바고","Turks and Caicos Islands":"터크스 케이커스 제도","US Virgin Islands":"미국령 버진아일랜드","Andorra":"안도라","Armenia":"아르메니아","Austria":"오스트리아","Azerbaijan":"아제르바이잔","Belarus":"벨라루스","Belgium":"벨기에","Bosnia and Herzegovina":"보스니아 헤르체고비나","Bosnia-Herzegovina":"보스니아 헤르체고비나","Bulgaria":"불가리아","Croatia":"크로아티아","Cyprus":"키프로스","Czechia":"체코","Czech Republic":"체코","Denmark":"덴마크","England":"잉글랜드","Estonia":"에스토니아","Faroe Islands":"페로 제도","Finland":"핀란드","France":"프랑스","Georgia":"조지아","Germany":"독일","Gibraltar":"지브롤터","Greece":"그리스","Hungary":"헝가리","Iceland":"아이슬란드","Israel":"이스라엘","Italy":"이탈리아","Kazakhstan":"카자흐스탄","Kosovo":"코소보","Latvia":"라트비아","Liechtenstein":"리히텐슈타인","Lithuania":"리투아니아","Luxembourg":"룩셈부르크","Malta":"몰타","Moldova":"몰도바","Montenegro":"몬테네그로","Netherlands":"네덜란드","North Macedonia":"북마케도니아","Northern Ireland":"북아일랜드","Norway":"노르웨이","Poland":"폴란드","Portugal":"포르투갈","Republic of Ireland":"아일랜드","Ireland":"아일랜드","Romania":"루마니아","Russia":"러시아","San Marino":"산마리노","Scotland":"스코틀랜드","Serbia":"세르비아","Slovakia":"슬로바키아","Slovenia":"슬로베니아","Spain":"스페인","Sweden":"스웨덴","Switzerland":"스위스","Türkiye":"튀르키예","Turkey":"튀르키예","Ukraine":"우크라이나","Wales":"웨일스",
+"Albania":"알바니아","Afghanistan":"아프가니스탄","American Samoa":"아메리칸사모아","Angola":"앙골라","Bahrain":"바레인","Bangladesh":"방글라데시","Benin":"베냉","Bhutan":"부탄","Botswana":"보츠와나","Burundi":"부룬디","Cambodia":"캄보디아","Central African Republic":"중앙아프리카공화국","Chinese Taipei":"대만","Comoros":"코모로","Congo DR":"콩고민주공화국","Cook Islands":"쿡 제도","Djibouti":"지부티","Equatorial Guinea":"적도 기니","Eswatini":"에스와티니","Ethiopia":"에티오피아","Fiji":"피지","Gabon":"가봉","Gambia":"감비아","Guam":"괌","Guinea":"기니","Hong Kong":"홍콩","India":"인도","Indonesia":"인도네시아","Kenya":"케냐","Kuwait":"쿠웨이트","Kyrgyz Republic":"키르기스스탄","Lebanon":"레바논","Lesotho":"레소토","Liberia":"라이베리아","Libya":"리비아","Macau":"마카오","Madagascar":"마다가스카르","Malawi":"말라위","Malaysia":"말레이시아","Maldives":"몰디브","Mauritania":"모리타니","Mauritius":"모리셔스","Mongolia":"몽골","Mozambique":"모잠비크","Myanmar":"미얀마","Namibia":"나미비아","New Caledonia":"뉴칼레도니아","Niger":"니제르","Pakistan":"파키스탄","Palestine":"팔레스타인","Papua New Guinea":"파푸아뉴기니","Philippines":"필리핀","Rwanda":"르완다","Sao Tome and Principe":"상투메 프린시페","Seychelles":"세이셸","Sierra Leone":"시에라리온","Singapore":"싱가포르","Solomon Islands":"솔로몬 제도","Sri Lanka":"스리랑카","Syria":"시리아","Tahiti":"타히티","Tajikistan":"타지키스탄","Tanzania":"탄자니아","Thailand":"태국","Togo":"토고","Turkmenistan":"투르크메니스탄","Uganda":"우간다","Vanuatu":"바누아투","Vietnam":"베트남","Yemen":"예멘","Zambia":"잠비아","Zimbabwe":"짐바브웨","Anguilla":"앵귈라","Antigua and Barbuda":"앤티가 바부다","Aruba":"아루바","Bahamas":"바하마","Barbados":"바베이도스","Belize":"벨리즈","Bermuda":"버뮤다","Bonaire":"보네르","British Virgin Islands":"영국령 버진아일랜드","Cayman Islands":"케이맨 제도","Cuba":"쿠바","Dominica":"도미니카 연방","Dominican Republic":"도미니카 공화국","El Salvador":"엘살바도르","French Guiana":"프랑스령 기아나","Grenada":"그레나다","Guadeloupe":"과들루프","Guatemala":"과테말라","Guyana":"가이아나","Martinique":"마르티니크","Montserrat":"몬트세랫","Nicaragua":"니카라과","Puerto Rico":"푸에르토리코","Sint Maarten":"신트마르턴","St. Kitts and Nevis":"세인트키츠 네비스","St. Lucia":"세인트루시아","St. Martin":"생마르탱","St. Vincent and the Grenadines":"세인트빈센트 그레나딘","Suriname":"수리남","Trinidad and Tobago":"트리니다드 토바고","Turks and Caicos Islands":"터크스 케이커스 제도","US Virgin Islands":"미국령 버진아일랜드","Andorra":"안도라","Armenia":"아르메니아","Austria":"오스트리아","Azerbaijan":"아제르바이잔","Belarus":"벨라루스","Belgium":"벨기에","Bosnia and Herzegovina":"보스니아 헤르체고비나","Bosnia-Herzegovina":"보스니아 헤르체고비나","Bulgaria":"불가리아","Croatia":"크로아티아","Cyprus":"키프로스","Czechia":"체코","Czech Republic":"체코","Denmark":"덴마크","England":"잉글랜드","Estonia":"에스토니아","Faroe Islands":"페로 제도","Finland":"핀란드","France":"프랑스","Georgia":"조지아","Germany":"독일","Gibraltar":"지브롤터","Greece":"그리스","Hungary":"헝가리","Iceland":"아이슬란드","Israel":"이스라엘","Italy":"이탈리아","Kazakhstan":"카자흐스탄","Kosovo":"코소보","Latvia":"라트비아","Liechtenstein":"리히텐슈타인","Lithuania":"리투아니아","Luxembourg":"룩셈부르크","Malta":"몰타","Moldova":"몰도바","Montenegro":"몬테네그로","Netherlands":"네덜란드","North Macedonia":"북마케도니아","Northern Ireland":"북아일랜드","Norway":"노르웨이","Poland":"폴란드","Portugal":"포르투갈","Republic of Ireland":"아일랜드","Ireland":"아일랜드","Romania":"루마니아","Russia":"러시아","San Marino":"산마리노","Scotland":"스코틀랜드","Serbia":"세르비아","Slovakia":"슬로바키아","Slovenia":"슬로베니아","Spain":"스페인","Sweden":"스웨덴","Switzerland":"스위스","Türkiye":"튀르키예","Turkey":"튀르키예","Ukraine":"우크라이나","Wales":"웨일스",
 "Argentina":"아르헨티나","Brazil":"브라질","Uruguay":"우루과이","Colombia":"콜롬비아","Paraguay":"파라과이","Ecuador":"에콰도르","Chile":"칠레","Peru":"페루","Venezuela":"베네수엘라","Bolivia":"볼리비아","Mexico":"멕시코","United States":"미국","USA":"미국","Canada":"캐나다","Panama":"파나마","Costa Rica":"코스타리카","Jamaica":"자메이카","Haiti":"아이티","Curaçao":"퀴라소","Honduras":"온두라스","Morocco":"모로코","Senegal":"세네갈","Ivory Coast":"코트디부아르","Côte d'Ivoire":"코트디부아르","Egypt":"이집트","Algeria":"알제리","Tunisia":"튀니지","Ghana":"가나","Nigeria":"나이지리아","Cameroon":"카메룬","South Africa":"남아프리카공화국","Cape Verde":"카보베르데","Cape Verde Islands":"카보베르데","DR Congo":"콩고민주공화국","Mali":"말리","Burkina Faso":"부르키나파소","Japan":"일본","South Korea":"대한민국","Korea Republic":"대한민국","Australia":"호주","Iran":"이란","Saudi Arabia":"사우디아라비아","Qatar":"카타르","Iraq":"이라크","Jordan":"요르단","Uzbekistan":"우즈베키스탄","United Arab Emirates":"아랍에미리트","China PR":"중국","China":"중국","New Zealand":"뉴질랜드","Oman":"오만",
 // 잉글랜드 클럽
 "Arsenal":"아스널","Aston Villa":"애스턴 빌라","AFC Bournemouth":"본머스","Bournemouth":"본머스","Brentford":"브렌트퍼드","Brighton & Hove Albion":"브라이턴","Burnley":"번리","Chelsea":"첼시","Crystal Palace":"크리스털 팰리스","Everton":"에버턴","Fulham":"풀럼","Ipswich Town":"입스위치 타운","Leeds United":"리즈 유나이티드","Leicester City":"레스터 시티","Liverpool":"리버풀","Luton Town":"루턴 타운","Manchester City":"맨체스터 시티","Manchester United":"맨체스터 유나이티드","Newcastle United":"뉴캐슬 유나이티드","Nottingham Forest":"노팅엄 포레스트","Sheffield United":"셰필드 유나이티드","Southampton":"사우샘프턴","Sunderland":"선덜랜드","Tottenham Hotspur":"토트넘 홋스퍼","West Ham United":"웨스트햄 유나이티드","Wolverhampton Wanderers":"울버햄튼","Coventry City":"코번트리 시티","Hull City":"헐 시티","Middlesbrough":"미들즈브러","Norwich City":"노리치 시티","Watford":"왓퍼드","West Bromwich Albion":"웨스트브로미치","Stoke City":"스토크 시티","Swansea City":"스완지 시티","Birmingham City":"버밍엄 시티","Wrexham":"렉섬","Millwall":"밀월","Bristol City":"브리스톨 시티","Sheffield Wednesday":"셰필드 웬즈데이","Preston North End":"프레스턴","Portsmouth":"포츠머스","Derby County":"더비 카운티","Queens Park Rangers":"퀸스 파크 레인저스","Blackburn Rovers":"블랙번 로버스","Charlton Athletic":"찰턴","Oxford United":"옥스퍼드 유나이티드","Cardiff City":"카디프 시티","Bolton Wanderers":"볼턴 원더러스","Lincoln City":"링컨 시티",
@@ -1171,10 +1175,12 @@ function renderHeader(){
   try { localStorage.setItem("last." + grp.keys[0], S.lg); } catch {}
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
   $("#tabs").style.display = Lg.disabled && S.tab !== "my" && S.tab !== "talk" ? "none" : "";
+  const stb = document.querySelector('#tabs [data-tab="standings"]'); if (stb) stb.hidden = !!Lg.nostand;
   updateLiveBadge();
   updateMyBadge();
 }
 function render(){
+  if (L().nostand && S.tab === "standings") S.tab = "matches";  // 순위표가 없는 대회(친선경기)
   renderHeader();
   updateFab();
   if (S.tab !== "my") clearTimeout(S.myPoll);
@@ -1719,8 +1725,17 @@ async function moveWeek(dir){
 
 function renderTeams(){
   const d = D();
+  if (L().nostand){
+    // 순위표가 없는 대회: 이번 주 경기에 나오는 팀 (FIFA 랭킹 순)
+    const tm = new Map(); for (const m of d.matches) for (const t of [m.home, m.away]) if (t && !tm.has(t.id)) tm.set(t.id, t);
+    const list = [...tm.values()].sort((a, b) => (fifaOf(a.name)?.rank || 999) - (fifaOf(b.name)?.rank || 999));
+    $("#main").innerHTML = list.length ? `<div class="lsec"><h3>이번 주 경기 팀 <small class="muted">FIFA 랭킹 순 · 다른 주는 경기 일정에서 주를 바꾸세요</small></h3><div class="tgrid">${list.map(t => `
+      <button class="tbtn" data-team="${t.id}">${logo(t.logo, "mid")}<span><b>${esc(ko(t.name))}</b><div class="meta">${fifaOf(t.name) ? `FIFA ${fifaOf(t.name).rank}위` : "FIFA 랭킹 없음"}</div></span></button>`).join("")}</div></div>`
+      : '<div class="card empty">이 주에는 경기가 없습니다. 경기 일정에서 다른 주로 이동해 보세요.</div>';
+    return;
+  }
   const groups = d.groups.filter(g => !isNL(S.lg) || S.chip === "ALL" || g.letter === S.chip);
-  const meta = r => L().sport === "soccer" ? `${r.rank}위 · 승점 ${r.pts}` : `${r.rank}위 · ${r.w}승 ${r.l}패`;
+  const meta = r => L().sport === "soccer" ? `${r.rank}위 · 승점 ${r.pts}${L().national && fifaOf(r.name) ? ` · FIFA ${fifaOf(r.name).rank}위` : ""}` : `${r.rank}위 · ${r.w}승 ${r.l}패`;
   $("#main").innerHTML = (chipsBar() ? `<div class="bar">${chipsBar()}</div>` : "") + groups.map(g => `
     <div class="lsec"><h3>${esc(g.label)}</h3><div class="tgrid">${g.rows.map(r => `
       <button class="tbtn" data-team="${r.id}">${logo(r.logo, "mid")}<span><b>${esc(ko(r.name))}</b><div class="meta">${meta(r)}</div></span></button>`).join("")}
@@ -1742,6 +1757,7 @@ const rankText = info => info && info.groupLabel ? `${info.groupLabel} ${info.ra
 
 async function openTeam(id, n = 5){
   S.modalMatch = null;
+  if (L().national && !FIFA.map) await withTimeout(loadFifa(), 2500);
   const lg = S.lg, info = infoOf(id) || {};
   openModal(`<div class="loading">${esc(ko(info.name))} 데이터를 불러오는 중…</div>`);
   try {
@@ -1758,7 +1774,7 @@ async function openTeam(id, n = 5){
     openModal(`
       <div class="m-head">${logo(info.logo || t.logo, "big")}<div>
         <h2>${esc(ko(name))}</h2>
-        <div>${info.id ? `<span class="pill">${esc(rankText(info))}</span> ` : ""}<span class="muted">${esc(line)}</span></div>
+        <div>${info.id ? `<span class="pill">${esc(rankText(info))}</span> ` : ""}${L().national ? fifaPill(name) + " " : ""}<span class="muted">${esc(line)}</span></div>
         ${info.zone ? `<div class="note">현재 순위 기준: ${esc(info.zone)}</div>` : ""}
       </div></div>
       <div id="intel" data-tid="${id}"><div class="loading">주목할 선수·부상자·뉴스를 불러오는 중…</div></div>
@@ -1908,9 +1924,11 @@ function cmpRow(label, a, b, higherBetter, fmt = v => v){
   }
   return `<div class="r"><div class="${ca}">${a == null ? "-" : fmt(a)}</div><div class="k">${label}</div><div class="${cb}">${b == null ? "-" : fmt(b)}</div></div>`;
 }
-function compareRows(hi, ai, hs, as){
+function compareRows(hi, ai, hs, as, m){
   const sp = L().sport, n = v => v + "/" + 5;
-  if (sp === "soccer") return [cmpRow("순위", hi.rank, ai.rank, false), cmpRow("승점", hi.pts, ai.pts, true), cmpRow("득실차", hi.gd, ai.gd, true, signed),
+  const fh = L().national && m ? fifaOf(m.home.name) : null, fa = L().national && m ? fifaOf(m.away.name) : null;
+  const fifa = fh || fa ? [cmpRow("🌍 FIFA 랭킹", fh?.rank, fa?.rank, false, v => v + "위"), cmpRow("FIFA 포인트", fh?.pts, fa?.pts, true, v => Math.round(v))] : [];
+  if (sp === "soccer") return [...fifa, ...(L().nostand ? [] : [cmpRow("순위", hi.rank, ai.rank, false), cmpRow("승점", hi.pts, ai.pts, true), cmpRow("득실차", hi.gd, ai.gd, true, signed)]),
     cmpRow("최근 5경기 승", hs.W, as.W, true), cmpRow("최근 5경기 패", hs.L, as.L, false), cmpRow("경기당 득점", hs.avgGf, as.avgGf, true, fx1), cmpRow("경기당 실점", hs.avgGa, as.avgGa, false, fx1),
     cmpRow("무실점 경기", hs.cs, as.cs, true), cmpRow("2.5골 오버", hs.o25, as.o25, null, n), cmpRow("양팀 득점", hs.btts, as.btts, null, n)].join("");
   const rows = [cmpRow("순위", hi.rank, ai.rank, false), cmpRow("시즌 성적", hi.w != null ? `${hi.w}-${hi.l}` : null, ai.w != null ? `${ai.w}-${ai.l}` : null, null),
@@ -1998,16 +2016,17 @@ function getSummary(ev, lg = S.lg){
 async function openMatch(id){
   const lg = S.lg, m = findMatch(lg, id);
   if (!m) return;
+  if (L().national && !FIFA.map) await withTimeout(loadFifa(), 2500);
   S.modalMatch = m.id;
   const hi = infoOf(m.home.id) || {}, ai = infoOf(m.away.id) || {};
   let center;
   if (m.state === "pre") center = `<div class="vs" style="font-size:22px">VS</div><div class="when">${dFull(m.date)}</div>`;
   else center = `<div class="sc">${m.home.score ?? "-"} : ${m.away.score ?? "-"}</div><div class="when">${m.state === "in" ? `<span class="live">● ${esc(liveText(m))}</span>` : esc(m.completed ? "경기 종료" : m.detail || "")} · ${dFull(m.date)}</div>`;
-  const sub = (info, side) => `${side} · ${esc(rankText(info) || "")}`;
+  const sub = (info, side, nm) => { const f = L().national ? fifaOf(nm) : null; return [side, esc(rankText(info) || ""), f ? `FIFA ${f.rank}위` : ""].filter(Boolean).join(" · "); };
   const head = `<div class="mh">${pickBtn(lg, m.id).replace('class="pick', 'class="pick mhpick')}
-      <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>${sub(hi, "홈")}</small></div>
+      <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>${sub(hi, "홈", m.home.name)}</small></div>
       <div class="ctr">${center}</div>
-      <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>${sub(ai, "원정")}</small></div>
+      <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>${sub(ai, "원정", m.away.name)}</small></div>
     </div><div class="meta-line">${esc(L().name)}${roundOf(m) ? " " + esc(roundOf(m)) : ""}${isNL(S.lg) && groupOf(m) ? " " + esc((infoOf(m.home.id) || infoOf(m.away.id) || {}).groupLabel || groupOf(m)) : ""}${m.note ? " · " + esc(m.note) : ""}${m.venue ? " · " + esc(m.venue) : ""}</div>`;
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
@@ -2039,7 +2058,7 @@ async function openMatch(id){
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
           <div class="r"><div>${strip(h5)}</div><div class="k">최근 5경기 흐름</div><div>${strip(a5)}</div></div>
-          ${compareRows(hi, ai, hs, as)}
+          ${compareRows(hi, ai, hs, as, m)}
         </div></div>
       <div class="sec cols">
         <div><div class="sec-h"><h3>${esc(ko(m.home.name))} 최근 5경기</h3></div>${short(h5)}</div>
@@ -2922,6 +2941,45 @@ async function tkAction(t){
     }
   } catch (e) { err(e.message); }
 }
+// ================================================================ 🌍 FIFA 랭킹 (위키백과 공개 데이터: FIFA 발표 때마다 편집자가 갱신)
+const FIFA = {map:null, p:null, updated:"", alias:{}};
+const fnorm = n => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/&/g, "and").replace(/[^a-z]/g, "");
+// ESPN 표기 → FIFA 표기
+const FIFA_EXTRA = {"unitedstates":"USA","iran":"IR Iran","ivorycoast":"Côte d'Ivoire","capeverde":"Cabo Verde","capeverdeislands":"Cabo Verde","china":"China PR","czechrepublic":"Czechia","turkey":"Türkiye",
+  "southkorea":"Korea Republic","northkorea":"Korea DPR","republicofireland":"Republic of Ireland","ireland":"Republic of Ireland","bosniaherzegovina":"Bosnia and Herzegovina","drcongo":"Congo DR","congodr":"Congo DR",
+  "curacao":"Curaçao","kyrgyzstan":"Kyrgyz Republic","stkittsandnevis":"St Kitts and Nevis","stlucia":"St Lucia","stvincentandthegrenadines":"St Vincent and the Grenadines","usvirginislands":"US Virgin Islands","chinesetaipei":"Chinese Taipei","taiwan":"Chinese Taipei","gambia":"Gambia","thegambia":"Gambia","swaziland":"Eswatini","macedonia":"North Macedonia"};
+function parseFifa(txt){
+  const map = {}, code = {}, byCode = {};
+  for (const m of txt.matchAll(/\{\s*"([^"]+)"\s*,\s*(\d+)\s*,\s*(-?\d+)\s*,\s*([\d.]+)\s*\}/g)) map[fnorm(m[1])] = {name:m[1], rank:Number(m[2]), move:Number(m[3]), pts:Number(m[4])};
+  // 별칭: { "KOR", "Korea Republic" }, { "KOR", "South Korea" } … 같은 코드끼리 이어 줌
+  for (const m of txt.matchAll(/\{\s*"([A-Z]{3})"\s*,\s*"([^"]+)"\s*\}/g)){ (code[m[1]] = code[m[1]] || []).push(fnorm(m[2])); }
+  for (const [c, names] of Object.entries(code)){ const hit = names.map(n => map[n]).find(Boolean); if (hit){ byCode[c] = hit; for (const n of names) if (!map[n]) map[n] = hit; } }
+  for (const [k, v] of Object.entries(FIFA_EXTRA)) if (!map[k] && map[fnorm(v)]) map[k] = map[fnorm(v)];
+  const u = txt.match(/data\.updated\s*=\s*\{\s*day\s*=\s*(\d+)\s*,\s*month\s*=\s*'(\w+)'\s*,\s*year\s*=\s*(\d+)/);
+  const MON = {January:1,February:2,March:3,April:4,May:5,June:6,July:7,August:8,September:9,October:10,November:11,December:12};
+  return {map, updated:u ? `${u[3]}년 ${MON[u[2]] || u[2]}월 ${u[1]}일` : ""};
+}
+function loadFifa(){
+  if (FIFA.p) return FIFA.p;
+  FIFA.p = (async () => {
+    let txt = null;
+    try { const c = JSON.parse(localStorage.getItem("fifa.v1") || "null"); if (c && Date.now() - c.t < 12 * 36e5) txt = c.txt; } catch {}
+    if (!txt){
+      const r = await fetch("https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvprop=content&rvslots=main&titles=Module:SportsRankings/data/FIFA_World_Rankings&format=json&formatversion=2&origin=*", {headers:{"Api-User-Agent":"SportsLiveDashboard/1.0"}});
+      const j = await r.json(); txt = j?.query?.pages?.[0]?.revisions?.[0]?.slots?.main?.content || "";
+      try { if (txt) localStorage.setItem("fifa.v1", JSON.stringify({t:Date.now(), txt})); } catch {}
+    }
+    const f = parseFifa(txt || ""); FIFA.map = f.map; FIFA.updated = f.updated;
+    // 받아 온 뒤 국가대표 화면이면 다시 그림
+    if (L().national && !modal.open) render();
+    return FIFA.map;
+  })().catch(() => { FIFA.p = null; return null; });
+  return FIFA.p;
+}
+const fifaOf = name => FIFA.map ? (FIFA.map[fnorm(name)] || FIFA.map[fnorm(FIFA_EXTRA[fnorm(name)])] || null) : null;
+const fifaMove = f => !f || !f.move ? "" : f.move > 0 ? `<span class="fup">▲${f.move}</span>` : `<span class="fdn">▼${-f.move}</span>`;
+const fifaPill = name => { const f = fifaOf(name); return f ? `<span class="pill fifa" title="FIFA 랭킹 ${esc(FIFA.updated)} 발표 기준 · ${f.pts}점">🌍 FIFA ${f.rank}위 ${fifaMove(f)}</span>` : ""; };
+
 // ================================================================ 📝 문자중계 (ESPN 플레이 기록 → 신나는 한국어 멘트)
 const PBP = {};  // "리그|경기id" → [{id, t, txt, big}] (오래된 것 → 최신)
 const pickT = (id, arr) => arr[[...String(id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % arr.length];  // 같은 장면은 항상 같은 멘트
@@ -3503,7 +3561,7 @@ function schedulePoll(){
 function seasonLabel(lg, y){
   y = Number(y);
   if (lg === "nba") return `${y - 1}-${String(y).slice(2)}`;
-  if (lg === "mlb" || lg === "mls") return String(y);
+  if (lg === "mlb" || lg === "mls" || lg === "intfr") return String(y);
   return `${y}-${String(y + 1).slice(2)}`;
 }
 function setSeason(y){
@@ -3519,6 +3577,7 @@ document.addEventListener("change", e => { if (e.target.id === "seasonSel") setS
 
 function setLeague(lg){
   if (!LEAGUES[lg]) lg = DEFAULT_LG;
+  if (LEAGUES[lg].national) loadFifa();
   if (S.lg !== lg) S.season = null;  // 리그를 바꾸면 현재 시즌으로
   S.lg = lg; S.chip = "ALL"; S.mStatus = "ALL";
   try { localStorage.setItem("league", lg); } catch {}
