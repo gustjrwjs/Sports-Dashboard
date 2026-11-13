@@ -655,6 +655,10 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.h2hs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.h2hs>div{flex:1 1 90px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 10px;text-align:center;box-shadow:var(--shadow)}
+.h2hs b{display:block;font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:520px){.h2hs>div{flex-basis:84px;padding:7px 4px}.h2hs b{font-size:14px}}.h2hs small{color:var(--muted);font-size:11.5px}
 .stcard{padding:10px 14px}
 .str{display:grid;grid-template-columns:76px 1fr 76px;align-items:center;gap:10px;padding:6px 0}
 .str+.str{border-top:1px dashed var(--border)}
@@ -2167,6 +2171,28 @@ function renderTeams(){
 // ================================================================ 모달
 const modal = $("#modal");
 function openModal(html){ $("#mbody").innerHTML = html; if (!modal.open) modal.showModal(); }
+// summary.seasonseries(축구: 최근 5번 맞대결 / NBA·MLB: 시즌 시리즈) → 팀 일정과 같은 모양
+function seriesEvents(sum){
+  const out = [];
+  for (const sr of sum?.seasonseries || []) for (const e of sr.events || []){
+    if (e.status !== "post" && !e.statusType?.completed) continue;
+    const c = e.competitors || [], H = c.find(x => x.homeAway === "home"), A = c.find(x => x.homeAway === "away");
+    if (!H || !A || H.score == null || A.score == null) continue;
+    const t = x => ({id:String(x.team?.id), name:x.team?.displayName, logo:x.team?.logo, score:Number(x.score), winner:x.winner});
+    const cn = String(e.competitionName || "").replace(/^\d{4}(-\d{2,4})?\s+/, "");
+    out.push({id:"s" + e.id, date:e.date, home:t(H), away:t(A), status:e.statusType?.name || "", neutral:!!e.neutralSite, competition:COMP[cn] ? cn : ""});
+  }
+  return out;
+}
+// 상대 전적 요약: 승무패 · 평균 득실 · 언오버 · 양팀 득점
+function h2hSummary(rs, sp, line){
+  const n = rs.length, W = rs.filter(r => r.r === "W").length, D = rs.filter(r => r.r === "D").length, Lx = n - W - D;
+  const gf = rs.reduce((a, r) => a + r.gf, 0), ga = rs.reduce((a, r) => a + r.ga, 0), tot = (gf + ga) / n;
+  const items = [[`${W}승${sp === "soccer" ? ` ${D}무` : ""} ${Lx}패`, "전적"], [`${(gf / n).toFixed(1)} : ${(ga / n).toFixed(1)}`, "평균 득실"], [(tot).toFixed(1), "평균 합계"]];
+  if (sp === "soccer") items.push([`${rs.filter(r => r.gf + r.ga > 2.5).length}/${n}`, "2.5골 오버"], [`${rs.filter(r => r.gf > 0 && r.ga > 0).length}/${n}`, "양팀 득점"]);
+  if (!isNaN(line) && line && !(sp === "soccer" && line === 2.5)) items.push([`${rs.filter(r => r.gf + r.ga > line).length}/${n}`, `${line} 오버`]);
+  return `<div class="h2hs">${items.map(([v, k]) => `<div><b>${v}</b><small>${k}</small></div>`).join("")}</div>`;
+}
 function resList(rs){
   if (!rs.length) return '<div class="card empty">기록이 없습니다.</div>';
   return `<ul class="res">${rs.map(r => `<li>
@@ -2466,7 +2492,12 @@ async function openMatch(id){
       const ids = [e.home.id, e.away.id];
       if (e.id !== m.id && ids.includes(m.home.id) && ids.includes(m.away.id)) h2hMap.set(e.id, e);
     }
+    // 경기 상세(summary)의 맞대결·시즌 시리즈도 합침 (지난 시즌 맞대결까지)
+    const pairKey = e => e.date.slice(0, 10) + "|" + [String(e.home.id), String(e.away.id)].sort().join("-");
+    const seen = new Set([...h2hMap.values()].map(pairKey));
+    for (const e of seriesEvents(sum)) if (e.date < m.date && !seen.has(pairKey(e)) && [e.home.id, e.away.id].includes(m.home.id) && [e.home.id, e.away.id].includes(m.away.id)) { seen.add(pairKey(e)); h2hMap.set(e.id, e); }
     const h2h = [...h2hMap.values()].sort((x, y) => y.date.localeCompare(x.date)).map(e => resultFor(e, m.home.id)).filter(Boolean).slice(0, 10);
+    const ouLine = Number(pickOdds(sum)?.overUnder);
     const strip = rs => `<span class="form">${rs.slice().reverse().map(r => badge(r.r)).join("")}</span>`;
     const short = rs => rs.length ? `<ul class="res">${rs.map(r => `<li><span class="d">${dShort(r.ev.date)}</span>
         <span class="o">${logo(r.op.logo)}<span>${esc(ko(r.op.name))}</span></span>
@@ -2482,13 +2513,14 @@ async function openMatch(id){
         <div class="cmp">
           <div class="r"><div>${strip(h5)}</div><div class="k">최근 5경기 흐름</div><div>${strip(a5)}</div></div>
           ${compareRows(hi, ai, hs, as, m)}
+          ${!isNaN(ouLine) && ouLine && !(sp === "soccer" && ouLine === 2.5) && h5.length && a5.length ? cmpRow(`이번 기준점(${ouLine}) 오버`, h5.filter(r => r.gf + r.ga > ouLine).length, a5.filter(r => r.gf + r.ga > ouLine).length, null, v => v + "/" + 5) : ""}
         </div></div>
       <div class="sec cols">
         <div><div class="sec-h"><h3>${esc(ko(m.home.name))} 최근 5경기</h3></div>${short(h5)}</div>
         <div><div class="sec-h"><h3>${esc(ko(m.away.name))} 최근 5경기</h3></div>${short(a5)}</div>
       </div>
-      <div class="sec"><div class="sec-h"><h3>맞대결 기록</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 조회 범위 안의 최근 경기</span></div>
-        ${h2h.length ? resList(h2h) : '<div class="card empty">조회 범위 안에 맞대결 기록이 없습니다.</div>'}</div>`);
+      <div class="sec"><div class="sec-h"><h3>🆚 상대 전적</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 최근 ${h2h.length}경기</span></div>
+        ${h2h.length ? h2hSummary(h2h, sp, ouLine) + resList(h2h) : '<div class="card empty">찾을 수 있는 맞대결 기록이 없습니다.</div>'}</div>`);
     if (sp === "soccer" && m.state === "pre" && !hasLineup(sum ? parseLineups(sum) : null)) fillPrevLineups(m, h, a);
     if (sp === "soccer") fillSoccerIntel(lg, m, h, a, sum);
     if (sp === "basketball" && document.getElementById("bb-pre")) fillBbPre(m, h, a);
