@@ -721,6 +721,23 @@ nav.gnav button.on .mystar{color:#fbbf24}
 nav.gnav .lcnt:empty{display:none}
 #lghead{border-top:1px solid var(--border);margin-top:8px;padding-top:10px}
 @media (max-width:480px){ nav.gnav button{padding:6px 11px;font-size:13px} }
+.mytools .mtsp,.grpsum .mtsp{flex:1}
+.grpbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
+.gchip{font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.gchip span{font-size:11px;color:var(--muted);margin-left:2px}
+.gchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.gchip.on span{color:rgba(255,255,255,.85)}
+.gchip.add{border-style:dashed;color:var(--muted)}
+.grpsum{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 12px;margin:-4px 0 12px;font-size:13px}
+.grpsum .godd{color:var(--accent);font-size:15px}
+.grpsum .gadd{font-size:11.5px}
+.grptag{position:absolute;top:-8px;left:12px;z-index:2;background:var(--text);color:var(--bg);font-size:10px;font-weight:800;border-radius:999px;padding:1px 8px}
+select.gmove{font:inherit;font-size:13px}
+.ocrf{border:1px solid var(--border);border-radius:12px;padding:10px;margin:0 0 10px;background:var(--surface)}
+.ocrfh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ocrfh img{width:56px;height:56px;object-fit:cover;object-position:top left;border-radius:8px;border:1px solid var(--border);flex:none}
+.ocrg{color:var(--accent)}
+.ocrnew{margin:6px 0 2px;font-size:13px}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -2749,6 +2766,23 @@ try { PICKS = JSON.parse(localStorage.getItem(MY_KEY)) || []; } catch {}
 // 경기일(또는 담은 날) 기준 7일 지난 경기는 자동 정리
 PICKS = PICKS.filter(p => p && LEAGUES[p.lg] && Date.now() - Math.max(new Date(p.date).getTime() || 0, p.at || 0) < 7 * 864e5);
 const MY = {ev:{}, raw:{}, odds:{}, prev:{}, t:0, loading:false, err:null};
+// 묶음: 담은 경기마다 grp(1, 2, 3…). 빈 묶음도 유지하려고 따로 저장
+PICKS.forEach(p => { if (!p.grp) p.grp = 1; });
+let MYGRPS = (() => { try { return JSON.parse(localStorage.getItem("my.groups") || "[]"); } catch { return []; } })();
+const grpList = () => [...new Set([1, ...MYGRPS, ...PICKS.map(p => p.grp)])].sort((a, b) => a - b);
+const saveGrps = () => { try { localStorage.setItem("my.groups", JSON.stringify(MYGRPS)); } catch {} };
+const addGrp = () => { const g = Number((() => { try { return localStorage.getItem("my.addGrp"); } catch { return 1; } })()) || 1; return grpList().includes(g) ? g : 1; };
+// 새 묶음 = 아직 안 쓰인 가장 작은 번호 (My가 비어 있으면 1묶음부터)
+const freeGrps = n => { const used = new Set([...MYGRPS, ...PICKS.map(p => p.grp)]), out = []; for (let g = 1; out.length < n; g++) if (!used.has(g)) out.push(g); return out; };
+const newGrp = () => { const g = freeGrps(1)[0]; MYGRPS.push(g); saveGrps(); return g; };
+// 묶음 삭제 뒤 1, 2, 3… 으로 다시 번호 매김
+function renumberGrps(){
+  const used = [...new Set([...PICKS.map(p => p.grp), ...MYGRPS])].sort((a, b) => a - b), map = {};
+  used.forEach((g, i) => map[g] = i + 1);
+  PICKS.forEach(p => p.grp = map[p.grp] || 1); MYGRPS = MYGRPS.map(g => map[g]).filter(Boolean);
+  if (typeof S.myGrp === "number") S.myGrp = map[S.myGrp] || "all";
+  saveGrps(); savePicks();
+}
 const savePicks = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); } catch {} };
 const isPicked = (lg, id) => PICKS.some(p => p.lg === lg && p.id === id);
 const pickBtn = (lg, id, inline) => { const on = isPicked(lg, id);
@@ -2762,7 +2796,7 @@ function togglePick(lg, id){
   else {
     const m = findMatch(lg, id);
     if (!m) return;
-    PICKS.push({lg, id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now()});
+    PICKS.push({lg, id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now(), grp:addGrp()});
     MY.t = 0;  // 다음에 My 탭을 열 때 새로 받기
   }
   savePicks();
@@ -2844,10 +2878,16 @@ function renderMy(fromRefresh){
   if (!MY.t){ $("#main").innerHTML = bar(PICKS.length) + '<div id="myimpSlot"></div><div class="loading">담은 경기를 불러오는 중…</div>'; mountImp(); refreshMy(); return; }
   if (!fromRefresh && Date.now() - MY.t > 15000) refreshMy();
   else if (!fromRefresh) scheduleMy();
-  const items = PICKS.map(p => ({p, k:p.lg + "|" + p.id, m:MY.ev[p.lg + "|" + p.id]}))
+  const grps = grpList();
+  if (S.myGrp !== "all" && !grps.includes(S.myGrp)) S.myGrp = "all";
+  const gsel = S.myGrp ?? "all";
+  const itemsAll = PICKS.map(p => ({p, k:p.lg + "|" + p.id, m:MY.ev[p.lg + "|" + p.id]}))
     .sort((a, b) => new Date(a.p.date) - new Date(b.p.date));
+  const items = gsel === "all" ? itemsAll : itemsAll.filter(x => x.p.grp === gsel);
+  S.myVisible = items.map(x => x.k);
   const sel = S.mySel;  // 선택 삭제 모드면 Set
-  const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.k) ? "on" : ""}" data-mysel="${esc(it.k)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.k) ? "✓" : ""}</span>` : ""}${html}</div>`;
+  const tag = it => gsel === "all" && grps.length > 1 ? `<span class="grptag">${it.p.grp}묶음</span>` : "";
+  const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.k) ? "on" : ""}" data-mysel="${esc(it.k)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.k) ? "✓" : ""}</span>` : ""}${tag(it)}${html}</div>`;
   const card = it => wrap(it, card0(it) + betRow(it));
   gradeBets();
   const card0 = it => {
@@ -2859,10 +2899,23 @@ function renderMy(fromRefresh){
   const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
   const sec = (title, list) => list.length ? `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div><div class="lgrid">${list.map(card).join("")}</div>` : "";
   let html = bar(PICKS.length) + '<div id="myimpSlot"></div>';
-  // 삭제 도구: 선택 삭제 · 전체 삭제
-  html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${sel.size === PICKS.length ? "선택 해제" : "모두 선택"}</button>
+  // 묶음 탭 + 삭제 도구
+  const cnt = g => PICKS.filter(p => p.grp === g).length;
+  const gbar = `<div class="grpbar"><button class="gchip ${gsel === "all" ? "on" : ""}" data-grp="all">전체 <span>${PICKS.length}</span></button>${grps.map(g => `<button class="gchip ${gsel === g ? "on" : ""}" data-grp="${g}">${g}묶음 <span>${cnt(g)}</span></button>`).join("")}<button class="gchip add" data-grp="new" title="빈 묶음 만들기">＋ 새 묶음</button></div>`;
+  html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${items.every(x => sel.has(x.k)) && items.length ? "선택 해제" : "모두 선택"}</button>
+      <select class="btn gmove" data-myact-move ${sel.size ? "" : "disabled"}><option value="">📦 묶음 이동…</option>${grps.map(g => `<option value="${g}">${g}묶음으로</option>`).join("")}<option value="new">새 묶음으로</option></select>
       <button class="btn danger" data-myact="delsel" ${sel.size ? "" : "disabled"}>🗑 선택 삭제</button><button class="btn" data-myact="cancel">취소</button></div>`
-    : `<div class="mytools"><button class="btn" data-myact="select">☑ 선택 삭제</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
+    : `<div class="mytools">${gbar}<span class="mtsp"></span><button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
+  // 묶음을 골랐을 때: 요약(예측 조합 배당) + 이 묶음 삭제
+  if (!sel && gsel !== "all"){
+    let odd = 1, n = 0;
+    for (const it of items){ const b = it.p.bet || {}, o = MY.odds[it.k] || {};
+      const pick = b.res === "home" ? o.homeTeamOdds?.moneyLine : b.res === "away" ? o.awayTeamOdds?.moneyLine : b.res === "draw" ? o.drawOdds?.moneyLine : null;
+      for (const ml of [pick, b.ou === "over" ? o.overOdds : b.ou === "under" ? o.underOdds : null]) { const d = ml != null ? decOdds(ml) : null; if (d){ odd *= d; n++; } } }
+    html += `<div class="grpsum"><b>${gsel}묶음</b><span>${items.length}경기</span>${n ? `<span>🎯 예측 ${n}개 조합 배당 <b class="godd">×${odd.toFixed(2)}</b></span>` : '<span class="muted">카드 아래에서 예측을 고르면 조합 배당이 나옵니다</span>'}
+      <span class="mtsp"></span><span class="muted gadd">☆로 담는 경기 → ${addGrp()}묶음</span><button class="btn danger" data-myact="delgrp">🗑 ${gsel}묶음 삭제</button></div>`;
+  }
+  if (!items.length && gsel !== "all") html += `<div class="card live-empty"><b>${gsel}묶음이 비어 있습니다</b><span class="muted">다른 화면에서 ☆를 누르면 이 묶음에 담깁니다. 베팅내역 캡처를 붙여넣으면 캡처마다 새 묶음이 생깁니다.</span></div>`;
   if (MY.err) html += `<div class="card empty" style="margin-bottom:10px">업데이트 실패: ${esc(MY.err)} · 잠시 후 다시 시도합니다.</div>`;
   if (done.length){
     const w = done.filter(x => x.m.home.winner || x.m.away.winner).length;
@@ -2876,12 +2929,26 @@ function renderMy(fromRefresh){
 // My 경기 삭제: 선택 모드에선 카드를 누르면 선택/해제 (경기 열기·☆ 대신)
 document.addEventListener("click", e => {
   if (S.tab !== "my") return;
+  const gb = e.target.closest("[data-grp]");
+  if (gb){
+    let g = gb.dataset.grp;
+    if (g === "new"){ g = newGrp(); toast(`${g}묶음을 만들었습니다 · ☆로 담는 경기가 여기에 들어갑니다`); }
+    S.myGrp = g === "all" ? "all" : Number(g);
+    if (S.myGrp !== "all") lsSet("my.addGrp", String(S.myGrp));
+    renderMy(true); return;
+  }
   const a = e.target.closest("[data-myact]");
   if (a){
     const act = a.dataset.myact;
     if (act === "select") S.mySel = new Set();
     else if (act === "cancel") S.mySel = null;
-    else if (act === "all") S.mySel = S.mySel && S.mySel.size === PICKS.length ? new Set() : new Set(PICKS.map(p => p.lg + "|" + p.id));
+    else if (act === "all"){ const vis = S.myVisible || []; S.mySel = S.mySel && vis.length && vis.every(k => S.mySel.has(k)) ? new Set() : new Set(vis); }
+    else if (act === "delgrp" && S.myGrp !== "all"){
+      const g = S.myGrp, n = PICKS.filter(p => p.grp === g).length;
+      if (!confirm(`${g}묶음${n ? `(${n}경기)` : ""}을 지울까요? 되돌릴 수 없습니다.`)) return;
+      PICKS = PICKS.filter(p => p.grp !== g); MYGRPS = MYGRPS.filter(x => x !== g); S.myGrp = "all";
+      renumberGrps(); savePicks(); updateMyBadge(); toast(`${g}묶음을 지웠습니다`);
+    }
     else if (act === "delsel" && S.mySel && S.mySel.size){
       const n = S.mySel.size;
       if (!confirm(`선택한 ${n}경기를 My 경기에서 뺄까요?`)) return;
@@ -2889,7 +2956,7 @@ document.addEventListener("click", e => {
     }
     else if (act === "clear"){
       if (!confirm(`담은 ${PICKS.length}경기를 전부 지울까요? 되돌릴 수 없습니다.`)) return;
-      PICKS = []; S.mySel = null; savePicks(); updateMyBadge(); toast("My 경기를 모두 비웠습니다");
+      PICKS = []; S.mySel = null; MYGRPS = []; S.myGrp = "all"; saveGrps(); lsSet("my.addGrp", "1"); savePicks(); updateMyBadge(); toast("My 경기를 모두 비웠습니다");
     }
     renderMy(true); return;
   }
@@ -3327,9 +3394,9 @@ function loadIndex(force){
   return IDX.p;
 }
 const normS = s => String(s || "").toLowerCase().replace(/[\s.\-·'’()]/g, "");
-function addPickFrom(lg, m){
+function addPickFrom(lg, m, grp){
   if (isPicked(lg, m.id)) return false;
-  PICKS.push({lg, id:m.id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now()});
+  PICKS.push({lg, id:m.id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now(), grp:grp || addGrp()});
   MY.t = 0; savePicks(); updateMyBadge();
   return true;
 }
@@ -3768,22 +3835,28 @@ async function importSlips(files){
   openModal(`<div class="srch"><h2>📷 베팅내역에서 경기 찾기</h2>${PRIVACY_NOTE}<div id="ocrst" class="loading">글자 인식 준비 중… (처음 한 번은 한국어 인식 자료를 받느라 10~30초 걸릴 수 있어요)</div><div id="ocrres"></div></div>`);
   try {
     const [w] = await Promise.all([loadOcr(), loadIndex()]);
-    let text = "";
+    // 캡처마다 따로 읽고 따로 찾음 → 담을 때 캡처마다 새 묶음
+    const per = [];
     for (let i = 0; i < files.length; i++){
       st(`캡처 ${files.length > 1 ? `${i + 1}/${files.length} ` : ""}글자 읽는 중…`);
-      text += "\n" + (await w.recognize(await prepImage(files[i]))).data.text;
+      const text = (await w.recognize(await prepImage(files[i]))).data.text, found = slipMatch(text);
+      per.push({i, text, url:URL.createObjectURL(files[i]), strong:found.filter(x => x.both), weak:found.filter(x => !x.both).slice(0, 6)});
     }
-    const found = slipMatch(text);
-    const strong = found.filter(x => x.both), weak = found.filter(x => !x.both).slice(0, 8);
-    S.ocrFound = [...strong, ...weak];
-    const row = (x, i, on) => `<label class="ocr-it"><input type="checkbox" data-oi="${i}" ${on ? "checked" : ""} ${isPicked(x.lg, x.m.id) ? "disabled" : ""}>${miniRow(x, {noPick:true})}${isPicked(x.lg, x.m.id) ? '<small class="muted">이미 담김</small>' : ""}</label>`;
-    st(strong.length ? `<b>${strong.length}경기</b>를 찾았습니다. 확인하고 담기를 누르세요.` : "두 팀이 모두 맞는 경기를 찾지 못했습니다. 아래 후보에서 골라 주세요.");
-    document.getElementById("ocrres").innerHTML = `
-      ${strong.length ? `<div class="strip-h"><h3>찾은 경기</h3><span class="muted">두 팀 이름이 모두 보임</span></div>${strong.map((x, i) => row(x, i, !isPicked(x.lg, x.m.id))).join("")}` : ""}
-      ${weak.length ? `<div class="strip-h"><h3>후보 (한 팀만 읽힘)</h3><span class="muted">그 팀의 가장 가까운 경기 · 맞으면 체크</span></div>${weak.map((x, i) => row(x, strong.length + i, false)).join("")}` : ""}
-      ${found.length ? `<div class="ocr-act"><button class="btn primary" id="ocrAdd">선택한 경기 My에 담기</button></div>` : '<div class="card empty">경기를 찾지 못했습니다. 팀 이름이 잘 보이게 캡처하거나, 🔍 검색으로 직접 담아 주세요.</div>'}
-      <details class="ocr-txt"><summary>읽은 글자 보기</summary><pre>${esc(text.trim())}</pre></details>
-      <p class="note">지난 2일 ~ 앞으로 10일 경기 중에서 찾습니다.</p>`;
+    S.ocrFound = []; S.ocrUrls = per.map(x => x.url);
+    const row = (x, on) => { const idx = S.ocrFound.push(x) - 1, had = isPicked(x.lg, x.m.id);
+      return `<label class="ocr-it"><input type="checkbox" data-oi="${idx}" data-of="${x.fi}" ${on && !had ? "checked" : ""} ${had ? "disabled" : ""}>${miniRow(x, {noPick:true})}${had ? '<small class="muted">이미 담김</small>' : ""}</label>`; };
+    const total = per.reduce((a, x) => a + x.strong.length, 0), multi = per.length > 1;
+    st(total ? `<b>${total}경기</b>를 찾았습니다.${multi ? ` 캡처 ${per.length}장 → 캡처마다 새 묶음으로 담깁니다.` : ""} 확인하고 담기를 누르세요.` : "두 팀이 모두 맞는 경기를 찾지 못했습니다. 아래 후보에서 골라 주세요.");
+    const nextG = freeGrps(per.length);
+    document.getElementById("ocrres").innerHTML = per.map((f, n) => {
+      const sx = f.strong.map(x => ({...x, fi:f.i})), wx = f.weak.map(x => ({...x, fi:f.i}));
+      return `<section class="ocrf"><div class="ocrfh"><img src="${f.url}" alt="캡처 ${n + 1}"><div><b>캡처 ${n + 1}</b><span class="muted"> → <b class="ocrg" data-ofg="${f.i}">${nextG[n]}묶음(새)</b> · ${f.strong.length}경기 찾음</span></div></div>
+        ${sx.length ? sx.map(x => row(x, true)).join("") : '<div class="muted" style="font-size:12px;margin:4px 0 8px">두 팀이 모두 맞는 경기가 없습니다.</div>'}
+        ${wx.length ? `<div class="muted" style="font-size:11.5px;margin:6px 0 4px">후보 (한 팀만 읽힘 · 맞으면 체크)</div>${wx.map(x => row(x, false)).join("")}` : ""}
+        <details class="ocr-txt"><summary>읽은 글자 보기</summary><pre>${esc(f.text.trim())}</pre></details></section>`;
+    }).join("") + (S.ocrFound.length ? `<label class="nck ocrnew"><input type="checkbox" id="ocrNewGrp" checked> 캡처마다 새 묶음으로 담기 <span class="muted">(끄면 지금 ☆ 담기 묶음인 ${addGrp()}묶음에 모두 담김)</span></label>
+      <div class="ocr-act"><button class="btn primary" id="ocrAdd">선택한 경기 My에 담기</button></div>` : '<div class="card empty">경기를 찾지 못했습니다. 팀 이름이 잘 보이게 캡처하거나, 🔍 검색으로 직접 담아 주세요.</div>')
+      + `<p class="note">지난 2일 ~ 앞으로 10일 경기 중에서 찾습니다.</p>`;
   } catch (e) { st(`<span class="live">오류: ${esc(e.message || e)}</span>`); }
 }
 // 붙여넣기 칸(채팅 입력창처럼): Ctrl+V → 썸네일 → Enter/↵로 경기 찾기
@@ -3852,11 +3925,19 @@ document.addEventListener("click", e => {
   if (d){ const i = Number(d.dataset.slipdel); URL.revokeObjectURL(SLIPQ[i].url); SLIPQ.splice(i, 1); drawSlipQ(); return; }
   if (e.target.closest("#slipgo")){ runSlipQ(); return; }
   if (e.target.id === "ocrAdd"){
-    let n = 0;
-    document.querySelectorAll("[data-oi]:checked:not(:disabled)").forEach(c => { const x = S.ocrFound[Number(c.dataset.oi)]; if (x && addPickFrom(x.lg, x.m)) n++; });
+    const byFile = new Map();
+    document.querySelectorAll("[data-oi]:checked:not(:disabled)").forEach(c => { const x = S.ocrFound[Number(c.dataset.oi)]; if (!x) return; if (!byFile.has(x.fi)) byFile.set(x.fi, []); byFile.get(x.fi).push(x); });
+    const sep = document.getElementById("ocrNewGrp")?.checked !== false;
+    let n = 0; const made = [];
+    for (const [, list] of [...byFile].sort((a, b) => a[0] - b[0])){
+      const g = sep ? newGrp() : addGrp(); let k = 0;
+      for (const x of list) if (addPickFrom(x.lg, x.m, g)){ n++; k++; }
+      if (sep){ if (k) made.push(g); else { MYGRPS = MYGRPS.filter(y => y !== g); saveGrps(); } }
+    }
+    (S.ocrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.ocrUrls = [];
     modal.close();
-    S.tab = "my"; render();
-    toast(n ? `${n}경기를 My 경기에 담았습니다` : "새로 담은 경기가 없습니다");
+    S.tab = "my"; S.myGrp = made.length === 1 ? made[0] : "all"; render();
+    toast(n ? `${n}경기를 담았습니다${made.length ? ` · ${made.map(g => g + "묶음").join(", ")}` : ""}` : "새로 담은 경기가 없습니다");
   }
 });
 document.addEventListener("change", e => { if (e.target.id === "myimgIn"){ queueSlips(e.target.files); e.target.value = ""; } });
@@ -4048,6 +4129,15 @@ function setSeason(y){
   if (!D().loaded) loadLeague(S.lg);
 }
 document.addEventListener("change", e => { if (e.target.id === "seasonSel") setSeason(e.target.value); });
+// 선택한 경기를 다른 묶음으로 옮기기
+document.addEventListener("change", e => {
+  if (!e.target.matches("[data-myact-move]") || !S.mySel || !S.mySel.size) return;
+  let g = e.target.value; if (!g) return;
+  g = g === "new" ? newGrp() : Number(g);
+  const n = S.mySel.size;
+  PICKS.forEach(p => { if (S.mySel.has(p.lg + "|" + p.id)) p.grp = g; });
+  S.mySel = null; renumberGrps(); savePicks(); toast(`${n}경기를 ${g}묶음으로 옮겼습니다`); renderMy(true);
+});
 
 function setLeague(lg){
   if (!LEAGUES[lg]) lg = DEFAULT_LG;
