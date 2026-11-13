@@ -9,12 +9,11 @@
 
 ## 📋 다음 할 일 (소유자가 요청함 · 묻지 말고 순서대로 진행, 끝나면 이 목록에서 지우기)
 
-1. **(소유자가 할 일)** `supabase_rank.sql`을 Supabase SQL Editor에서 실행해야 예측 랭킹이 켜짐(실행 전엔 홈 카드가 숨겨짐). 실행 뒤 실제 서버에서 `pred_rank` 호출·10분 자동 채점(cron.job `sl-pred-grade`) 확인할 것.
-2. **(소유자가 할 일)** `supabase_account.sql`을 SQL Editor에서 실행해야 회원가입·로그인이 켜짐(실행 전엔 "서버에 준비되지 않았습니다" 안내). 실행 뒤 실제 가입·로그인·동기화 확인할 것.
-3. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
-4. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
-5. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
-6. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+1. **(소유자가 할 일)** `supabase_rank.sql`을 Supabase SQL Editor에서 실행해야 예측 랭킹이 켜짐(실행 전엔 홈 카드가 숨겨짐). 2026-11-13 확인: 회원 SQL은 실서버 동작 확인 완료, 랭킹은 아직 `preds`·`pred_rank` 없음(실행 안 됐거나 pg_cron/pg_net 확장 오류 추정). 실행 뒤 실제 서버에서 `pred_rank` 호출·10분 자동 채점(cron.job `sl-pred-grade`) 확인할 것.
+2. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
+3. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
+4. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
+5. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 완료(2026-11-12): EFL 챔피언십(`eng.2`) 추가, K리그1·2·NPB "준비 중"(ESPN `baseball` 리그 12개에 NPB 없음, `jpn.npb`/`npb` 빈 응답), 대진표 미리보기.
 
