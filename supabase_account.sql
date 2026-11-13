@@ -50,7 +50,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare u text := lower(btrim(coalesce(p_uid, '')));
 begin
   if u !~ '^[a-z0-9_]{4,16}$' then raise exception '아이디는 영어 소문자·숫자·_ 4~16자로 정해 주세요'; end if;
-  if char_length(coalesce(p_pw, '')) < 8 or char_length(p_pw) > 72 then raise exception '비밀번호는 8자 이상으로 정해 주세요'; end if;
+  if char_length(coalesce(p_pw, '')) < 6 or char_length(p_pw) > 72 then raise exception '비밀번호는 6자 이상으로 정해 주세요'; end if;
   if char_length(btrim(coalesce(p_nick, ''))) not between 2 and 12 then raise exception '닉네임은 2~12자로 정해 주세요'; end if;
   if sl_reserved(p_nick) or sl_reserved(u) then raise exception '사용할 수 없는 아이디·닉네임입니다'; end if;
   if (select count(*) from accounts where created_at > now() - interval '10 minutes') >= 30 then raise exception '지금 가입이 많아요. 잠시 후 다시 시도해 주세요'; end if;
@@ -117,7 +117,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare u text := acc_uid(p_token); a accounts;
 begin
   if u is null then raise exception '로그인이 만료됐습니다. 다시 로그인해 주세요'; end if;
-  if char_length(coalesce(p_new, '')) < 8 or char_length(p_new) > 72 then raise exception '새 비밀번호는 8자 이상으로 정해 주세요'; end if;
+  if char_length(coalesce(p_new, '')) < 6 or char_length(p_new) > 72 then raise exception '새 비밀번호는 6자 이상으로 정해 주세요'; end if;
   select * into a from accounts where uid = u;
   if a.pw_hash <> extensions.crypt(coalesce(p_old, ''), a.pw_hash) then raise exception '지금 비밀번호가 맞지 않습니다'; end if;
   update accounts set pw_hash = extensions.crypt(p_new, extensions.gen_salt('bf', 10)) where uid = u;

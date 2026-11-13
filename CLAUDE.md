@@ -59,7 +59,7 @@
 
 - ▶ 하이라이트(2026-11-13 완료): 종료 경기 상세 머리 아래 `hlLinks` — 유튜브 검색 링크만(한국어 팀명 + "하이라이트" / 영어 팀명 + highlights 연도). 영상 삽입·저장 없음.
 
-- 👤 회원(2026-11-13 코드 완료): `supabase_account.sql` — 아이디(영소문자·숫자·_ 4~16)+비밀번호(8~72, bcrypt) 가입, 이메일 없음(비번 분실 시 복구 불가 안내). 표 `accounts`(data jsonb = 기기 연동과 같은 `syncState()`)·`acc_tokens`(토큰 sha256, 180일). RPC `acc_signup`·`acc_login`(틀리면 예외 대신 {error} 반환 → 틀린 횟수 기록 유지, 10번 틀리면 15분 잠금)·`acc_get`·`acc_put`(300KB)·`acc_logout`·`acc_nick`·`acc_passwd`(다른 기기 토큰 삭제)·`acc_delete`. 앱: `ACC`(acc.tok/uid/nick), 머리글 👤 `#accBtn`→`openAcc`, 로그인하면 코드 연동 끄고 `syncPush/syncPull`이 acc_put/acc_get 사용, 첫 로그인 때 `mergeSync`로 합침, 닉네임은 게시판 닉네임(tk.nick)과 같게. My의 연동 버튼은 `syncBtn()`. 로컬 PostgreSQL로 SQL 검증함.
+- 👤 회원(2026-11-13 코드 완료): `supabase_account.sql` — 아이디(영소문자·숫자·_ 4~16)+비밀번호(6~72, bcrypt, 소유자 요청으로 6자) 가입, 이메일 없음(비번 분실 시 복구 불가 안내). 표 `accounts`(data jsonb = 기기 연동과 같은 `syncState()`)·`acc_tokens`(토큰 sha256, 180일). RPC `acc_signup`·`acc_login`(틀리면 예외 대신 {error} 반환 → 틀린 횟수 기록 유지, 10번 틀리면 15분 잠금)·`acc_get`·`acc_put`(300KB)·`acc_logout`·`acc_nick`·`acc_passwd`(다른 기기 토큰 삭제)·`acc_delete`. 앱: `ACC`(acc.tok/uid/nick), 머리글 👤 `#accBtn`→`openAcc`, 로그인하면 코드 연동 끄고 `syncPush/syncPull`이 acc_put/acc_get 사용, 첫 로그인 때 `mergeSync`로 합침, 닉네임은 게시판 닉네임(tk.nick)과 같게. My의 연동 버튼은 `syncBtn()`. 로컬 PostgreSQL로 SQL 검증함.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 
