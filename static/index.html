@@ -40,7 +40,7 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:14px/1.5 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
-header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top);overflow:hidden}
+header.top{background:var(--surface);border-bottom:1px solid var(--border);position:relative;z-index:5;padding-top:env(safe-area-inset-top);overflow:hidden}
 header.top>.wrap{position:relative;z-index:1}
 /* 리그 색 배경 (은은한 그라데이션 + 위쪽 색 띠) */
 header.top{background:linear-gradient(115deg, color-mix(in srgb, var(--lgc, #1d4ed8) 15%, var(--surface)) 0%, color-mix(in srgb, var(--lgc, #1d4ed8) 6%, var(--surface)) 45%, var(--surface) 75%, color-mix(in srgb, var(--lgc, #1d4ed8) 9%, var(--surface)) 100%);transition:background .3s}
@@ -1918,7 +1918,7 @@ function renderMatches(){
   if (!d.scrolled){
     d.scrolled = true;
     const target = days.find(x => x.ms.some(m => m.state !== "post"));
-    if (target){ document.querySelector(`[data-day="${target.k}"]`)?.scrollIntoView({block:"start"}); window.scrollBy(0, -180); }
+    if (target){ document.querySelector(`[data-day="${target.k}"]`)?.scrollIntoView({block:"start"}); window.scrollBy(0, -12); }
   }
 }
 // ---------------------------------------------------------------- 경기 일정: 맨 위로 · 오늘 경기로 (떠 있는 버튼)
@@ -1947,7 +1947,7 @@ async function goToday(){
   for (let i = 0; !el && L().sched === "week" && i < 4; i++){ await moveWeek(1); el = find(); }
   if (!el){ const days = [...document.querySelectorAll("#main .day[data-day]")]; el = days[days.length - 1]; }
   if (!el){ toast("가까운 경기 일정이 없습니다"); return; }
-  window.scrollTo({top:el.getBoundingClientRect().top + window.scrollY - 70, behavior:"smooth"});
+  window.scrollTo({top:el.getBoundingClientRect().top + window.scrollY - 12, behavior:"smooth"});
   el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   if (el.dataset.day !== today) toast("오늘은 경기가 없어 가장 가까운 경기일로 이동했습니다");
 }

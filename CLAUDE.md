@@ -25,7 +25,7 @@
 - 축구 경기 상세 `fillSoccerIntel`: 주목할 선수 = summary.leaders(득점·도움·슈팅·선방 팀 내 1위), 결장 의심 = 최근 4경기 라인업 비교(이전 3경기 중 2선발 이상인데 직전 경기 미출전 → 명단 제외/벤치, 직전 퇴장 → 출장정지 가능). ESPN은 축구 부상 데이터가 사실상 없음(경기 전·후 summary.injuries 빈 값 확인).
 - 홈 탭 `renderHome`(첫 화면, 주소에 리그 없으면 홈): `loadIndex()` 목록에서 오늘(기기 날짜) + 진행 중. 종목·상태 필터, 내 경기·진행 중·곧 시작(`countdown`)·리그별 묶음. 홈에선 `#lgbar` 숨김, 리그 버튼 누르면 순위표로. My 경기 선택/전체 삭제 `data-myact`.
 - 응원팀 `FAVS`(favTeams.v1, `favBtn`/`favCard`), 알림 `NOTI`(noti.v1, 기본 off, `notiTick` 30초: My+응원팀 경기 점수 스냅샷 비교 → `pushNoti`(SW showNotification, sw.js notificationclick)), 빅매치 `loadBig`(리그 순위·FIFA·승률), 예측 `PICKS[].bet` + `BETLOG`(betLog.v1, `gradeBets`, 홈 `betStats`).
-- 메뉴 2단: 맨 위 `#gnav`(홈·리그·My·커뮤니티, 항상) / 리그 화면(`LG_TABS` 순위표·일정·팀 분석·LIVE)에서만 `#lghead`·`#lgbar`·`#tabs`. 리그 버튼은 마지막 리그 탭(`S.lastLgTab`) 기억.
+- 머리글(header.top)은 고정하지 않음(스크롤하면 같이 올라감, 소유자 요청). 메뉴 2단: 맨 위 `#gnav`(홈·리그·My·커뮤니티, 항상) / 리그 화면(`LG_TABS` 순위표·일정·팀 분석·LIVE)에서만 `#lghead`·`#lgbar`·`#tabs`. 리그 버튼은 마지막 리그 탭(`S.lastLgTab`) 기억.
 - My 묶음: `PICKS[].grp`(기본 1), 빈 묶음 `MYGRPS`(my.groups), ☆ 담기 대상 `addGrp()`(my.addGrp = 마지막으로 고른 묶음), 새 번호 `freeGrps`(빈 가장 작은 번호), 삭제 후 `renumberGrps`. 캡처는 파일마다 따로 OCR → 파일마다 새 묶음.
 - 컵대회 `facup`(eng.fa)·`dfbpokal`(ger.dfb_pokal)·`copadelrey`(esp.copa_del_rey)·`coppaitalia`(ita.coppa_italia): `cup:true`+`nostand` → 순위표 탭이 "🏆 대진표"(BR kind `cup`: 16강/FA컵 5라운드~결승), 일정은 `months:CUP_MONTHS`(8월~다음 해 5월). 두 팀 다 TBD인 경기는 대진표에서 제외. ESPN standings 응답 시즌은 `seasonOfResp`(seasons 배열/season 단수/빈 객체).
 - 기기 연동 `SYNC`(sync.code/sync.t): Supabase RPC `sync_get`/`sync_put`(supabase_sync.sql, 코드 해시를 키로 JSON 저장). 저장 함수들이 `syncDirty()` → 2초 뒤 push, 앱 열 때·다시 볼 때·1분마다 pull. 마지막 변경 기기 우선(전체 덮어쓰기), 처음 연결 때만 `mergeSync`. QR(qrcode-generator 1.4.4 jsdelivr) 주소 `#sync=코드`. 알림 설정은 기기별.
