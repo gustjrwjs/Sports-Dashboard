@@ -632,6 +632,18 @@ tr.dnp td{color:var(--muted)}
 .slead b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .slead .sv{flex:none;font-size:12px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
 .sabs-h{font-size:12.5px;font-weight:700;margin:4px 0 6px}
+.mytools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;justify-content:flex-end}
+.mytools.sel{justify-content:flex-start;background:color-mix(in srgb, var(--accent) 8%, var(--surface));border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));border-radius:12px;padding:8px 10px;position:sticky;top:6px;z-index:5}
+.mytools.sel b{margin-right:auto;font-size:13px}
+.btn.danger{color:var(--loss);border-color:color-mix(in srgb, var(--loss) 40%, var(--border))}
+.btn.danger:disabled{opacity:.45}
+.mywrap{position:relative;min-width:0}
+.mywrap.selm{cursor:pointer}
+.mywrap.selm>.lcard{pointer-events:none;transition:opacity .15s}
+.mywrap.selm:not(.on)>.lcard{opacity:.6}
+.mywrap.on>.lcard{outline:2.5px solid var(--accent);outline-offset:-1px}
+.mychk{position:absolute;top:8px;left:8px;z-index:3;width:24px;height:24px;border-radius:7px;border:2px solid var(--accent);background:var(--surface);color:#fff;display:grid;place-items:center;font-weight:900;font-size:14px}
+.mywrap.on .mychk{background:var(--accent)}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -1190,7 +1202,7 @@ function render(){
   if (L().nostand && S.tab === "standings") S.tab = "matches";  // 순위표가 없는 대회(친선경기)
   renderHeader();
   updateFab();
-  if (S.tab !== "my") clearTimeout(S.myPoll);
+  if (S.tab !== "my"){ clearTimeout(S.myPoll); S.mySel = null; }
   if (S.tab === "my") return renderMy();  // My 경기는 리그와 상관없이 표시
   if (S.tab === "talk") return renderTalk();  // 커뮤니티도 리그와 상관없음
   if (L().disabled) return renderSoon();
@@ -2741,7 +2753,10 @@ function renderMy(fromRefresh){
   else if (!fromRefresh) scheduleMy();
   const items = PICKS.map(p => ({p, k:p.lg + "|" + p.id, m:MY.ev[p.lg + "|" + p.id]}))
     .sort((a, b) => new Date(a.p.date) - new Date(b.p.date));
-  const card = it => {
+  const sel = S.mySel;  // 선택 삭제 모드면 Set
+  const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.k) ? "on" : ""}" data-mysel="${esc(it.k)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.k) ? "✓" : ""}</span>` : ""}${html}</div>`;
+  const card = it => wrap(it, card0(it));
+  const card0 = it => {
     if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true)}</div>
       <div class="muted" style="text-align:center;padding:6px 0">${esc(ko(it.p.home))} vs ${esc(ko(it.p.away))} · 정보를 불러오지 못했습니다</div></div>`;
     const id = it.m.id;
@@ -2750,6 +2765,10 @@ function renderMy(fromRefresh){
   const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
   const sec = (title, list) => list.length ? `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div><div class="lgrid">${list.map(card).join("")}</div>` : "";
   let html = bar(PICKS.length) + '<div id="myimpSlot"></div>';
+  // 삭제 도구: 선택 삭제 · 전체 삭제
+  html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${sel.size === PICKS.length ? "선택 해제" : "모두 선택"}</button>
+      <button class="btn danger" data-myact="delsel" ${sel.size ? "" : "disabled"}>🗑 선택 삭제</button><button class="btn" data-myact="cancel">취소</button></div>`
+    : `<div class="mytools"><button class="btn" data-myact="select">☑ 선택 삭제</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
   if (MY.err) html += `<div class="card empty" style="margin-bottom:10px">업데이트 실패: ${esc(MY.err)} · 잠시 후 다시 시도합니다.</div>`;
   if (done.length){
     const w = done.filter(x => x.m.home.winner || x.m.away.winner).length;
@@ -2760,6 +2779,34 @@ function renderMy(fromRefresh){
   $("#main").innerHTML = html;
   mountImp();
 }
+// My 경기 삭제: 선택 모드에선 카드를 누르면 선택/해제 (경기 열기·☆ 대신)
+document.addEventListener("click", e => {
+  if (S.tab !== "my") return;
+  const a = e.target.closest("[data-myact]");
+  if (a){
+    const act = a.dataset.myact;
+    if (act === "select") S.mySel = new Set();
+    else if (act === "cancel") S.mySel = null;
+    else if (act === "all") S.mySel = S.mySel && S.mySel.size === PICKS.length ? new Set() : new Set(PICKS.map(p => p.lg + "|" + p.id));
+    else if (act === "delsel" && S.mySel && S.mySel.size){
+      const n = S.mySel.size;
+      if (!confirm(`선택한 ${n}경기를 My 경기에서 뺄까요?`)) return;
+      PICKS = PICKS.filter(p => !S.mySel.has(p.lg + "|" + p.id)); S.mySel = null; savePicks(); updateMyBadge(); toast(`${n}경기를 뺐습니다`);
+    }
+    else if (act === "clear"){
+      if (!confirm(`담은 ${PICKS.length}경기를 전부 지울까요? 되돌릴 수 없습니다.`)) return;
+      PICKS = []; S.mySel = null; savePicks(); updateMyBadge(); toast("My 경기를 모두 비웠습니다");
+    }
+    renderMy(true); return;
+  }
+  if (!S.mySel) return;
+  const w = e.target.closest("[data-mysel]");
+  if (!w) return;
+  e.preventDefault(); e.stopPropagation();
+  const k = w.dataset.mysel;
+  if (S.mySel.has(k)) S.mySel.delete(k); else S.mySel.add(k);
+  renderMy(true);
+}, true);
 async function openMyMatch(lg, id){
   if (S.lg !== lg){ setLeague(lg); }
   if (!D(lg).loaded){ await (D(lg).loading || loadLeague(lg)); }
