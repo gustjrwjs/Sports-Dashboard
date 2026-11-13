@@ -657,6 +657,8 @@ tr.dnp td{color:var(--muted)}
 nav.tabs button.tab-home.on{border-bottom-color:var(--text)}
 @media (max-width:480px){ .hgrid{grid-template-columns:1fr} }
 #lgbar[hidden]{display:none!important}
+a.appname{text-decoration:none;color:inherit;cursor:pointer}
+a.appname:hover{opacity:.85}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -755,7 +757,7 @@ ul.news small{font-size:11px}
   <div class="lgwm lt" id="lgwm" aria-hidden="true"></div><div class="lgwm dk" id="lgwmd" aria-hidden="true"></div>
   <div class="wrap">
     <div class="appbar">
-      <span class="appname"><img src="icons/favicon-64.png" alt="" width="30" height="30"><span>SPORTS <b>LIVE!</b></span></span>
+      <a class="appname" href="./" id="homeLink" title="홈으로" aria-label="SPORTS LIVE! 홈으로"><img src="icons/favicon-64.png" alt="" width="30" height="30"><span>SPORTS <b>LIVE!</b></span></a>
       <span class="upd" id="upd"></span>
       <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치">앱 설치</button>
       <button class="btn ibtn" id="searchBtn" title="경기 검색 (예정·진행 중)" aria-label="경기 검색">🔍</button>
@@ -3785,6 +3787,8 @@ document.addEventListener("click", e => {
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("tr[data-team]")) openTeam(e.target.dataset.team); });
 $("#mclose").onclick = () => modal.close();
 modal.addEventListener("click", e => { if (e.target === modal) modal.close(); });
+// 왼쪽 위 앱 이름 → 홈 (새로고침 없이)
+$("#homeLink").onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); if (modal.open) modal.close(); S.tab = "home"; history.replaceState(null, "", location.pathname); window.scrollTo(0, 0); render(); };
 $("#searchBtn").onclick = () => openSearch();
 $("#pipBtn").onclick = () => openPip();
 $("#refresh").onclick = () => {
