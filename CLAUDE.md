@@ -10,10 +10,11 @@
 ## 📋 다음 할 일 (소유자가 요청함 · 묻지 말고 순서대로 진행, 끝나면 이 목록에서 지우기)
 
 1. **(소유자가 할 일)** `supabase_rank.sql`을 Supabase SQL Editor에서 실행해야 예측 랭킹이 켜짐(실행 전엔 홈 카드가 숨겨짐). 실행 뒤 실제 서버에서 `pred_rank` 호출·10분 자동 채점(cron.job `sl-pred-grade`) 확인할 것.
-2. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
-3. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
-4. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
-5. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+2. **(소유자가 할 일)** `supabase_account.sql`을 SQL Editor에서 실행해야 회원가입·로그인이 켜짐(실행 전엔 "서버에 준비되지 않았습니다" 안내). 실행 뒤 실제 가입·로그인·동기화 확인할 것.
+3. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
+4. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
+5. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
+6. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 완료(2026-11-12): EFL 챔피언십(`eng.2`) 추가, K리그1·2·NPB "준비 중"(ESPN `baseball` 리그 12개에 NPB 없음, `jpn.npb`/`npb` 빈 응답), 대진표 미리보기.
 
@@ -57,6 +58,8 @@
 - 🏆 예측 랭킹(2026-11-13 코드 완료): `supabase_rank.sql` — 표 `preds`(직접 읽기·쓰기 불가), RPC `pred_put`(시작 전만·닉네임 사칭·주소 형식 검사, 1분 40회 제한)·`pred_rank`(주간 상위 20 + 내 줄). 채점은 서버가 pg_cron 10분마다 `pred_collect`→`pred_fetch`(pg_net으로 ESPN summary) → 시작 시간(ESPN 값) 뒤 변경은 void. 앱: `RANK`(rank.on), 랭킹 전용 비밀값 `rankSecret()`(rank.sec, 기기 연동 `syncState().rank`로 이어짐), `setBet`의 승패 예측 → `predPush`, 홈 `rankCard`(SQL 없으면 숨김), 주 = 월요일 0시 KST(`weekRange`). 로컬 PostgreSQL 16 + net/cron 흉내로 SQL 검증함.
 
 - ▶ 하이라이트(2026-11-13 완료): 종료 경기 상세 머리 아래 `hlLinks` — 유튜브 검색 링크만(한국어 팀명 + "하이라이트" / 영어 팀명 + highlights 연도). 영상 삽입·저장 없음.
+
+- 👤 회원(2026-11-13 코드 완료): `supabase_account.sql` — 아이디(영소문자·숫자·_ 4~16)+비밀번호(8~72, bcrypt) 가입, 이메일 없음(비번 분실 시 복구 불가 안내). 표 `accounts`(data jsonb = 기기 연동과 같은 `syncState()`)·`acc_tokens`(토큰 sha256, 180일). RPC `acc_signup`·`acc_login`(틀리면 예외 대신 {error} 반환 → 틀린 횟수 기록 유지, 10번 틀리면 15분 잠금)·`acc_get`·`acc_put`(300KB)·`acc_logout`·`acc_nick`·`acc_passwd`(다른 기기 토큰 삭제)·`acc_delete`. 앱: `ACC`(acc.tok/uid/nick), 머리글 👤 `#accBtn`→`openAcc`, 로그인하면 코드 연동 끄고 `syncPush/syncPull`이 acc_put/acc_get 사용, 첫 로그인 때 `mergeSync`로 합침, 닉네임은 게시판 닉네임(tk.nick)과 같게. My의 연동 버튼은 `syncBtn()`. 로컬 PostgreSQL로 SQL 검증함.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 

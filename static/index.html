@@ -655,6 +655,13 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+#accBtn.on{background:var(--accent-soft);border-color:var(--accent)}
+.acc .accl{display:block;font-size:13px;font-weight:700;margin:10px 0 0}.acc .accl input{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-weight:400}
+.acc .accgo{width:100%;margin-top:12px;padding:11px}.accinfo{margin:14px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.accme{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);margin-bottom:10px}.accme b{font-size:17px}
+.accbox{margin-top:12px;padding:12px;border:1px dashed var(--border);border-radius:12px}.accbox .btn{margin-top:10px}
+.accnudge{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;margin:6px 0 10px;font-size:13px}
+.accnudge span{flex:1 1 200px;color:var(--muted)}
 .dayp{border:2px solid var(--border);border-radius:16px;background:var(--surface);margin:0 0 16px;overflow:hidden;box-shadow:var(--shadow)}
 .dayp.d0{border-color:var(--accent)}
 .dayp>header{display:flex;align-items:baseline;gap:8px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
@@ -1004,6 +1011,7 @@ ul.news small{font-size:11px}
       <a class="appname" href="./" id="homeLink" title="홈으로" aria-label="SPORTS LIVE! 홈으로"><img src="icons/favicon-64.png" alt="" width="30" height="30"><span>SPORTS <b>LIVE!</b></span></a>
       <span class="upd" id="upd"></span>
       <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치">앱 설치</button>
+      <button class="btn ibtn" id="accBtn" title="로그인 · 회원가입" aria-label="로그인">👤</button>
       <button class="btn ibtn" id="notiBtn" title="경기 알림" aria-label="경기 알림">🔕</button>
       <button class="btn ibtn" id="searchBtn" title="경기 검색 (예정·진행 중)" aria-label="경기 검색">🔍</button>
       <button class="btn ibtn" id="pipBtn" title="미니 라이브 창 띄우기 (다른 일 하면서 보기)" aria-label="미니 라이브">📺</button>
@@ -3283,7 +3291,7 @@ function renderMy(fromRefresh){
     ? `<span class="auto"><i></i>${Object.values(MY.ev).some(m => m.state === "in") ? LIVE_FAST / 1000 : LIVE_SLOW / 1000}초마다 자동 업데이트 · ${new Date(MY.t).toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</span>` : ""}</div>`;
   if (!PICKS.length){
     clearTimeout(S.myPoll);
-    $("#main").innerHTML = bar(0) + '<div id="myimpSlot"></div>' + `<div class="mytools"><span class="mtsp"></span><button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 기기 연동${SYNC.code ? " ✓" : ""}</button></div><div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
+    $("#main").innerHTML = bar(0) + '<div id="myimpSlot"></div>' + `<div class="mytools"><span class="mtsp"></span>${syncBtn(false)}</div><div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
       <span class="muted">경기 카드 오른쪽 위의 <b class="mystar">☆</b>를 누르거나, 위 칸에 베팅내역 캡처를 붙여넣으면 여기에 모입니다.<br>여러 리그 경기를 섞어서 담을 수 있고, 진행 중인 경기는 점수가 자동으로 바뀝니다.</span></div>`;
     mountImp();
     return;
@@ -3320,7 +3328,7 @@ function renderMy(fromRefresh){
   html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${items.every(x => sel.has(x.k)) && items.length ? "선택 해제" : "모두 선택"}</button>
       <select class="btn gmove" data-myact-move ${sel.size ? "" : "disabled"}><option value="">📦 묶음 이동…</option>${grps.map(g => `<option value="${g}">${g}묶음으로</option>`).join("")}<option value="new">새 묶음으로</option></select>
       <button class="btn danger" data-myact="delsel" ${sel.size ? "" : "disabled"}>🗑 선택 삭제</button><button class="btn" data-myact="cancel">취소</button></div>`
-    : `<div class="mytools">${gbar}<span class="mtsp"></span><span class="vseg"><button class="${listView ? "on" : ""}" data-myview="list" title="한 경기 한 줄">☰<span class="tl-long"> 한 줄</span></button><button class="${listView ? "" : "on"}" data-myview="card" title="카드">▦<span class="tl-long"> 카드</span></button></span><button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 <span class="tl-long">기기 </span>연동${SYNC.code ? " ✓" : ""}</button><button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체<span class="tl-long"> </span>삭제</button></div>`;
+    : `<div class="mytools">${gbar}<span class="mtsp"></span><span class="vseg"><button class="${listView ? "on" : ""}" data-myview="list" title="한 경기 한 줄">☰<span class="tl-long"> 한 줄</span></button><button class="${listView ? "" : "on"}" data-myview="card" title="카드">▦<span class="tl-long"> 카드</span></button></span>${syncBtn(true)}<button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체<span class="tl-long"> </span>삭제</button></div>`;
   // 묶음을 골랐을 때: 요약(예측 조합 배당) + 이 묶음 삭제
   if (!sel && gsel !== "all"){
     let odd = 1, n = 0;
@@ -3488,25 +3496,26 @@ function mergeSync(a, b){
 // 내 기기에서 바뀌면 2초 뒤 올림
 function syncDirty(){
   SYNC.t = Date.now(); lsSet("sync.t", String(SYNC.t));
-  if (!SYNC.code || !sbOn()) return;
+  if ((!SYNC.code && !ACC.tok) || !sbOn()) return;
   clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncPush, 2000);
 }
 async function syncPush(){
-  if (!SYNC.code) return;
-  try { await rpc("sync_put", {p_code:SYNC.code, p_data:syncState()}); SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = ""; }
-  catch (e) { SYNC.err = e.message; }
+  if (!SYNC.code && !ACC.tok) return;
+  try { if (ACC.tok) await rpc("acc_put", {p_token:ACC.tok, p_data:syncState()}); else await rpc("sync_put", {p_code:SYNC.code, p_data:syncState()}); SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = ""; }
+  catch (e) { SYNC.err = e.message; accExpired(e); }
 }
 // 다른 기기 변경 받기: 앱을 열 때·다시 볼 때·1분마다
 async function syncPull(){
-  if (!SYNC.code || SYNC.busy || !sbOn()) return;
+  if ((!SYNC.code && !ACC.tok) || SYNC.busy || !sbOn()) return;
   SYNC.busy = true;
   try {
-    const r = await rpc("sync_get", {p_code:SYNC.code});
+    const r = ACC.tok ? await rpc("acc_get", {p_token:ACC.tok}) : await rpc("sync_get", {p_code:SYNC.code});
+    if (ACC.tok && r && r.nick && r.nick !== ACC.nick){ ACC.nick = r.nick; lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick); }
     const d = r && r.data;
     if (d && Number(d.t) > SYNC.t) applySync(d);
     else if (!d || Number(d.t) < SYNC.t) await syncPush();  // 서버가 비었거나 내가 더 최신
     SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = "";
-  } catch (e) { SYNC.err = e.message; }
+  } catch (e) { SYNC.err = e.message; accExpired(e); }
   finally { SYNC.busy = false; }
 }
 setInterval(() => { if (!document.hidden) syncPull(); }, 60000);
@@ -3524,7 +3533,8 @@ function openSync(prefill){
   if (!sbOn()){ openModal('<div class="srch"><h2>🔗 기기 연동</h2><div class="card empty">서버(게시판용 Supabase)가 연결돼 있지 않아 연동을 쓸 수 없습니다.</div></div>'); return; }
   const when = SYNC.last ? new Date(SYNC.last).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "-";
   openModal(`<div class="srch sync"><h2>🔗 기기 연동 (폰 ↔ PC)</h2>
-    <p class="muted" style="font-size:13px">My 경기·묶음·예측 기록·응원팀을 여러 기기에서 똑같이 씁니다. 가입은 필요 없고, <b>연동 코드</b>가 비밀번호 역할을 합니다.</p>
+    <div class="accnudge"><b>👤 회원가입하면 더 편해요</b><span>코드 없이 아이디·비밀번호로 어느 기기에서나 로그인하면 바로 연동됩니다.</span><button class="btn primary" data-acc="open">로그인 · 가입</button></div>
+    <p class="muted" style="font-size:13px">가입 없이 쓰려면 아래 <b>연동 코드</b>로도 연결할 수 있습니다(코드가 비밀번호 역할).</p>
     ${SYNC.code ? `<div class="syncon"><div><div class="muted" style="font-size:12px">이 기기의 연동 코드</div><div class="scode">${fmtCode(SYNC.code)}</div>
         <div class="muted" style="font-size:12px">마지막 동기화 ${when}${SYNC.err ? ` · <span class="live">오류: ${esc(SYNC.err)}</span>` : ""}</div>
         <div class="srow"><button class="btn" data-sync="copy">코드 복사</button><button class="btn" data-sync="now">지금 동기화</button><button class="btn danger" data-sync="off">연동 끊기</button></div></div>
@@ -3556,6 +3566,110 @@ document.addEventListener("click", async e => {
   else if (act === "copy"){ try { await navigator.clipboard.writeText(fmtCode(SYNC.code)); toast("코드를 복사했습니다"); } catch { toast(fmtCode(SYNC.code)); } }
   else if (act === "now"){ await syncPull(); toast(SYNC.err ? "동기화 실패: " + SYNC.err : "동기화했습니다"); openSync(); }
   else if (act === "off"){ if (!confirm("이 기기의 연동을 끊을까요? (이 기기 데이터는 그대로 남고, 더 이상 맞추지 않습니다)")) return; SYNC.code = ""; lsSet("sync.code", ""); toast("연동을 끊었습니다"); openSync(); }
+});
+// ================================================================ 👤 회원 (아이디·비밀번호, supabase_account.sql)
+// 로그인하면 My 경기·묶음·예측 기록·응원팀·랭킹 참가 정보가 계정에 저장돼 어느 기기에서나 같음 (연동 코드 대신)
+const ACC = {tok:lsGet("acc.tok", ""), uid:lsGet("acc.uid", ""), nick:lsGet("acc.nick", ""), mode:"login"};
+function accBadge(){ const b = document.getElementById("accBtn"); if (!b) return; b.classList.toggle("on", !!ACC.tok); b.title = ACC.tok ? `${ACC.nick} (${ACC.uid}) · 내 계정` : "로그인 · 회원가입"; }
+function syncBtn(short){
+  if (ACC.tok) return `<button class="btn on" data-acc="open">👤 ${esc(ACC.nick || ACC.uid)}<span class="tl-long"> 연동 중</span> ✓</button>`;
+  return `<button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 ${short ? '<span class="tl-long">기기 </span>' : "기기 "}연동${SYNC.code ? " ✓" : ""}</button>`;
+}
+function accSet(r){
+  ACC.tok = r.token; ACC.uid = r.uid; ACC.nick = r.nick;
+  lsSet("acc.tok", r.token); lsSet("acc.uid", r.uid); lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick);
+  SYNC.code = ""; lsSet("sync.code", "");  // 계정으로 연동하니 코드 연동은 끔
+  accBadge();
+}
+function accClear(){ ACC.tok = ""; ACC.uid = ""; ACC.nick = ""; ["acc.tok", "acc.uid", "acc.nick"].forEach(k => lsSet(k, "")); accBadge(); }
+function accExpired(e){ if (ACC.tok && /로그인이 만료/.test(e?.message || "")){ accClear(); toast("로그인이 만료됐습니다. 다시 로그인해 주세요"); } }
+// 로그인·가입 직후: 서버 내용 + 이 기기 내용을 합쳐서 올림
+async function accAfterLogin(){
+  const r = await rpc("acc_get", {p_token:ACC.tok});
+  const d = r && r.data;
+  if (d && d.v) applySync(mergeSync(d, syncState())); else SYNC.t = Date.now();
+  await syncPush(); MY.t = 0; render();
+}
+function openAcc(){
+  if (!sbOn()){ openModal('<div class="srch"><h2>👤 로그인</h2><div class="card empty">서버가 연결돼 있지 않습니다.</div></div>'); return; }
+  if (ACC.tok){
+    const when = SYNC.last ? new Date(SYNC.last).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "-";
+    openModal(`<div class="srch acc"><h2>👤 내 계정</h2>
+      <div class="accme"><b>${esc(ACC.nick)}</b><span class="muted">아이디 ${esc(ACC.uid)}</span><span class="muted" style="font-size:12px">마지막 동기화 ${when}${SYNC.err ? ` · <span class="live">오류: ${esc(SYNC.err)}</span>` : ""}</span></div>
+      <p class="muted" style="font-size:13px">My 경기·묶음·예측 기록·응원팀·랭킹 참가 정보가 이 계정에 저장돼, 다른 기기에서 같은 아이디로 로그인하면 똑같이 보입니다. (알림 켜기/끄기는 기기마다 따로)</p>
+      <div class="srow"><button class="btn primary" data-acc="sync">지금 동기화</button><button class="btn" data-acc="nick">닉네임 변경</button><button class="btn" data-acc="pw">비밀번호 변경</button><button class="btn" data-acc="logout">로그아웃</button></div>
+      <div id="accsub"></div>
+      <p class="note" style="margin-top:14px"><button class="linkbtn" data-acc="delete">회원 탈퇴</button> · 탈퇴하면 계정에 저장된 내용이 모두 지워집니다(이 기기에 있는 내용은 남음).</p></div>`);
+    return;
+  }
+  const su = ACC.mode === "signup";
+  openModal(`<div class="srch acc"><h2>👤 ${su ? "회원가입" : "로그인"}</h2>
+    <div class="tkseg sm"><button class="${su ? "" : "on"}" data-acc="mode" data-v="login">로그인</button><button class="${su ? "on" : ""}" data-acc="mode" data-v="signup">회원가입</button></div>
+    <form id="accf" autocomplete="on" onsubmit="return false">
+      <label class="accl">아이디<input id="accid" name="username" autocomplete="username" maxlength="16" placeholder="영어 소문자·숫자·_ 4~16자" autocapitalize="none" spellcheck="false"></label>
+      <label class="accl">비밀번호<input id="accpw" name="password" type="password" autocomplete="${su ? "new-password" : "current-password"}" maxlength="72" placeholder="${su ? "8자 이상" : ""}"></label>
+      ${su ? `<label class="accl">비밀번호 확인<input id="accpw2" type="password" autocomplete="new-password" maxlength="72"></label>
+      <label class="accl">닉네임 <small class="muted">(게시판·랭킹에 표시)</small><input id="accnick" maxlength="12" value="${esc(myNick())}" placeholder="2~12자"></label>` : ""}
+      <div class="tkerr" id="accerr"></div>
+      <button class="btn primary accgo" data-acc="${su ? "signup" : "login"}">${su ? "가입하고 시작" : "로그인"}</button>
+    </form>
+    <ul class="accinfo"><li>이메일·전화번호 같은 개인정보는 받지 않습니다. 비밀번호는 암호화돼 저장됩니다.</li>
+      <li>⚠️ 이메일이 없어서 <b>비밀번호를 잊으면 찾을 수 없어요.</b> 꼭 기억해 두세요.</li>
+      <li>로그인하면 지금 이 기기의 My 경기·예측 기록이 계정 내용과 합쳐집니다.</li></ul></div>`);
+  setTimeout(() => document.getElementById("accid")?.focus(), 60);
+}
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest && e.target.closest("#accf")){ e.preventDefault(); document.querySelector(".accgo")?.click(); } });
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-acc]"); if (!b) return;
+  e.preventDefault();
+  const act = b.dataset.acc, err = m => { const x = document.getElementById("accerr"); if (x) x.textContent = m; else toast(m); };
+  const busy = (on, txt) => { b.disabled = on; if (txt) b.textContent = txt; };
+  const noSql = e2 => /acc_|404|PGRST202/.test(e2.message) ? "회원 기능이 아직 서버에 준비되지 않았습니다(운영자 설정 필요)." : e2.message;
+  try {
+    if (act === "open") openAcc();
+    else if (act === "mode"){ ACC.mode = b.dataset.v; openAcc(); }
+    else if (act === "login" || act === "signup"){
+      const id = (document.getElementById("accid").value || "").trim().toLowerCase(), pw = document.getElementById("accpw").value || "";
+      if (!/^[a-z0-9_]{4,16}$/.test(id)) return err("아이디는 영어 소문자·숫자·_ 4~16자입니다.");
+      if (pw.length < 8) return err("비밀번호는 8자 이상입니다.");
+      let r;
+      if (act === "signup"){
+        if (pw !== document.getElementById("accpw2").value) return err("비밀번호 확인이 다릅니다.");
+        const nk = (document.getElementById("accnick").value || "").trim();
+        if (nk.length < 2 || nk.length > 12) return err("닉네임은 2~12자로 정해 주세요.");
+        if (RESERVED.test(nk.replace(/\s/g, ""))) return err("운영자로 오해될 수 있는 닉네임은 쓸 수 없습니다.");
+        busy(true, "가입 중…"); r = await rpc("acc_signup", {p_uid:id, p_pw:pw, p_nick:nk});
+      } else { busy(true, "로그인 중…"); r = await rpc("acc_login", {p_uid:id, p_pw:pw}); }
+      if (!r || r.error || !r.token){ busy(false, act === "signup" ? "가입하고 시작" : "로그인"); return err(r?.error || "실패했습니다."); }
+      accSet(r); await accAfterLogin(); modal.close();
+      toast(act === "signup" ? `가입 완료! ${r.nick} 님 환영합니다 · 다른 기기에서도 이 아이디로 로그인하세요` : `${r.nick} 님 로그인했습니다 · 내용을 맞췄습니다`);
+    }
+    else if (act === "sync"){ await syncPull(); toast(SYNC.err ? "동기화 실패: " + SYNC.err : "동기화했습니다"); openAcc(); }
+    else if (act === "logout"){
+      if (!confirm("로그아웃할까요? (이 기기의 My 경기는 그대로 남고, 더 이상 계정과 맞추지 않습니다)")) return;
+      await syncPush(); rpc("acc_logout", {p_token:ACC.tok}).catch(() => {}); accClear(); modal.close(); toast("로그아웃했습니다"); render();
+    }
+    else if (act === "nick"){
+      document.getElementById("accsub").innerHTML = `<div class="accbox"><label class="accl">새 닉네임<input id="accnick2" maxlength="12" value="${esc(ACC.nick)}"></label><div class="tkerr" id="accerr"></div><button class="btn primary" data-acc="nicksave">저장</button></div>`;
+    }
+    else if (act === "nicksave"){
+      const nk = (document.getElementById("accnick2").value || "").trim();
+      if (nk.length < 2 || nk.length > 12 || RESERVED.test(nk.replace(/\s/g, ""))) return err("2~12자, 운영자로 오해될 수 있는 이름은 안 됩니다.");
+      await rpc("acc_nick", {p_token:ACC.tok, p_nick:nk}); ACC.nick = nk; lsSet("acc.nick", nk); lsSet("tk.nick", nk); accBadge(); toast("닉네임을 바꿨습니다"); openAcc();
+    }
+    else if (act === "pw"){
+      document.getElementById("accsub").innerHTML = `<div class="accbox"><label class="accl">지금 비밀번호<input id="accold" type="password" autocomplete="current-password"></label><label class="accl">새 비밀번호 (8자 이상)<input id="accnew" type="password" autocomplete="new-password"></label><div class="tkerr" id="accerr"></div><button class="btn primary" data-acc="pwsave">변경</button></div>`;
+    }
+    else if (act === "pwsave"){
+      const nw = document.getElementById("accnew").value || "";
+      if (nw.length < 8) return err("새 비밀번호는 8자 이상입니다.");
+      await rpc("acc_passwd", {p_token:ACC.tok, p_old:document.getElementById("accold").value || "", p_new:nw}); toast("비밀번호를 바꿨습니다 · 다른 기기는 다시 로그인해야 합니다"); openAcc();
+    }
+    else if (act === "delete"){
+      const pw = prompt("회원 탈퇴: 계정에 저장된 내용이 모두 지워집니다.\n계속하려면 비밀번호를 입력하세요."); if (!pw) return;
+      await rpc("acc_delete", {p_token:ACC.tok, p_pw:pw}); accClear(); modal.close(); toast("탈퇴했습니다"); render();
+    }
+  } catch (e2) { b.disabled = false; err(noSql(e2)); accExpired(e2); }
 });
 // QR로 열린 주소(#sync=코드) → 바로 연결 창
 function syncFromHash(){
@@ -4984,6 +5098,8 @@ modal.addEventListener("click", e => { if (e.target === modal) modal.close(); })
 $("#homeLink").onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); if (modal.open) modal.close(); S.tab = "home"; history.replaceState(null, "", location.pathname); window.scrollTo(0, 0); render(); };
 $("#searchBtn").onclick = () => openSearch();
 $("#notiBtn").onclick = () => openNoti();
+$("#accBtn").onclick = () => openAcc();
+accBadge();
 updateNotiBtn(); if (NOTI.on) setTimeout(notiTick, 3000);
 setTimeout(syncPull, 1500);  // 연동돼 있으면 다른 기기 변경 받기
 $("#pipBtn").onclick = () => openPip();
