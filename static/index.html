@@ -655,6 +655,16 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.stcard{padding:10px 14px}
+.str{display:grid;grid-template-columns:76px 1fr 76px;align-items:center;gap:10px;padding:6px 0}
+.str+.str{border-top:1px dashed var(--border)}
+.str .sv{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
+.str .sv.a{text-align:right}.str .sv.hi{color:var(--text)}
+.str .sv small{font-size:11px;font-weight:600;color:var(--muted)}
+.stm em{display:block;text-align:center;font-style:normal;font-size:12px;color:var(--muted);margin-bottom:4px}
+.stb{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--border);gap:2px}
+.stb i{display:block;height:100%}.stb i.h{background:var(--accent)}.stb i.a{background:#f97316}.sth{color:var(--accent)}.sta{color:#f97316}
+@media (max-width:520px){.str{grid-template-columns:64px 1fr 64px;gap:6px}.str .sv{font-size:13px}}
 .hday h3 .muted{font-size:13px;font-weight:600;margin-left:4px;white-space:nowrap}
 .hday{flex-wrap:nowrap}
 .hday h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -2464,8 +2474,9 @@ async function openMatch(id){
     const sp = L().sport;
     const ob = oddsBlock(m, pickOdds(sum), false);
     const pbp = m.state !== "pre" && sum ? pbpSection(lg, m, sum) : "";
-    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + `<div class="sec" id="sintel" data-mid="${esc(m.id)}"><div class="loading">주목할 선수·결장 선수를 불러오는 중…</div></div>` + pbp + lineupSection(m, sum ? parseLineups(sum) : null)
-                 : ob + lineScore(m, sum) + pbp + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
+    const stx = statsSection(m, sum, sp);
+    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + `<div class="sec" id="sintel" data-mid="${esc(m.id)}"><div class="loading">주목할 선수·결장 선수를 불러오는 중…</div></div>` + pbp + stx + lineupSection(m, sum ? parseLineups(sum) : null)
+                 : ob + lineScore(m, sum) + pbp + stx + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
     openModal(head + detail + adSlot("detail") + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
@@ -3896,6 +3907,43 @@ function pbpTicker(lg, m){
   return `<div class="lpbp ${x.big ? "big" : ""} ${fresh ? "new" : ""}" data-pbpid="${esc(x.id)}" title="${esc(x.t)}"><span class="pt">${esc(x.t)}</span>${x.txt}</div>`;
 }
 // 경기 상세 창이 열려 있는 동안 문자중계를 20초마다 새로
+// ---------------------------------------------------------------- 📊 경기 기록 (팀 기록 막대 그래프)
+const ST_DEF = {
+  soccer:[["possessionPct", "점유율", "%"], ["totalShots", "슈팅"], ["shotsOnTarget", "유효 슈팅"], ["wonCorners", "코너킥"], ["saves", "선방"], ["foulsCommitted", "파울"],
+    ["offsides", "오프사이드"], ["yellowCards", "경고"], ["redCards", "퇴장"], ["totalPasses", "패스"], ["passPct", "패스 성공률", "pct"], ["totalCrosses", "크로스"],
+    ["totalTackles", "태클"], ["interceptions", "가로채기"], ["blockedShots", "슈팅 블록"]],
+  basketball:[["fieldGoalsMade-fieldGoalsAttempted", "야투", "ma"], ["threePointFieldGoalsMade-threePointFieldGoalsAttempted", "3점슛", "ma"], ["freeThrowsMade-freeThrowsAttempted", "자유투", "ma"],
+    ["totalRebounds", "리바운드"], ["offensiveRebounds", "공격 리바운드"], ["assists", "어시스트"], ["steals", "스틸"], ["blocks", "블록"], ["totalTurnovers", "턴오버"],
+    ["fouls", "파울"], ["pointsInPaint", "페인트존 득점"], ["fastBreakPoints", "속공 득점"], ["turnoverPoints", "턴오버로 내준 점수"], ["largestLead", "최다 점수 차 리드"]],
+  baseball:[["batting.H", "안타"], ["batting.HR", "홈런"], ["batting.2B", "2루타"], ["batting.BB", "볼넷"], ["batting.SO", "삼진(타자)"], ["batting.SB", "도루"], ["fielding.E", "실책"], ["pitching.K", "탈삼진(투수)"]]};
+function teamStats(t, sp){
+  const o = {};
+  for (const x of t?.statistics || []){
+    if (sp === "baseball"){ for (const y of x.stats || []) { const k = x.name + "." + (y.abbreviation || y.name); if (!(k in o)) o[k] = y.displayValue; } }
+    else o[x.name] = x.displayValue;
+  }
+  return o;
+}
+function statsSection(m, sum, sp){
+  if (m.state === "pre") return "";
+  const ts = sum?.boxscore?.teams || [];
+  const h = ts.find(t => t.homeAway === "home" || String(t.team?.id) === String(m.home.id)), a = ts.find(t => t !== h);
+  if (!h || !a) return "";
+  const H = teamStats(h, sp), A = teamStats(a, sp), rows = [];
+  for (const [k, lab, ty] of ST_DEF[sp] || []){
+    if (H[k] == null || A[k] == null) continue;
+    let hv, av, hs, as;
+    if (ty === "ma"){ const p = v => String(v).split("-").map(Number); const [hm, ha] = p(H[k]), [am, aa] = p(A[k]); hv = ha ? hm / ha : 0; av = aa ? am / aa : 0; hs = `${hm}/${ha} <small>${Math.round(hv * 100)}%</small>`; as = `${am}/${aa} <small>${Math.round(av * 100)}%</small>`; }
+    else if (ty === "pct"){ hv = parseFloat(H[k]); av = parseFloat(A[k]); if (hv <= 1 && av <= 1){ hv *= 100; av *= 100; } hs = Math.round(hv) + "%"; as = Math.round(av) + "%"; }
+    else { hv = parseFloat(H[k]) || 0; av = parseFloat(A[k]) || 0; hs = (ty === "%" ? Math.round(hv) : esc(H[k])) + (ty === "%" ? "%" : ""); as = (ty === "%" ? Math.round(av) : esc(A[k])) + (ty === "%" ? "%" : ""); }
+    if (!hv && !av && !["redCards", "yellowCards", "batting.HR", "fielding.E"].includes(k)) continue;
+    const tot = hv + av, hp = tot ? hv / tot * 100 : 50;
+    rows.push(`<div class="str"><span class="sv ${hv > av ? "hi" : ""}">${hs}</span><div class="stm"><em>${lab}</em><div class="stb"><i class="h" style="width:${hp.toFixed(1)}%"></i><i class="a" style="width:${(100 - hp).toFixed(1)}%"></i></div></div><span class="sv a ${av > hv ? "hi" : ""}">${as}</span></div>`);
+  }
+  if (!rows.length) return "";
+  return `<div class="sec" id="stsec"><div class="sec-h"><h3>📊 경기 기록</h3><span class="muted sp">${esc(ko(m.home.name))} <b class="sth">■</b> vs <b class="sta">■</b> ${esc(ko(m.away.name))}${m.state === "in" ? " · 20초마다 업데이트" : ""}</span></div>
+    <div class="card stcard">${rows.join("")}</div></div>`;
+}
 function pbpLoop(lg, m){
   clearTimeout(PBP.loop);
   PBP.loop = setTimeout(async () => {
@@ -3903,6 +3951,7 @@ function pbpLoop(lg, m){
     try {
       const s = await espn(summaryPath(lg, m.id), 15);
       if (sportOf(lg) !== "soccer") await withTimeout(lookupPlayers(playerNames(s), OCC[sportOf(lg)]), 2500);
+      const se = document.getElementById("stsec"), sh = statsSection({...m, state:"in"}, s, sportOf(lg)); if (se && sh && modal.open && S.modalMatch === m.id) se.outerHTML = sh;
       const el = document.getElementById("pbpsec"), html = pbpSection(lg, m, s);
       if (el && html && modal.open && S.modalMatch === m.id){ const open = el.querySelector("details")?.open; el.outerHTML = html; if (open) document.querySelector("#pbpsec details")?.setAttribute("open", ""); }
       const st = s?.header?.competitions?.[0]?.status?.type?.state;
