@@ -236,6 +236,11 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .ptab td.ptm .lg{width:18px;height:18px;flex:none}
 .ptab .cur{background:color-mix(in srgb, var(--live) 9%, transparent);color:var(--live);font-weight:800}
 .ptab th.cur{background:color-mix(in srgb, var(--live) 14%, var(--surface-2))}
+.ptab tr.sumrow td{background:color-mix(in srgb, var(--accent) 6%, var(--surface));color:var(--accent);font-weight:700;border-top:1.5px solid var(--border)}
+.ptab tr.sumrow td.ptm{font-size:11px}
+.ptab tr.sumrow td.tot{color:var(--accent)}
+.ptab tr.sumrow td.cur{color:var(--live)}
+@media (max-width:420px){ .ptab.cp.bsb tr.sumrow .ptn>span{display:inline} }
 .ptab .tot{font-weight:800;border-left:1px solid var(--border);color:var(--text)}
 .ptab.cp{font-size:11.5px}
 .ptab.cp td{padding:4px 2px}
@@ -2256,10 +2261,15 @@ function periodTable(sp, rows, live, period, compact){
   const cur = live ? (Number(period) || Math.max(...rows.map(r => r.ls.length))) - 1 : -1;
   const tail = bb ? ["합"] : ["R", "H", "E"];
   const short = n => { const k = ko(n), p = k.split(" "); return p.length > 1 ? p[p.length - 1] : k; };
+  // 합산 줄: 쿼터(이닝)마다 두 팀 점수 합 + 전체 합 (언더오버 볼 때)
+  const num = v => v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v);
+  const add = (a, b) => a == null && b == null ? "" : (a ?? 0) + (b ?? 0);
+  const sumRow = () => rows.length !== 2 ? "" : `<tr class="sumrow"><td class="ptm"><span class="ptn"><span>합산</span></span></td>${[...Array(n)].map((_, i) =>
+      `<td class="${i === cur ? "cur" : ""}">${add(num(rows[0].ls[i]), num(rows[1].ls[i]))}</td>`).join("")}<td class="tot">${add(num(rows[0].total), num(rows[1].total))}</td>${bb ? "" : `<td>${add(num(rows[0].hits), num(rows[1].hits))}</td><td>${add(num(rows[0].errors), num(rows[1].errors))}</td>`}</tr>`;
   return `<div class="ptwrap"><table class="ptab ${compact ? "cp" : ""} ${bb ? "" : "bsb"}"><thead><tr><th class="ptm"></th>${[...Array(n)].map((_, i) => `<th class="${i === cur ? "cur" : ""}">${lab(i)}</th>`).join("")}${tail.map(t => `<th class="tot">${t}</th>`).join("")}</tr></thead>
     <tbody>${rows.map(r => `<tr><td class="ptm"><span class="ptn">${logo(r.logo)}<span>${esc(compact ? short(r.name) : ko(r.name))}</span>${r.side ? `<small>${r.side}</small>` : ""}</span></td>${[...Array(n)].map((_, i) => { const v = r.ls[i];
       return `<td class="${i === cur ? "cur" : ""}">${v == null || v === "" ? "" : esc(Number.isFinite(Number(v)) ? Number(v) : v)}</td>`; }).join("")}
-      <td class="tot">${esc(r.total ?? "")}</td>${bb ? "" : `<td>${esc(r.hits ?? "")}</td><td>${esc(r.errors ?? "")}</td>`}</tr>`).join("")}</tbody></table></div>`;
+      <td class="tot">${esc(r.total ?? "")}</td>${bb ? "" : `<td>${esc(r.hits ?? "")}</td><td>${esc(r.errors ?? "")}</td>`}</tr>`).join("")}${sumRow()}</tbody></table></div>`;
 }
 function lineScore(m, sum){
   const comps = sum?.header?.competitions?.[0]?.competitors || [];
