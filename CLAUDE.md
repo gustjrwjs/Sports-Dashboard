@@ -28,6 +28,7 @@
 - 메뉴 2단: 맨 위 `#gnav`(홈·리그·My·커뮤니티, 항상) / 리그 화면(`LG_TABS` 순위표·일정·팀 분석·LIVE)에서만 `#lghead`·`#lgbar`·`#tabs`. 리그 버튼은 마지막 리그 탭(`S.lastLgTab`) 기억.
 - My 묶음: `PICKS[].grp`(기본 1), 빈 묶음 `MYGRPS`(my.groups), ☆ 담기 대상 `addGrp()`(my.addGrp = 마지막으로 고른 묶음), 새 번호 `freeGrps`(빈 가장 작은 번호), 삭제 후 `renumberGrps`. 캡처는 파일마다 따로 OCR → 파일마다 새 묶음.
 - 컵대회 `facup`(eng.fa)·`dfbpokal`(ger.dfb_pokal)·`copadelrey`(esp.copa_del_rey)·`coppaitalia`(ita.coppa_italia): `cup:true`+`nostand` → 순위표 탭이 "🏆 대진표"(BR kind `cup`: 16강/FA컵 5라운드~결승), 일정은 `months:CUP_MONTHS`(8월~다음 해 5월). 두 팀 다 TBD인 경기는 대진표에서 제외. ESPN standings 응답 시즌은 `seasonOfResp`(seasons 배열/season 단수/빈 객체).
+- 기기 연동 `SYNC`(sync.code/sync.t): Supabase RPC `sync_get`/`sync_put`(supabase_sync.sql, 코드 해시를 키로 JSON 저장). 저장 함수들이 `syncDirty()` → 2초 뒤 push, 앱 열 때·다시 볼 때·1분마다 pull. 마지막 변경 기기 우선(전체 덮어쓰기), 처음 연결 때만 `mergeSync`. QR(qrcode-generator 1.4.4 jsdelivr) 주소 `#sync=코드`. 알림 설정은 기기별.
 - 캡처 이미지는 **절대 서버·저장소로 보내거나 저장하지 않음**(화면에 명시됨, 소유자 요청). 이 원칙 유지.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.

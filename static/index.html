@@ -738,6 +738,18 @@ select.gmove{font:inherit;font-size:13px}
 .ocrfh img{width:56px;height:56px;object-fit:cover;object-position:top left;border-radius:8px;border:1px solid var(--border);flex:none}
 .ocrg{color:var(--accent)}
 .ocrnew{margin:6px 0 2px;font-size:13px}
+.btn.on{border-color:#16a34a;color:#15803d}
+.sync .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.sync .sbox{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.sync .sbox p{margin:0;font-size:12.5px}
+.sync input{font:inherit;font-size:16px;letter-spacing:1px;text-transform:uppercase;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)}
+.syncon{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-radius:12px;padding:12px;margin:8px 0}
+.syncon>div:first-child{flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px}
+.scode{font-size:22px;font-weight:900;letter-spacing:2px;font-variant-numeric:tabular-nums;font-family:ui-monospace,Consolas,monospace}
+.srow{display:flex;gap:6px;flex-wrap:wrap}
+.syncqr{width:150px;height:150px;background:#fff;border-radius:10px;display:grid;place-items:center;padding:4px;flex:none}
+.syncqr svg{width:100%;height:100%}
+@media (max-width:480px){ .sync .sgrid{grid-template-columns:1fr} .syncqr{margin:0 auto} }
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -2785,7 +2797,7 @@ const MY = {ev:{}, raw:{}, odds:{}, prev:{}, t:0, loading:false, err:null};
 PICKS.forEach(p => { if (!p.grp) p.grp = 1; });
 let MYGRPS = (() => { try { return JSON.parse(localStorage.getItem("my.groups") || "[]"); } catch { return []; } })();
 const grpList = () => [...new Set([1, ...MYGRPS, ...PICKS.map(p => p.grp)])].sort((a, b) => a - b);
-const saveGrps = () => { try { localStorage.setItem("my.groups", JSON.stringify(MYGRPS)); } catch {} };
+const saveGrps = () => { try { localStorage.setItem("my.groups", JSON.stringify(MYGRPS)); } catch {} try { syncDirty(); } catch {} };
 const addGrp = () => { const g = Number((() => { try { return localStorage.getItem("my.addGrp"); } catch { return 1; } })()) || 1; return grpList().includes(g) ? g : 1; };
 // 새 묶음 = 아직 안 쓰인 가장 작은 번호 (My가 비어 있으면 1묶음부터)
 const freeGrps = n => { const used = new Set([...MYGRPS, ...PICKS.map(p => p.grp)]), out = []; for (let g = 1; out.length < n; g++) if (!used.has(g)) out.push(g); return out; };
@@ -2798,7 +2810,7 @@ function renumberGrps(){
   if (typeof S.myGrp === "number") S.myGrp = map[S.myGrp] || "all";
   saveGrps(); savePicks();
 }
-const savePicks = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); } catch {} };
+const savePicks = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); } catch {} try { syncDirty(); } catch {} };
 const isPicked = (lg, id) => PICKS.some(p => p.lg === lg && p.id === id);
 const pickBtn = (lg, id, inline) => { const on = isPicked(lg, id);
   return `<span class="pick ${inline ? "inl" : ""} ${on ? "on" : ""}" data-pick="${lg}|${id}" role="button" title="${on ? "My 경기에서 빼기" : "My 경기에 담기"}">${on ? "★" : "☆"}</span>`; };
@@ -2885,7 +2897,7 @@ function renderMy(fromRefresh){
     ? `<span class="auto"><i></i>${Object.values(MY.ev).some(m => m.state === "in") ? LIVE_FAST / 1000 : LIVE_SLOW / 1000}초마다 자동 업데이트 · ${new Date(MY.t).toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</span>` : ""}</div>`;
   if (!PICKS.length){
     clearTimeout(S.myPoll);
-    $("#main").innerHTML = bar(0) + '<div id="myimpSlot"></div>' + `<div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
+    $("#main").innerHTML = bar(0) + '<div id="myimpSlot"></div>' + `<div class="mytools"><span class="mtsp"></span><button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 기기 연동${SYNC.code ? " ✓" : ""}</button></div><div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
       <span class="muted">경기 카드 오른쪽 위의 <b class="mystar">☆</b>를 누르거나, 위 칸에 베팅내역 캡처를 붙여넣으면 여기에 모입니다.<br>여러 리그 경기를 섞어서 담을 수 있고, 진행 중인 경기는 점수가 자동으로 바뀝니다.</span></div>`;
     mountImp();
     return;
@@ -2920,7 +2932,7 @@ function renderMy(fromRefresh){
   html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${items.every(x => sel.has(x.k)) && items.length ? "선택 해제" : "모두 선택"}</button>
       <select class="btn gmove" data-myact-move ${sel.size ? "" : "disabled"}><option value="">📦 묶음 이동…</option>${grps.map(g => `<option value="${g}">${g}묶음으로</option>`).join("")}<option value="new">새 묶음으로</option></select>
       <button class="btn danger" data-myact="delsel" ${sel.size ? "" : "disabled"}>🗑 선택 삭제</button><button class="btn" data-myact="cancel">취소</button></div>`
-    : `<div class="mytools">${gbar}<span class="mtsp"></span><button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
+    : `<div class="mytools">${gbar}<span class="mtsp"></span><button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 기기 연동${SYNC.code ? " ✓" : ""}</button><button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
   // 묶음을 골랐을 때: 요약(예측 조합 배당) + 이 묶음 삭제
   if (!sel && gsel !== "all"){
     let odd = 1, n = 0;
@@ -2937,7 +2949,7 @@ function renderMy(fromRefresh){
     html += `<div class="muted" style="font-size:12px;margin:-4px 0 10px">끝난 경기 ${done.length} · 진행 중 ${live.length} · 예정 ${soon.length}${w < done.length ? ` · 무승부 ${done.length - w}` : ""}</div>`;
   }
   html += sec("● 진행 중", live) + sec("예정", soon) + sec("결과", done);
-  html += `<div class="muted" style="font-size:11px;margin:-8px 0 16px">담은 경기는 이 기기에만 저장되고, 경기(또는 담은 날) 후 7일이 지나면 자동으로 빠집니다. ★를 다시 누르면 뺄 수 있습니다.${Object.keys(MY.odds).some(k => MY.odds[k]) ? " · 배당: DraftKings 경기 전 기준 · 초록색은 현재(최종) 점수 기준 맞는 쪽" : ""}</div>`;
+  html += `<div class="muted" style="font-size:11px;margin:-8px 0 16px">담은 경기는 ${SYNC.code ? "연동된 기기끼리 함께 저장되고" : "이 기기에만 저장되고(🔗 기기 연동으로 폰·PC 함께 쓰기)"}, 경기(또는 담은 날) 후 7일이 지나면 자동으로 빠집니다. ★를 다시 누르면 뺄 수 있습니다.${Object.keys(MY.odds).some(k => MY.odds[k]) ? " · 배당: DraftKings 경기 전 기준 · 초록색은 현재(최종) 점수 기준 맞는 쪽" : ""}</div>`;
   $("#main").innerHTML = html;
   mountImp();
 }
@@ -2949,7 +2961,7 @@ document.addEventListener("click", e => {
     let g = gb.dataset.grp;
     if (g === "new"){ g = newGrp(); toast(`${g}묶음을 만들었습니다 · ☆로 담는 경기가 여기에 들어갑니다`); }
     S.myGrp = g === "all" ? "all" : Number(g);
-    if (S.myGrp !== "all") lsSet("my.addGrp", String(S.myGrp));
+    if (S.myGrp !== "all"){ lsSet("my.addGrp", String(S.myGrp)); try { syncDirty(); } catch {} }
     renderMy(true); return;
   }
   const a = e.target.closest("[data-myact]");
@@ -3020,6 +3032,113 @@ async function sb(path, opt = {}){
   return j;
 }
 const rpc = (fn, args) => sb("/rest/v1/rpc/" + fn, {method:"POST", body:JSON.stringify(args)});
+// ================================================================ 🔗 기기 연동 (폰 ↔ PC) — 가입 없이 '연동 코드'로 Supabase에 내 데이터 보관
+// 같이 맞추는 것: My 경기(묶음·예측 포함), 빈 묶음, ☆ 담기 묶음, 예측 기록, 응원팀. 알림 설정은 기기마다 따로.
+// 규칙: 마지막으로 바꾼 기기가 이김(전체 덮어쓰기). 처음 연결할 때만 두 기기 내용을 합침.
+const SYNC = {code:lsGet("sync.code", ""), t:Number(lsGet("sync.t", "0")) || 0, pushT:0, busy:false, timer:null, last:Number(lsGet("sync.last", "0")) || 0, err:""};
+const SYNC_AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";  // 헷갈리는 0·O·1·I 뺌
+const fmtCode = c => c.replace(/(.{4})(?=.)/g, "$1-");
+const normCode = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+function newCode(){ const a = new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(x => SYNC_AB[x % 32]).join(""); }
+function syncState(){ return {v:1, t:SYNC.t, picks:PICKS, groups:MYGRPS, addGrp:lsGet("my.addGrp", "1"), betlog:BETLOG, favs:FAVS}; }
+function applySync(d){
+  PICKS = Array.isArray(d.picks) ? d.picks : []; MYGRPS = Array.isArray(d.groups) ? d.groups : [];
+  BETLOG = Array.isArray(d.betlog) ? d.betlog : []; FAVS = Array.isArray(d.favs) ? d.favs : [];
+  try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); localStorage.setItem("my.groups", JSON.stringify(MYGRPS)); localStorage.setItem(BETLOG_KEY, JSON.stringify(BETLOG)); localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); } catch {}
+  lsSet("my.addGrp", String(d.addGrp || "1"));
+  SYNC.t = Number(d.t) || Date.now(); lsSet("sync.t", String(SYNC.t));
+  MY.t = 0; updateMyBadge();
+  if (["home", "my"].includes(S.tab) && !modal.open) render();
+}
+// 두 기기 내용을 합치기 (처음 연결할 때): 같은 경기는 예측이 있는 쪽, 나머지는 모두 모음
+function mergeSync(a, b){
+  const by = new Map();
+  for (const p of [...(a.picks || []), ...(b.picks || [])]){ const k = p.lg + "|" + p.id, o = by.get(k); if (!o || (!o.bet && p.bet)) by.set(k, p); }
+  const bl = new Map(); for (const x of [...(a.betlog || []), ...(b.betlog || [])]) if (!bl.has(x.k) || x.done) bl.set(x.k, x);
+  const fv = new Map(); for (const f of [...(a.favs || []), ...(b.favs || [])]) fv.set(f.lg + "|" + f.id, f);
+  return {v:1, t:Date.now(), picks:[...by.values()], groups:[...new Set([...(a.groups || []), ...(b.groups || [])])], addGrp:a.addGrp || b.addGrp || "1", betlog:[...bl.values()], favs:[...fv.values()]};
+}
+// 내 기기에서 바뀌면 2초 뒤 올림
+function syncDirty(){
+  SYNC.t = Date.now(); lsSet("sync.t", String(SYNC.t));
+  if (!SYNC.code || !sbOn()) return;
+  clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncPush, 2000);
+}
+async function syncPush(){
+  if (!SYNC.code) return;
+  try { await rpc("sync_put", {p_code:SYNC.code, p_data:syncState()}); SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = ""; }
+  catch (e) { SYNC.err = e.message; }
+}
+// 다른 기기 변경 받기: 앱을 열 때·다시 볼 때·1분마다
+async function syncPull(){
+  if (!SYNC.code || SYNC.busy || !sbOn()) return;
+  SYNC.busy = true;
+  try {
+    const r = await rpc("sync_get", {p_code:SYNC.code});
+    const d = r && r.data;
+    if (d && Number(d.t) > SYNC.t) applySync(d);
+    else if (!d || Number(d.t) < SYNC.t) await syncPush();  // 서버가 비었거나 내가 더 최신
+    SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = "";
+  } catch (e) { SYNC.err = e.message; }
+  finally { SYNC.busy = false; }
+}
+setInterval(() => { if (!document.hidden) syncPull(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncPull(); });
+// QR코드 (연동 주소를 폰 카메라로 찍으면 바로 연결)
+let QRLIB = null;
+const loadQR = () => QRLIB || (QRLIB = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"; s.onload = () => res(window.qrcode); s.onerror = () => { QRLIB = null; rej(new Error("QR")); }; document.head.appendChild(s); }));
+const syncLink = () => location.href.split("#")[0].split("?")[0] + "#sync=" + SYNC.code;
+async function drawQR(){
+  const el = document.getElementById("syncqr"); if (!el || !SYNC.code) return;
+  try { const q = (await loadQR())(0, "M"); q.addData(syncLink()); q.make(); el.innerHTML = q.createSvgTag({cellSize:4, margin:2, scalable:true}); }
+  catch { el.innerHTML = '<span class="muted">QR을 불러오지 못했습니다. 코드를 직접 입력하세요.</span>'; }
+}
+function openSync(prefill){
+  if (!sbOn()){ openModal('<div class="srch"><h2>🔗 기기 연동</h2><div class="card empty">서버(게시판용 Supabase)가 연결돼 있지 않아 연동을 쓸 수 없습니다.</div></div>'); return; }
+  const when = SYNC.last ? new Date(SYNC.last).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "-";
+  openModal(`<div class="srch sync"><h2>🔗 기기 연동 (폰 ↔ PC)</h2>
+    <p class="muted" style="font-size:13px">My 경기·묶음·예측 기록·응원팀을 여러 기기에서 똑같이 씁니다. 가입은 필요 없고, <b>연동 코드</b>가 비밀번호 역할을 합니다.</p>
+    ${SYNC.code ? `<div class="syncon"><div><div class="muted" style="font-size:12px">이 기기의 연동 코드</div><div class="scode">${fmtCode(SYNC.code)}</div>
+        <div class="muted" style="font-size:12px">마지막 동기화 ${when}${SYNC.err ? ` · <span class="live">오류: ${esc(SYNC.err)}</span>` : ""}</div>
+        <div class="srow"><button class="btn" data-sync="copy">코드 복사</button><button class="btn" data-sync="now">지금 동기화</button><button class="btn danger" data-sync="off">연동 끊기</button></div></div>
+        <div id="syncqr" class="syncqr"><span class="muted">QR 만드는 중…</span></div></div>
+      <p class="note">다른 기기: 휴대폰 카메라로 QR을 찍거나, 그 기기에서 🔗 기기 연동 → <b>코드 입력</b>에 위 코드를 넣으세요. ⚠️ 코드를 아는 사람은 내 My 경기를 보고 바꿀 수 있으니 남에게 알려주지 마세요.</p>`
+    : `<div class="sgrid"><div class="sbox"><b>① 이 기기에서 시작</b><p class="muted">연동 코드를 새로 만들고 지금 이 기기의 내용을 올립니다.</p><button class="btn primary" data-sync="start">연동 시작</button></div>
+        <div class="sbox"><b>② 다른 기기 코드 입력</b><p class="muted">다른 기기에서 만든 코드를 넣으면 두 기기 내용이 합쳐집니다.</p>
+          <input id="synccode" placeholder="XXXX-XXXX-XXXX-XXXX" value="${esc(prefill ? fmtCode(prefill) : "")}" autocomplete="off" autocapitalize="characters"><button class="btn primary" data-sync="join">연결</button></div></div>
+      <p class="note">알림 켜기/끄기는 기기마다 따로 정합니다.</p>`}</div>`);
+  drawQR();
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-syncopen]")) openSync(); });
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-sync]"); if (!b) return;
+  const act = b.dataset.sync;
+  if (act === "start"){ SYNC.code = newCode(); lsSet("sync.code", SYNC.code); SYNC.t = Date.now(); lsSet("sync.t", String(SYNC.t)); await syncPush(); toast("연동을 시작했습니다 · 다른 기기에서 QR을 찍거나 코드를 입력하세요"); openSync(); }
+  else if (act === "join"){
+    const c = normCode(document.getElementById("synccode").value);
+    if (c.length !== 16){ toast("코드 16자리를 확인해 주세요"); return; }
+    b.disabled = true; b.textContent = "연결 중…";
+    try {
+      const r = await rpc("sync_get", {p_code:c});
+      if (!r || !r.data){ toast("그 코드로 연동된 기기가 없습니다. 코드를 확인해 주세요"); b.disabled = false; b.textContent = "연결"; return; }
+      SYNC.code = c; lsSet("sync.code", c);
+      applySync(mergeSync(r.data, syncState())); await syncPush();
+      toast("연결했습니다 · 두 기기 내용을 합쳤습니다"); openSync();
+    } catch (err) { toast("연결 실패: " + err.message); b.disabled = false; b.textContent = "연결"; }
+  }
+  else if (act === "copy"){ try { await navigator.clipboard.writeText(fmtCode(SYNC.code)); toast("코드를 복사했습니다"); } catch { toast(fmtCode(SYNC.code)); } }
+  else if (act === "now"){ await syncPull(); toast(SYNC.err ? "동기화 실패: " + SYNC.err : "동기화했습니다"); openSync(); }
+  else if (act === "off"){ if (!confirm("이 기기의 연동을 끊을까요? (이 기기 데이터는 그대로 남고, 더 이상 맞추지 않습니다)")) return; SYNC.code = ""; lsSet("sync.code", ""); toast("연동을 끊었습니다"); openSync(); }
+});
+// QR로 열린 주소(#sync=코드) → 바로 연결 창
+function syncFromHash(){
+  const m = location.hash.match(/^#sync=([A-Za-z0-9-]{16,24})$/); if (!m) return false;
+  history.replaceState(null, "", location.pathname);
+  const c = normCode(m[1]);
+  if (SYNC.code === c){ toast("이미 연결된 코드입니다"); return true; }
+  setTimeout(() => openSync(c), 300); return true;
+}
+
 const imgOk = u => typeof u === "string" && sbOn() && u.startsWith(SB.url.replace(/\/$/, "") + "/storage/v1/object/public/brag/");
 
 async function loadTalk(cat, force){
@@ -3444,7 +3563,7 @@ function toggleFav(lg, id, name, logo){
   id = String(id);
   const i = FAVS.findIndex(f => f.lg === lg && f.id === id);
   if (i >= 0) FAVS.splice(i, 1); else FAVS.push({lg, id, name, logo});
-  lsSet(FAV_KEY, JSON.stringify(FAVS));
+  lsSet(FAV_KEY, JSON.stringify(FAVS)); try { syncDirty(); } catch {}
   const on = isFav(lg, id);
   document.querySelectorAll(`[data-fav="${lg}|${id}"]`).forEach(b => { b.classList.toggle("on", on); b.textContent = on ? "⭐ 응원팀" : "☆ 응원팀 등록"; });
   toast(on ? `${ko(name)}을(를) 응원팀으로 등록했습니다 · 홈 맨 위에 나옵니다` : `${ko(name)} 응원팀 해제`);
@@ -3585,7 +3704,7 @@ async function loadBig(){
 // ================================================================ 🎯 오늘 나의 예측 (재미용) — My 경기에서 승패·언오버를 고르고 적중률을 홈에 표시
 const BETLOG_KEY = "betLog.v1";
 let BETLOG = lsJson(BETLOG_KEY, []);  // [{k, lg, date, home, away, res, ou, line, rHit, oHit}]
-const saveBet = () => lsSet(BETLOG_KEY, JSON.stringify(BETLOG.slice(-500)));
+const saveBet = () => { lsSet(BETLOG_KEY, JSON.stringify(BETLOG.slice(-500))); try { syncDirty(); } catch {} };
 function setBet(k, field, val){
   const p = PICKS.find(x => x.lg + "|" + x.id === k); if (!p) return;
   const m = MY.ev[k]; if (m && m.state !== "pre"){ toast("경기가 시작돼 예측을 바꿀 수 없습니다"); return; }
@@ -4192,6 +4311,7 @@ $("#homeLink").onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return
 $("#searchBtn").onclick = () => openSearch();
 $("#notiBtn").onclick = () => openNoti();
 updateNotiBtn(); if (NOTI.on) setTimeout(notiTick, 3000);
+setTimeout(syncPull, 1500);  // 연동돼 있으면 다른 기기 변경 받기
 $("#pipBtn").onclick = () => openPip();
 $("#refresh").onclick = () => {
   if (L().disabled) return;
@@ -4199,10 +4319,11 @@ $("#refresh").onclick = () => {
   const d = D(); d.teamCache = {}; d.sumCache = {}; d.forms = null;
   loadLeague(S.lg, true);
 };
-window.addEventListener("hashchange", () => { const k = location.hash.slice(1); if (LEAGUES[k] && k !== S.lg) setLeague(k); });
+window.addEventListener("hashchange", () => { if (syncFromHash()){ S.tab = "my"; render(); return; } const k = location.hash.slice(1); if (LEAGUES[k] && k !== S.lg) setLeague(k); });
 
+const fromSyncLink = syncFromHash();  // QR로 연 경우(#sync=코드)
 let start = location.hash.slice(1);
-if (!LEAGUES[start]) S.tab = "home";  // 주소에 리그가 없으면 홈부터
+if (!LEAGUES[start]) S.tab = fromSyncLink ? "my" : "home";  // 주소에 리그가 없으면 홈부터
 if (!LEAGUES[start]) { try { start = localStorage.getItem("league") || DEFAULT_LG; } catch { start = DEFAULT_LG; } }
 setLeague(start);
 
