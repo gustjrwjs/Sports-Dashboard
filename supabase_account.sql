@@ -23,6 +23,7 @@ create table if not exists public.acc_tokens (
   expires_at timestamptz not null
 );
 create index if not exists acc_tokens_uid on public.acc_tokens (uid);
+alter table public.accounts add column if not exists is_admin boolean not null default false;  -- 🛡 운영자 계정
 alter table public.accounts enable row level security;
 alter table public.acc_tokens enable row level security;
 revoke all on public.accounts from anon, authenticated;
@@ -56,7 +57,7 @@ begin
   if (select count(*) from accounts where created_at > now() - interval '10 minutes') >= 30 then raise exception '지금 가입이 많아요. 잠시 후 다시 시도해 주세요'; end if;
   if exists (select 1 from accounts where uid = u) then raise exception '이미 있는 아이디입니다'; end if;
   insert into accounts (uid, pw_hash, nick) values (u, extensions.crypt(p_pw, extensions.gen_salt('bf', 10)), btrim(p_nick));
-  return jsonb_build_object('token', acc_issue(u), 'uid', u, 'nick', btrim(p_nick));
+  return jsonb_build_object('token', acc_issue(u), 'uid', u, 'nick', btrim(p_nick), 'admin', false);
 end $$;
 
 -- 로그인 → 토큰
@@ -73,7 +74,7 @@ begin
     return jsonb_build_object('error', '아이디 또는 비밀번호가 맞지 않습니다');
   end if;
   update accounts set fails = 0, locked_until = null where uid = u;
-  return jsonb_build_object('token', acc_issue(u), 'uid', u, 'nick', a.nick);
+  return jsonb_build_object('token', acc_issue(u), 'uid', u, 'nick', a.nick, 'admin', a.is_admin);
 end $$;
 
 -- 내 데이터 읽기 / 쓰기
@@ -83,7 +84,7 @@ declare u text := acc_uid(p_token); a accounts;
 begin
   if u is null then raise exception '로그인이 만료됐습니다. 다시 로그인해 주세요'; end if;
   select * into a from accounts where uid = u;
-  return jsonb_build_object('uid', a.uid, 'nick', a.nick, 'data', a.data, 'updated_at', a.updated_at);
+  return jsonb_build_object('uid', a.uid, 'nick', a.nick, 'data', a.data, 'updated_at', a.updated_at, 'admin', a.is_admin);
 end $$;
 
 create or replace function public.acc_put(p_token text, p_data jsonb) returns timestamptz
@@ -135,6 +136,31 @@ begin
   delete from accounts where uid = u;
   return true;
 end $$;
+
+-- ---------------------------------------------------------------- 🛡 운영자 계정
+-- 운영자 판정: 기존 운영자 비밀번호 또는 운영자 계정의 로그인 토큰 (게시판 운영자 기능이 모두 이걸 씀)
+-- ※ supabase_setup.sql 을 다시 실행하면 이 함수가 비밀번호 전용으로 돌아가니, 그 뒤엔 이 파일도 다시 실행하세요
+create or replace function public.sl_is_admin(p_pass text) returns boolean
+language sql security definer set search_path = public, extensions as $$
+  select (coalesce(p_pass, '') <> '여기에-관리자-비밀번호' and char_length(coalesce(p_pass, '')) >= 8
+          and exists (select 1 from admin_config where pass_hash = extensions.crypt(p_pass, pass_hash)))
+      or exists (select 1 from accounts where uid = acc_uid(p_pass) and is_admin)
+$$;
+-- 로그인한 계정을 운영자로 등록: 운영자 비밀번호(게시판 설정 때 정한 것)를 알아야 함
+create or replace function public.acc_make_admin(p_token text, p_pass text) returns boolean
+language plpgsql security definer set search_path = public, extensions as $$
+declare u text := acc_uid(p_token);
+begin
+  if u is null then raise exception '로그인이 만료됐습니다. 다시 로그인해 주세요'; end if;
+  if not (coalesce(p_pass, '') <> '여기에-관리자-비밀번호' and char_length(coalesce(p_pass, '')) >= 8
+          and exists (select 1 from admin_config where pass_hash = extensions.crypt(p_pass, pass_hash))) then
+    raise exception '운영자 비밀번호가 맞지 않습니다'; end if;
+  update accounts set is_admin = true where uid = u;
+  return true;
+end $$;
+-- (운영자 비밀번호를 잊었다면 SQL Editor 에서 직접:  update public.accounts set is_admin = true where uid = '내아이디';)
+revoke all on function public.sl_is_admin(text) from public, anon, authenticated;
+grant execute on function public.acc_make_admin(text, text) to anon, authenticated;
 
 revoke all on function public.acc_issue(text) from public, anon, authenticated;
 revoke all on function public.acc_uid(text) from public, anon, authenticated;

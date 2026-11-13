@@ -655,6 +655,7 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+#accBtn.isadm{background:#fef3c7;border-color:#f59e0b}.admtag{display:inline-block;font-size:12px;font-weight:800;color:#b45309;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:1px 7px;vertical-align:2px}
 #accBtn.on{background:var(--accent-soft);border-color:var(--accent)}
 .acc .accl{display:block;font-size:13px;font-weight:700;margin:10px 0 0}.acc .accl input{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-weight:400}
 .acc .accgo{width:100%;margin-top:12px;padding:11px}.accinfo{margin:14px 0 0;padding-left:18px;font-size:12.5px;color:var(--muted);line-height:1.6}
@@ -3453,7 +3454,8 @@ function mySecret(){
 const myNick = () => lsGet("tk.nick", "");
 const isMine = (kind, id) => lsJson("tk.mine." + kind, []).includes(id);
 const addMine = (kind, id) => { const a = lsJson("tk.mine." + kind, []); a.push(id); lsSet("tk.mine." + kind, JSON.stringify(a.slice(-300))); };
-const adminPass = () => { try { return sessionStorage.getItem("tk.admin") || ""; } catch { return ""; } };
+// 운영자: 운영자 계정으로 로그인했으면 로그인 토큰, 아니면 이 창에서 입력한 운영자 비밀번호 (서버 sl_is_admin 이 둘 다 확인)
+const adminPass = () => { if (typeof ACC !== "undefined" && ACC.tok && ACC.admin) return ACC.tok; try { return sessionStorage.getItem("tk.admin") || ""; } catch { return ""; } };
 const RESERVED = /(운영자|관리자|운영진|admin|sportslive|스포츠라이브)/i;
 
 async function sb(path, opt = {}){
@@ -3511,6 +3513,7 @@ async function syncPull(){
   try {
     const r = ACC.tok ? await rpc("acc_get", {p_token:ACC.tok}) : await rpc("sync_get", {p_code:SYNC.code});
     if (ACC.tok && r && r.nick && r.nick !== ACC.nick){ ACC.nick = r.nick; lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick); }
+    if (ACC.tok && r && "admin" in r && !!r.admin !== ACC.admin) accAdmin(r.admin);
     const d = r && r.data;
     if (d && Number(d.t) > SYNC.t) applySync(d);
     else if (!d || Number(d.t) < SYNC.t) await syncPush();  // 서버가 비었거나 내가 더 최신
@@ -3569,19 +3572,21 @@ document.addEventListener("click", async e => {
 });
 // ================================================================ 👤 회원 (아이디·비밀번호, supabase_account.sql)
 // 로그인하면 My 경기·묶음·예측 기록·응원팀·랭킹 참가 정보가 계정에 저장돼 어느 기기에서나 같음 (연동 코드 대신)
-const ACC = {tok:lsGet("acc.tok", ""), uid:lsGet("acc.uid", ""), nick:lsGet("acc.nick", ""), mode:"login"};
-function accBadge(){ const b = document.getElementById("accBtn"); if (!b) return; b.classList.toggle("on", !!ACC.tok); b.title = ACC.tok ? `${ACC.nick} (${ACC.uid}) · 내 계정` : "로그인 · 회원가입"; }
+const ACC = {tok:lsGet("acc.tok", ""), uid:lsGet("acc.uid", ""), nick:lsGet("acc.nick", ""), admin:lsGet("acc.admin", "") === "1", mode:"login"};
+function accBadge(){ const b = document.getElementById("accBtn"); if (!b) return; b.classList.toggle("on", !!ACC.tok); b.classList.toggle("isadm", !!(ACC.tok && ACC.admin)); b.textContent = ACC.tok && ACC.admin ? "🛡" : "👤";
+  b.title = ACC.tok ? `${ACC.nick} (${ACC.uid})${ACC.admin ? " · 운영자" : ""} · 내 계정` : "로그인 · 회원가입"; }
+function accAdmin(v){ ACC.admin = !!v; lsSet("acc.admin", ACC.admin ? "1" : ""); accBadge(); }
 function syncBtn(short){
   if (ACC.tok) return `<button class="btn on" data-acc="open">👤 ${esc(ACC.nick || ACC.uid)}<span class="tl-long"> 연동 중</span> ✓</button>`;
   return `<button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 ${short ? '<span class="tl-long">기기 </span>' : "기기 "}연동${SYNC.code ? " ✓" : ""}</button>`;
 }
 function accSet(r){
   ACC.tok = r.token; ACC.uid = r.uid; ACC.nick = r.nick;
-  lsSet("acc.tok", r.token); lsSet("acc.uid", r.uid); lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick);
+  lsSet("acc.tok", r.token); lsSet("acc.uid", r.uid); lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick); accAdmin(r.admin);
   SYNC.code = ""; lsSet("sync.code", "");  // 계정으로 연동하니 코드 연동은 끔
   accBadge();
 }
-function accClear(){ ACC.tok = ""; ACC.uid = ""; ACC.nick = ""; ["acc.tok", "acc.uid", "acc.nick"].forEach(k => lsSet(k, "")); accBadge(); }
+function accClear(){ ACC.tok = ""; ACC.uid = ""; ACC.nick = ""; ACC.admin = false; ["acc.tok", "acc.uid", "acc.nick", "acc.admin"].forEach(k => lsSet(k, "")); accBadge(); }
 function accExpired(e){ if (ACC.tok && /로그인이 만료/.test(e?.message || "")){ accClear(); toast("로그인이 만료됐습니다. 다시 로그인해 주세요"); } }
 // 로그인·가입 직후: 서버 내용 + 이 기기 내용을 합쳐서 올림
 async function accAfterLogin(){
@@ -3595,11 +3600,12 @@ function openAcc(){
   if (ACC.tok){
     const when = SYNC.last ? new Date(SYNC.last).toLocaleString("ko-KR", {month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit"}) : "-";
     openModal(`<div class="srch acc"><h2>👤 내 계정</h2>
-      <div class="accme"><b>${esc(ACC.nick)}</b><span class="muted">아이디 ${esc(ACC.uid)}</span><span class="muted" style="font-size:12px">마지막 동기화 ${when}${SYNC.err ? ` · <span class="live">오류: ${esc(SYNC.err)}</span>` : ""}</span></div>
+      <div class="accme"><b>${esc(ACC.nick)}${ACC.admin ? ' <span class="admtag">🛡 운영자</span>' : ""}</b><span class="muted">아이디 ${esc(ACC.uid)}</span><span class="muted" style="font-size:12px">마지막 동기화 ${when}${SYNC.err ? ` · <span class="live">오류: ${esc(SYNC.err)}</span>` : ""}</span></div>
       <p class="muted" style="font-size:13px">My 경기·묶음·예측 기록·응원팀·랭킹 참가 정보가 이 계정에 저장돼, 다른 기기에서 같은 아이디로 로그인하면 똑같이 보입니다. (알림 켜기/끄기는 기기마다 따로)</p>
       <div class="srow"><button class="btn primary" data-acc="sync">지금 동기화</button><button class="btn" data-acc="nick">닉네임 변경</button><button class="btn" data-acc="pw">비밀번호 변경</button><button class="btn" data-acc="logout">로그아웃</button></div>
       <div id="accsub"></div>
-      <p class="note" style="margin-top:14px"><button class="linkbtn" data-acc="delete">회원 탈퇴</button> · 탈퇴하면 계정에 저장된 내용이 모두 지워집니다(이 기기에 있는 내용은 남음).</p></div>`);
+      ${ACC.admin ? `<p class="note">🛡 운영자 계정: 커뮤니티에서 공지 고정·운영자 답변·글/댓글 삭제를 비밀번호 입력 없이 쓸 수 있습니다.</p>` : ""}
+      <p class="note" style="margin-top:14px"><button class="linkbtn" data-acc="delete">회원 탈퇴</button>${ACC.admin ? "" : ` · <button class="linkbtn" data-acc="mkadmin">운영자 계정으로 등록</button>`} · 탈퇴하면 계정에 저장된 내용이 모두 지워집니다(이 기기에 있는 내용은 남음).</p></div>`);
     return;
   }
   const su = ACC.mode === "signup";
@@ -3643,6 +3649,10 @@ document.addEventListener("click", async e => {
       if (!r || r.error || !r.token){ busy(false, act === "signup" ? "가입하고 시작" : "로그인"); return err(r?.error || "실패했습니다."); }
       accSet(r); await accAfterLogin(); modal.close();
       toast(act === "signup" ? `가입 완료! ${r.nick} 님 환영합니다 · 다른 기기에서도 이 아이디로 로그인하세요` : `${r.nick} 님 로그인했습니다 · 내용을 맞췄습니다`);
+    }
+    else if (act === "mkadmin"){
+      const pw = prompt("운영자 계정으로 등록합니다.\n게시판 설정 때 정한 운영자 비밀번호를 입력하세요."); if (!pw) return;
+      await rpc("acc_make_admin", {p_token:ACC.tok, p_pass:pw}); accAdmin(true); toast("🛡 운영자 계정으로 등록했습니다"); openAcc(); if (S.tab === "talk") renderTalk();
     }
     else if (act === "sync"){ await syncPull(); toast(SYNC.err ? "동기화 실패: " + SYNC.err : "동기화했습니다"); openAcc(); }
     else if (act === "logout"){
@@ -3719,7 +3729,7 @@ function renderTalk(fromLoad){
     html += `<div class="faq">${FAQ.map(([q, a]) => `<details><summary>${q}<i class="chev">▼</i></summary><div>${a}</div></details>`).join("")}</div>
       <div class="card live-empty" style="margin-top:12px"><b>원하는 답이 없나요?</b><span class="muted">문의 게시판에 남겨 주시면 운영자가 답변해 드립니다.</span>
       <div style="margin-top:10px"><button class="btn tkbtn" data-tk="write" data-v="qna">🙋 문의 글 쓰기</button></div></div>
-      <div style="text-align:right;margin:10px 2px 0"><button class="linkbtn" data-tk="admin">${adminPass() ? "운영자 모드 끄기" : "운영자"}</button></div>`;
+      <div style="text-align:right;margin:10px 2px 0">${ACC.tok && ACC.admin ? '<span class="admtag">🛡 운영자 계정으로 로그인됨</span>' : `<button class="linkbtn" data-tk="admin">${adminPass() ? "운영자 모드 끄기" : "운영자"}</button>`}</div>`;
     $("#main").innerHTML = html; return;
   }
   if (!sbOn()){
@@ -4494,7 +4504,7 @@ function loadRank(){
   if (RANK.off || RANK.busy || !sbOn() || Date.now() - RANK.t < 60000) return;
   RANK.busy = true; const [f, to] = weekRange();
   rpc("pred_rank", {p_from:f, p_to:to, p_secret:RANK.on ? rankSecret() : null})
-    .then(r => { RANK.rows = r || []; })
+    .then(r => { RANK.rows = Array.isArray(r) ? r : []; })
     .catch(e => { if (/pred_rank|404|PGRST202/.test(e.message)) RANK.off = true; })
     .finally(() => { RANK.busy = false; RANK.t = Date.now(); if (S.tab === "home" && RANK.rows) renderHome(true); });
 }
