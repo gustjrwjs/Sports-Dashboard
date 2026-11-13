@@ -4416,6 +4416,7 @@ const LG_ORDER = SPORT_GROUPS.flatMap(g => g.keys);
 S.homeSport = lsGet("home.sport", "all"); S.homeState = "all";
 const countdown = iso => { const mi = Math.round((new Date(iso) - Date.now()) / 6e4); return mi <= 0 ? "곧 시작" : mi < 60 ? `${mi}분 후` : mi < 180 ? `${Math.floor(mi / 60)}시간 ${mi % 60 ? (mi % 60) + "분 " : ""}후` : ""; };
 const DAYW = {"-1":"어제", "0":"오늘", "1":"내일"};
+const STO = {in:0, pre:1, post:2};  // 홈 상자 안 순서: 진행 중 → 예정 → 종료(맨 아래)
 // 홈 일정 한 줄: 시간·상태 | 리그 | 홈팀 | 점수 | 원정팀 | ☆
 function lsRow({lg, m}){
   const Lg = LEAGUES[lg], live = m.state === "in", post = m.state === "post";
@@ -4484,7 +4485,7 @@ function renderHome(fromTick){
     for (const off of ["0", "1", "-1"].filter(o => dy === "all" || dy === o)){
       const dd = new Date(d0); dd.setDate(dd.getDate() + Number(off));
       const rows = list.filter(x => String(x.m.state === "in" ? 0 : offOf(x)) === off)
-        .sort((a, b) => (b.m.state === "in") - (a.m.state === "in") || a.m.date.localeCompare(b.m.date) || LG_ORDER.indexOf(a.lg) - LG_ORDER.indexOf(b.lg));
+        .sort((a, b) => STO[a.m.state] - STO[b.m.state] || a.m.date.localeCompare(b.m.date) || LG_ORDER.indexOf(a.lg) - LG_ORDER.indexOf(b.lg));
       if (!rows.length) continue;
       html += `<section class="dayp d${off.replace("-", "m")}"><header><b>${DAYW[off]}</b><span>${dd.getMonth() + 1}월 ${dd.getDate()}일 (${"일월화수목금토"[dd.getDay()]})</span><em>${rows.length}경기</em></header>
         <div class="lsl">${rows.map(lsRow).join("")}</div></section>`;
