@@ -750,6 +750,42 @@ select.gmove{font:inherit;font-size:13px}
 .syncqr{width:150px;height:150px;background:#fff;border-radius:10px;display:grid;place-items:center;padding:4px;flex:none}
 .syncqr svg{width:100%;height:100%}
 @media (max-width:480px){ .sync .sgrid{grid-template-columns:1fr} .syncqr{margin:0 auto} }
+.vseg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.vseg button{font:inherit;font-size:12.5px;font-weight:700;border:0;background:var(--surface);color:var(--muted);padding:6px 11px;cursor:pointer}
+.vseg button.on{background:var(--text);color:var(--bg)}
+.mtwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;-webkit-overflow-scrolling:touch}
+.mytab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mytab th{font-size:11px;color:var(--muted);font-weight:700;padding:7px 4px;border-bottom:1px solid var(--border);background:var(--surface-2);text-align:center}
+.mytab th.r{text-align:right}.mytab th.l{text-align:left}
+.mytab td{padding:5px 4px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle}
+.mytab tr:last-child td{border-bottom:0}
+.mytab tr.is-live{background:color-mix(in srgb, var(--live) 5%, transparent)}
+.mytab tr.selon{background:color-mix(in srgb, var(--accent) 10%, transparent)}
+.mytab .mk{width:22px;height:22px;font-size:6px;border-radius:5px;display:inline-grid}
+.mytab .mtw{font-size:12px;color:var(--muted);min-width:72px}
+.mytab .mtw b{color:var(--text)}
+.mytab .mth,.mytab .mta,.mytab .mts{cursor:pointer;font-weight:700}
+.mytab .mth{text-align:right}.mytab .mta{text-align:left}
+.mytab .mth span,.mytab .mta span{display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.mytab .mth .lg,.mytab .mta .lg{width:18px;height:18px;vertical-align:middle;margin:0 5px}
+.mytab .msc2{font-size:15px}.mytab .msc2.lv{color:var(--live)}
+.mytab .vs{color:var(--muted);font-size:11px}
+.mytab .ln{font-weight:700;color:var(--muted);font-size:12px;border-left:1px solid var(--border)}
+.mytab td.moc{padding:4px 2px}
+.mytab .ob{position:relative;font:inherit;font-weight:700;font-size:12.5px;min-width:46px;padding:5px 4px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer}
+.mytab .ob:hover:not(:disabled){border-color:var(--accent)}
+.mytab .ob.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mytab .ob:disabled{cursor:default}
+.mytab .ob:disabled:not(.on){opacity:.6}
+.mytab .ob.act{box-shadow:0 0 0 2px var(--win);opacity:1!important}
+.mytab .ob i{position:absolute;top:-8px;right:-6px;font-style:normal;font-size:12px}
+.mytab .na{color:var(--muted)}
+.mytab .grpb{display:inline-block;min-width:20px;font-size:11px;font-weight:800;background:var(--text);color:var(--bg);border-radius:999px;padding:1px 6px}
+.mytab .mtp .pick{position:static;font-size:16px}
+.mytab .mychk2{display:inline-grid;place-items:center;width:20px;height:20px;border:2px solid var(--accent);border-radius:6px;color:#fff;font-weight:900;font-size:12px}
+.mytab .mychk2.on{background:var(--accent)}
+.mytab tr.mrw{cursor:default}
+@media (max-width:640px){ .mytab .mth span,.mytab .mta span{max-width:78px} .mytab{font-size:12px} .mytab .ob{min-width:40px;font-size:12px} }
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -2924,7 +2960,9 @@ function renderMy(fromRefresh){
     return liveCard(it.m, {lg:it.p.lg, raw:{[id]:MY.raw[it.k]}, odds:{[id]:MY.odds[it.k]}, prev:MY.prev[it.k] ? {[id]:MY.prev[it.k]} : {}, my:true});
   };
   const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
-  const sec = (title, list) => list.length ? `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div><div class="lgrid">${list.map(card).join("")}</div>` : "";
+  const listView = S.myView !== "card";
+  const sec = (title, list) => !list.length ? "" : `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div>` +
+    (listView ? myTable(list, sel, gsel === "all" && grps.length > 1) : `<div class="lgrid">${list.map(card).join("")}</div>`);
   let html = bar(PICKS.length) + '<div id="myimpSlot"></div>';
   // 묶음 탭 + 삭제 도구
   const cnt = g => PICKS.filter(p => p.grp === g).length;
@@ -2932,7 +2970,7 @@ function renderMy(fromRefresh){
   html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${items.every(x => sel.has(x.k)) && items.length ? "선택 해제" : "모두 선택"}</button>
       <select class="btn gmove" data-myact-move ${sel.size ? "" : "disabled"}><option value="">📦 묶음 이동…</option>${grps.map(g => `<option value="${g}">${g}묶음으로</option>`).join("")}<option value="new">새 묶음으로</option></select>
       <button class="btn danger" data-myact="delsel" ${sel.size ? "" : "disabled"}>🗑 선택 삭제</button><button class="btn" data-myact="cancel">취소</button></div>`
-    : `<div class="mytools">${gbar}<span class="mtsp"></span><button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 기기 연동${SYNC.code ? " ✓" : ""}</button><button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
+    : `<div class="mytools">${gbar}<span class="mtsp"></span><span class="vseg"><button class="${listView ? "on" : ""}" data-myview="list" title="한 경기 한 줄">☰ 한 줄</button><button class="${listView ? "" : "on"}" data-myview="card" title="카드">▦ 카드</button></span><button class="btn ${SYNC.code ? "on" : ""}" data-syncopen>🔗 기기 연동${SYNC.code ? " ✓" : ""}</button><button class="btn" data-myact="select">☑ 선택</button><button class="btn danger" data-myact="clear">🗑 전체 삭제</button></div>`;
   // 묶음을 골랐을 때: 요약(예측 조합 배당) + 이 묶음 삭제
   if (!sel && gsel !== "all"){
     let odd = 1, n = 0;
@@ -2995,6 +3033,41 @@ document.addEventListener("click", e => {
   if (S.mySel.has(k)) S.mySel.delete(k); else S.mySel.add(k);
   renderMy(true);
 }, true);
+// ---------------------------------------------------------------- My 경기 한 줄 보기 (표)
+S.myView = (() => { try { return localStorage.getItem("my.view") || "list"; } catch { return "list"; } })();  // lsGet은 아래에서 정의돼 여기선 직접 읽음
+document.addEventListener("click", e => { const v = e.target.closest("[data-myview]"); if (!v || S.tab !== "my") return; S.myView = v.dataset.myview; try { localStorage.setItem("my.view", S.myView); } catch {} renderMy(true); });
+function myTable(list, sel, showGrp){
+  const row = it => {
+    const p = it.p, m = it.m, k = it.k, Lg = LEAGUES[p.lg], sp = Lg.sport, bet = p.bet || {}, log = BETLOG.find(b => b.k === k) || {};
+    const chk = sel ? `<td class="mtc"><span class="mychk2 ${sel.has(k) ? "on" : ""}">${sel.has(k) ? "✓" : ""}</span></td>` : "";
+    const grp = showGrp ? `<td class="mtg"><span class="grpb">${p.grp}</span></td>` : "";
+    if (!m) return `<tr class="mrw" data-mysel="${esc(k)}">${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="9" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td><td>${pickBtn(p.lg, p.id, true)}</td></tr>`;
+    const o = MY.odds[k] || {}, ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
+    const pre = m.state === "pre", live = m.state === "in", post = m.state === "post";
+    const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
+    const act = post ? (hs > as ? "home" : hs < as ? "away" : sp === "soccer" ? "draw" : m.home.winner ? "home" : "away") : live ? (hs > as ? "home" : hs < as ? "away" : "draw") : null;
+    const line = pre ? Number(o.overUnder) : (bet.line ?? Number(o.overUnder));
+    const hasLine = line != null && !isNaN(line);
+    const ouAct = (post || live) && hasLine && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
+    // 배당 칸 = 예측 고르기 버튼. 고른 칸 파랑, 실제(진행 중이면 현재) 결과 칸 초록 테두리, 끝나면 ✅/❌
+    const cell = (f, v, ml, a) => { const d = ml != null ? fOdds(ml) : "-", on = bet[f] === v, hit = f === "res" ? log.rHit : log.oHit;
+      return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
+    const when = live ? `<span class="live">● ${esc(liveText(m, sp))}</span>` : post ? "종료" : `${md(m.date)} <b>${timeOnly(m.date)}</b>`;
+    const sc = pre ? '<span class="vs">vs</span>' : `<b class="msc2 ${live ? "lv" : ""}">${hs} : ${as}</b>`;
+    const nm = t => { const n = ko(t.name), q = n.split(" "); return sp === "soccer" ? n : q[q.length - 1]; };
+    return `<tr class="mrw ${live ? "is-live" : ""} ${sel && sel.has(k) ? "selon" : ""}" data-mysel="${esc(k)}">${chk}${grp}
+      <td class="mtl" title="${esc(Lg.name)}"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td>
+      <td class="mtw">${when}</td>
+      <td class="mth" data-mymatch="${esc(p.lg)}|${esc(p.id)}"><span>${esc(nm(m.home))}</span>${logo(m.home.logo)}</td>
+      <td class="mts" data-mymatch="${esc(p.lg)}|${esc(p.id)}">${sc}</td>
+      <td class="mta" data-mymatch="${esc(p.lg)}|${esc(p.id)}">${logo(m.away.logo)}<span>${esc(nm(m.away))}</span></td>
+      ${cell("res", "home", ho.moneyLine, act)}${sp === "soccer" ? cell("res", "draw", (o.drawOdds || {}).moneyLine, act) : '<td class="moc"><span class="na">-</span></td>'}${cell("res", "away", ao.moneyLine, act)}
+      <td class="ln">${hasLine ? line : "-"}</td>${hasLine ? cell("ou", "over", o.overOdds, ouAct) + cell("ou", "under", o.underOdds, ouAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}
+      <td class="mtp">${pickBtn(p.lg, p.id, true)}</td></tr>`;
+  };
+  return `<div class="mtwrap"><table class="mytab"><thead><tr>${sel ? "<th></th>" : ""}${showGrp ? "<th>묶음</th>" : ""}<th>리그</th><th>시간</th><th class="r">홈</th><th></th><th class="l">원정</th>
+    <th>승</th><th>무</th><th>패</th><th>기준</th><th>오버</th><th>언더</th><th></th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`;
+}
 async function openMyMatch(lg, id){
   if (S.lg !== lg){ setLeague(lg); }
   if (!D(lg).loaded){ await (D(lg).loading || loadLeague(lg)); }
