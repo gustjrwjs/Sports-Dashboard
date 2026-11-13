@@ -36,3 +36,13 @@ self.addEventListener("fetch", e => {
     }
   })());
 });
+
+// 경기 알림을 누르면 앱 창으로 이동
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "./";
+  e.waitUntil(self.clients.matchAll({type:"window", includeUncontrolled:true}).then(list => {
+    for (const c of list) if ("focus" in c) { c.navigate && c.navigate(url).catch(() => {}); return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
+});

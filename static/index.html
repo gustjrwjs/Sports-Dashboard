@@ -659,6 +659,49 @@ nav.tabs button.tab-home.on{border-bottom-color:var(--text)}
 #lgbar[hidden]{display:none!important}
 a.appname{text-decoration:none;color:inherit;cursor:pointer}
 a.appname:hover{opacity:.85}
+.favbtn{font-size:12px;padding:3px 10px;vertical-align:middle;margin-left:6px}
+.favbtn.on{background:#fef3c7;border-color:#f59e0b;color:#92400e}
+@media (prefers-color-scheme: dark){ .favbtn.on{background:#422006;color:#fcd34d} }
+.favgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-bottom:14px}
+.favcard{background:var(--surface);border:1px solid color-mix(in srgb, #f59e0b 45%, var(--border));border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.favh{display:flex;align-items:center;gap:6px;min-width:0}
+.favh .lg{width:22px;height:22px}
+.favh b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.favh .muted{font-size:11px;white-space:nowrap}
+.favh .favbtn{margin-left:auto;font-size:11px;padding:2px 8px}
+.favln{font-size:12.5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.favln .lg{width:16px;height:16px}
+.favcard .mrow{border:0;padding:0}
+.bigw{position:relative;min-width:0}
+.bigwhy{position:absolute;top:-7px;left:10px;z-index:1;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:1px 8px}
+.bigw .mrow{border-color:color-mix(in srgb, #dc2626 45%, var(--border));padding-top:9px}
+.betstat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:0 0 14px}
+.bsh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:8px}
+.bsh .muted{font-size:11.5px}
+.bsrow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.bsbox{background:var(--surface-2);border-radius:10px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;gap:1px}
+.bsbox small{font-size:10.5px;color:var(--muted)}
+.bsbox b{font-size:18px;color:var(--accent);font-variant-numeric:tabular-nums}
+.bsbox span{font-size:10.5px;color:var(--muted)}
+.betrow{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:-4px 0 0;padding:7px 10px;background:var(--surface-2);border:1px solid var(--border);border-top:0;border-radius:0 0 12px 12px;font-size:12px}
+.betrow .bl{font-weight:700;margin-right:2px}
+.bchip{font:inherit;font-size:11.5px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:999px;padding:3px 9px;cursor:pointer}
+.bchip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.bchip:disabled{cursor:default}
+.bsep{width:1px;height:16px;background:var(--border);margin:0 3px}
+.bhit{color:var(--win)}.bmiss{color:var(--loss)}
+.bst2{margin-left:auto;font-size:11px}
+.nsw{display:flex;align-items:center;gap:10px;cursor:pointer;margin:6px 0 10px}
+.nsw input{display:none}
+.nsw .track{width:46px;height:26px;border-radius:999px;background:var(--border);position:relative;transition:.2s;flex:none}
+.nsw .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.2s}
+.nsw input:checked+.track{background:#16a34a}
+.nsw input:checked+.track .knob{left:23px}
+.nset{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 12px}
+.nset>div{background:var(--surface-2);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.nck{display:flex;align-items:center;gap:6px;cursor:pointer}
+@media (max-width:480px){ .favgrid{grid-template-columns:1fr} .bsrow{grid-template-columns:repeat(3,1fr)} .nset{grid-template-columns:1fr} }
+@media (max-width:400px){ #upd{display:none} }
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -760,6 +803,7 @@ ul.news small{font-size:11px}
       <a class="appname" href="./" id="homeLink" title="홈으로" aria-label="SPORTS LIVE! 홈으로"><img src="icons/favicon-64.png" alt="" width="30" height="30"><span>SPORTS <b>LIVE!</b></span></a>
       <span class="upd" id="upd"></span>
       <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치">앱 설치</button>
+      <button class="btn ibtn" id="notiBtn" title="경기 알림" aria-label="경기 알림">🔕</button>
       <button class="btn ibtn" id="searchBtn" title="경기 검색 (예정·진행 중)" aria-label="경기 검색">🔍</button>
       <button class="btn ibtn" id="pipBtn" title="미니 라이브 창 띄우기 (다른 일 하면서 보기)" aria-label="미니 라이브">📺</button>
       <button class="btn ibtn" id="refresh" title="데이터 새로고침" aria-label="새로고침">↻</button>
@@ -1816,7 +1860,7 @@ async function openTeam(id, n = 5){
       : `${info.w}승 ${info.l}패 · 승률 ${info.pct} · 게임차 ${info.gb} · ${streakKo(info.streak)}`) : "";
     openModal(`
       <div class="m-head">${logo(info.logo || t.logo, "big")}<div>
-        <h2>${esc(ko(name))}</h2>
+        <h2>${esc(ko(name))} ${favBtn(lg, id, name, info.logo || t.logo)}</h2>
         <div>${info.id ? `<span class="pill">${esc(rankText(info))}</span> ` : ""}${L().national ? fifaPill(name) + " " : ""}<span class="muted">${esc(line)}</span></div>
         ${info.zone ? `<div class="note">현재 순위 기준: ${esc(info.zone)}</div>` : ""}
       </div></div>
@@ -2779,7 +2823,8 @@ function renderMy(fromRefresh){
     .sort((a, b) => new Date(a.p.date) - new Date(b.p.date));
   const sel = S.mySel;  // 선택 삭제 모드면 Set
   const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.k) ? "on" : ""}" data-mysel="${esc(it.k)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.k) ? "✓" : ""}</span>` : ""}${html}</div>`;
-  const card = it => wrap(it, card0(it));
+  const card = it => wrap(it, card0(it) + betRow(it));
+  gradeBets();
   const card0 = it => {
     if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true)}</div>
       <div class="muted" style="text-align:center;padding:6px 0">${esc(ko(it.p.home))} vs ${esc(ko(it.p.away))} · 정보를 불러오지 못했습니다</div></div>`;
@@ -3282,6 +3327,218 @@ document.addEventListener("click", e => {
   openMyMatch(lg, id);
 });
 
+// ================================================================ ⭐ 응원팀
+const FAV_KEY = "favTeams.v1";
+let FAVS = lsJson(FAV_KEY, []);  // [{lg, id, name, logo}]
+const isFav = (lg, id) => FAVS.some(f => f.lg === lg && f.id === String(id));
+const favBtn = (lg, id, name, logo) => { const on = isFav(lg, id);
+  return `<button class="btn favbtn ${on ? "on" : ""}" data-fav="${esc(lg)}|${esc(id)}" data-fname="${esc(name || "")}" data-flogo="${esc(logo || "")}">${on ? "⭐ 응원팀" : "☆ 응원팀 등록"}</button>`; };
+function toggleFav(lg, id, name, logo){
+  id = String(id);
+  const i = FAVS.findIndex(f => f.lg === lg && f.id === id);
+  if (i >= 0) FAVS.splice(i, 1); else FAVS.push({lg, id, name, logo});
+  lsSet(FAV_KEY, JSON.stringify(FAVS));
+  const on = isFav(lg, id);
+  document.querySelectorAll(`[data-fav="${lg}|${id}"]`).forEach(b => { b.classList.toggle("on", on); b.textContent = on ? "⭐ 응원팀" : "☆ 응원팀 등록"; });
+  toast(on ? `${ko(name)}을(를) 응원팀으로 등록했습니다 · 홈 맨 위에 나옵니다` : `${ko(name)} 응원팀 해제`);
+  delete FAVC[lg + "|" + id];
+  if (S.tab === "home") renderHome(true);
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-fav]"); if (!b) return; e.preventDefault(); e.stopPropagation(); const [lg, id] = b.dataset.fav.split("|"); toggleFav(lg, id, b.dataset.fname, b.dataset.flogo); }, true);
+// 홈의 응원팀 카드: 다음 경기 + 최근 결과 (10분마다 새로)
+const FAVC = {};
+function favCard(f){
+  const k = f.lg + "|" + f.id, c = FAVC[k], Lg = LEAGUES[f.lg];
+  if (!c || Date.now() - c.t > 6e5){
+    if (!c || !c.loading){
+      FAVC[k] = {...(c || {}), loading:true, t:(c || {}).t || 0};
+      getTeam(f.id, f.lg).then(t => { FAVC[k] = {t:Date.now(), team:t}; if (S.tab === "home") renderHome(true); })
+        .catch(() => { FAVC[k] = {t:Date.now(), err:true}; });
+    }
+  }
+  const t = c && c.team;
+  const live = IDX.list.find(x => x.lg === f.lg && (x.m.home.id === f.id || x.m.away.id === f.id) && (x.m.state === "in" || dkey(x.m.date) === dkey(new Date().toISOString())));
+  let body = "";
+  if (live) body = miniRow(live, {today:true});
+  else if (t){
+    const nx = t.upcoming[0], last = t.past[0] && resultFor(t.past[0], f.id);
+    body = `<div class="favln">${nx ? `<span class="muted">다음</span> ${dFull(nx.date)} · ${nx.home.id === f.id ? "홈" : "원정"} vs ${logo((nx.home.id === f.id ? nx.away : nx.home).logo)}<b>${esc(ko((nx.home.id === f.id ? nx.away : nx.home).name))}</b>` : '<span class="muted">예정된 경기 없음</span>'}</div>
+      ${last ? `<div class="favln"><span class="muted">최근</span> ${badge(last.r)} ${last.gf} : ${last.ga} vs ${esc(ko(last.op.name))} <span class="muted">${md(last.ev.date)}</span></div>` : ""}`;
+  } else body = `<div class="favln muted">${c && c.err ? "불러오지 못했습니다" : "불러오는 중…"}</div>`;
+  return `<div class="favcard"><div class="favh">${logo(f.logo)}<b>${esc(ko(f.name))}</b><span class="muted">${esc(Lg ? Lg.short : "")}</span>${favBtn(f.lg, f.id, f.name, f.logo)}</div>${body}</div>`;
+}
+
+// ================================================================ 🔔 경기 알림 (기본 꺼짐) — 앱이 열려 있을 때 My 경기·응원팀 경기의 득점·역전·쿼터 종료
+const NOTI_DEF = {on:false, soccer:{goal:true, lead:true}, baseball:{goal:true, lead:true}, basketball:{q:true, lead:true}};
+let NOTI = (() => { const v = lsJson("noti.v1", null); return v ? {...NOTI_DEF, ...v} : JSON.parse(JSON.stringify(NOTI_DEF)); })();
+const NSNAP = {};
+const saveNoti = () => { lsSet("noti.v1", JSON.stringify(NOTI)); updateNotiBtn(); };
+function updateNotiBtn(){ const b = document.getElementById("notiBtn"); if (!b) return; b.textContent = NOTI.on ? "🔔" : "🔕"; b.classList.toggle("on", NOTI.on); b.title = NOTI.on ? "경기 알림 켜짐 (눌러서 설정)" : "경기 알림 꺼짐 (눌러서 켜기)"; }
+function openNoti(){
+  const perm = !("Notification" in window) ? "unsupported" : Notification.permission;
+  const ck = (sp, k, lab) => `<label class="nck"><input type="checkbox" data-nset="${sp}.${k}" ${NOTI[sp][k] ? "checked" : ""} ${NOTI.on ? "" : "disabled"}> ${lab}</label>`;
+  openModal(`<div class="srch"><h2>🔔 경기 알림</h2>
+    <label class="nsw"><input type="checkbox" id="notiOn" ${NOTI.on ? "checked" : ""}><span class="track"><span class="knob"></span></span><b>${NOTI.on ? "알림 켜짐" : "알림 꺼짐"}</b></label>
+    <p class="muted" style="font-size:13px">대상: <b>★ My 경기</b>와 <b>⭐ 응원팀 경기</b> · 진행 중일 때 아래 상황이 생기면 알려 줍니다.</p>
+    <div class="nset"><div><b>⚽ 축구</b>${ck("soccer", "goal", "득점")}${ck("soccer", "lead", "역전")}</div>
+      <div><b>⚾ 야구</b>${ck("baseball", "goal", "득점")}${ck("baseball", "lead", "역전")}</div>
+      <div><b>🏀 농구</b>${ck("basketball", "q", "쿼터 종료")}${ck("basketball", "lead", "역전")}</div></div>
+    ${NOTI.on ? `<button class="btn" id="notiTest">테스트 알림 보내기</button>` : ""}
+    <p class="note">${perm === "denied" ? "⚠️ 브라우저에서 이 사이트 알림이 차단돼 있어, 앱 화면 안의 알림만 나옵니다. 브라우저 주소창 왼쪽 자물쇠 → 알림 허용으로 바꿀 수 있습니다.<br>" : perm === "unsupported" ? "⚠️ 이 브라우저는 알림을 지원하지 않아 앱 화면 안의 알림만 나옵니다. (아이폰은 홈 화면에 앱을 설치하면 알림을 받을 수 있습니다)<br>" : ""}
+      알림은 이 앱(또는 브라우저 탭)이 열려 있을 때 30초마다 점수를 확인해서 보냅니다. 앱을 완전히 닫으면 오지 않습니다.</p></div>`);
+}
+document.addEventListener("change", async e => {
+  if (e.target.id === "notiOn"){
+    NOTI.on = e.target.checked;
+    if (NOTI.on && "Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch {} }
+    saveNoti(); openNoti(); if (NOTI.on) notiTick(); return;
+  }
+  const s = e.target.dataset && e.target.dataset.nset;
+  if (s){ const [sp, k] = s.split("."); NOTI[sp][k] = e.target.checked; saveNoti(); }
+});
+document.addEventListener("click", e => { if (e.target.id === "notiTest") pushNoti("🔔 테스트 알림", "경기 알림이 이렇게 옵니다", "test"); });
+async function pushNoti(title, body, tag, open){
+  toast(`${title} ${body}`);
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const opt = {body, icon:"icons/icon-192.png", badge:"icons/favicon-64.png", tag, renotify:true, data:{url:location.href.split("#")[0] + (open ? "#" + open : "")}};
+  try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (reg) { await reg.showNotification(title, opt); return; } } catch {}
+  try { new Notification(title, opt); } catch {}
+}
+// 알림 대상 경기: My 경기 + 응원팀의 오늘 경기
+function notiTargets(){
+  const today = dkey(new Date().toISOString()), keys = new Set(PICKS.map(p => p.lg + "|" + p.id));
+  for (const x of IDX.list) if (FAVS.some(f => f.lg === x.lg && (x.m.home.id === f.id || x.m.away.id === f.id)) && (x.m.state === "in" || dkey(x.m.date) === today)) keys.add(x.lg + "|" + x.m.id);
+  return keys;
+}
+async function notiTick(){
+  clearTimeout(NOTI.timer);
+  if (!NOTI.on) return;
+  try {
+    if (!IDX.list.length) await loadIndex();
+    const keys = notiTargets(), lgs = new Set([...keys].map(k => k.split("|")[0]));
+    // 대상 리그만 오늘 점수판을 새로 받음
+    const evs = {};
+    await Promise.all([...lgs].map(async lg => { const Lg = LEAGUES[lg], base = `site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard`;
+      for (const p of [base, `${base}?dates=${ymd(new Date())}`]) { const j = await espn(p, 15).catch(() => null); for (const e of (j && j.events) || []) evs[lg + "|" + e.id] = nEvent(e); } }));
+    for (const k of keys){
+      const m = evs[k]; if (!m || !m.home || !m.away) continue;
+      const lg = k.split("|")[0], sp = sportOf(lg), set = NOTI[sp] || {};
+      const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0, lead = Math.sign(hs - as);
+      const prev = NSNAP[k]; NSNAP[k] = {hs, as, lead:lead || (prev ? prev.lead : 0), per:m.period, st:m.state, q:prev ? prev.q : 0};
+      if (!prev || m.state === "pre") continue;
+      const H = ko(m.home.name), A = ko(m.away.name), sc = `${H} ${hs} : ${as} ${A}`;
+      const flipped = prev.lead && lead && lead !== prev.lead;
+      if (sp === "basketball"){
+        if (set.lead && flipped) pushNoti(`🔄 역전!!! ${lead > 0 ? H : A}`, sc, k + "lead" + hs + as, lg);
+        const endQ = /END_PERIOD|HALFTIME/.test(m.status || "") ? Number(m.period) : (Number(m.period) > Number(prev.per) ? Number(prev.per) : 0);
+        if (set.q && endQ && endQ > (prev.q || 0)){ NSNAP[k].q = endQ; pushNoti(`🏀 ${endQ > 4 ? "연장" : endQ + "쿼터"} 종료`, sc, k + "q" + endQ, lg); }
+      } else if (hs + as > prev.hs + prev.as){
+        const who = hs > prev.hs ? H : A, icon = sp === "soccer" ? "⚽" : "⚾";
+        if (flipped && set.lead) pushNoti(`${icon} 역전${sp === "soccer" ? "골" : ""}!!! ${who}`, sc, k + "g" + hs + as, lg);
+        else if (set.goal) pushNoti(`${icon} ${who} ${sp === "soccer" ? "골ㄹㄹㄹ!!!" : "득점!"}`, sc, k + "g" + hs + as, lg);
+      }
+    }
+  } catch {}
+  NOTI.timer = setTimeout(notiTick, 30000);
+}
+
+// ================================================================ 🔥 오늘의 빅매치 (상위권 맞대결 · 선두 경쟁 · FIFA 상위 · 고승률 팀끼리)
+const BIG = {day:"", list:null, loading:false};
+async function loadBig(){
+  const today = dkey(new Date().toISOString());
+  if (BIG.day === today && (BIG.list || BIG.loading)) return;
+  BIG.day = today; BIG.loading = true;
+  const games = IDX.list.filter(x => dkey(x.m.date) === today && x.m.state !== "post");
+  const lgs = [...new Set(games.map(x => x.lg))];
+  if (lgs.some(lg => LEAGUES[lg].national)) await withTimeout(loadFifa(), 3000);
+  const ranks = {};
+  await Promise.all(lgs.filter(lg => !LEAGUES[lg].national).map(async lg => {
+    try { const st = await loadStandings(lg); const r = {}; for (const g of st.groups) for (const row of g.rows) r[row.id] = {...row, n:g.rows.length}; ranks[lg] = r; } catch {}
+  }));
+  const out = [];
+  for (const x of games){
+    const Lg = LEAGUES[x.lg], sp = Lg.sport;
+    if (Lg.national){
+      const a = fifaOf(x.m.home.name), b = fifaOf(x.m.away.name);
+      if (a && b && a.rank <= 40 && b.rank <= 40) out.push({...x, sc:100 - a.rank - b.rank, why:`FIFA ${a.rank}위 vs ${b.rank}위`});
+      continue;
+    }
+    const R = ranks[x.lg] || {}, a = R[x.m.home.id], b = R[x.m.away.id];
+    if (!a || !b || (!a.p && !a.w && !a.l)) continue;
+    if (sp === "soccer"){
+      const top = Math.max(4, Math.round(a.n / 3));
+      if (a.rank <= top && b.rank <= top) out.push({...x, sc:90 - (a.rank + b.rank) * 3, why:`${a.rank}위 vs ${b.rank}위 ${Math.min(a.rank, b.rank) <= 2 && Math.abs(a.rank - b.rank) <= 2 ? "선두 경쟁" : "상위권 맞대결"}`});
+    } else if (a.wp >= .58 && b.wp >= .58) out.push({...x, sc:(a.wp + b.wp) * 50, why:`승률 ${a.pct} vs ${b.pct} 강팀 맞대결`});
+  }
+  BIG.list = out.sort((p, q) => q.sc - p.sc).slice(0, 5);
+  BIG.loading = false;
+  if (S.tab === "home") renderHome(true);
+}
+
+// ================================================================ 🎯 오늘 나의 예측 (재미용) — My 경기에서 승패·언오버를 고르고 적중률을 홈에 표시
+const BETLOG_KEY = "betLog.v1";
+let BETLOG = lsJson(BETLOG_KEY, []);  // [{k, lg, date, home, away, res, ou, line, rHit, oHit}]
+const saveBet = () => lsSet(BETLOG_KEY, JSON.stringify(BETLOG.slice(-500)));
+function setBet(k, field, val){
+  const p = PICKS.find(x => x.lg + "|" + x.id === k); if (!p) return;
+  const m = MY.ev[k]; if (m && m.state !== "pre"){ toast("경기가 시작돼 예측을 바꿀 수 없습니다"); return; }
+  p.bet = p.bet || {};
+  p.bet[field] = p.bet[field] === val ? null : val;
+  if (field === "ou") p.bet.line = p.bet.ou ? Number((MY.odds[k] || {}).overUnder) : null;
+  savePicks();
+  const i = BETLOG.findIndex(b => b.k === k);
+  if (!p.bet.res && !p.bet.ou){ if (i >= 0) BETLOG.splice(i, 1); }
+  else { const e = {k, lg:p.lg, date:p.date, home:p.home, away:p.away, res:p.bet.res || null, ou:p.bet.ou || null, line:p.bet.line ?? null, rHit:null, oHit:null}; if (i >= 0) BETLOG[i] = e; else BETLOG.push(e); }
+  saveBet();
+}
+// 끝난 경기 채점
+function gradeBets(){
+  let ch = false;
+  for (const b of BETLOG){
+    if (b.rHit !== null || b.oHit !== null) continue;
+    const [lg, id] = b.k.split("|"), m = MY.ev[b.k] || (IDX.list.find(x => x.lg === lg && x.m.id === id) || {}).m;
+    if (!m || m.state !== "post") continue;
+    const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
+    let w = hs > as ? "home" : hs < as ? "away" : "draw";
+    if (w === "draw" && sportOf(lg) !== "soccer") w = m.home.winner ? "home" : m.away.winner ? "away" : "draw";
+    if (b.res) b.rHit = b.res === w;
+    if (b.ou && b.line != null && !isNaN(b.line)){ const t = hs + as; b.oHit = t === b.line ? null : (b.ou === "over") === (t > b.line); if (b.oHit === null) b.ou = null; }
+    if (!b.res) b.rHit = null;
+    b.done = true; ch = true;
+  }
+  if (ch) saveBet();
+}
+function betRow(it){
+  const p = it.p, m = it.m, k = it.k; if (!m) return "";
+  const sp = sportOf(p.lg), bet = p.bet || {}, pre = m.state === "pre", log = BETLOG.find(b => b.k === k) || {};
+  const nm = t => { const s = ko(t.name).split(" "); return sp === "soccer" ? ko(t.name) : s[s.length - 1]; };
+  const opts = [["home", `${nm(m.home)} 승`], ...(sp === "soccer" ? [["draw", "무"]] : []), ["away", `${nm(m.away)} 승`]];
+  const line = pre ? Number((MY.odds[k] || {}).overUnder) : bet.line;
+  const mark = h => h === true ? '<b class="bhit">✅ 적중</b>' : h === false ? '<b class="bmiss">❌</b>' : "";
+  const chip = (f, v, lab) => `<button class="bchip ${bet[f] === v ? "on" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>${esc(lab)}</button>`;
+  if (!pre && !bet.res && !bet.ou) return "";
+  return `<div class="betrow"><span class="bl">🎯 내 예측</span>${pre ? opts.map(([v, l]) => chip("res", v, l)).join("") : bet.res ? `${chip("res", bet.res, (opts.find(o => o[0] === bet.res) || [, ""])[1])}${mark(log.rHit)}` : ""}
+    ${line != null && !isNaN(line) ? (pre ? `<span class="bsep"></span>${chip("ou", "over", `오버 ${line}`)}${chip("ou", "under", `언더 ${line}`)}` : bet.ou ? `<span class="bsep"></span>${chip("ou", bet.ou, `${bet.ou === "over" ? "오버" : "언더"} ${line}`)}${mark(log.oHit)}` : "") : ""}
+    ${!pre && m.state === "in" ? '<span class="muted bst2">경기 중</span>' : ""}</div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-bet]"); if (!b || S.mySel) return;
+  e.preventDefault(); e.stopPropagation();
+  const [lg, id, f, v] = b.dataset.bet.split("|"); setBet(lg + "|" + id, f, v); renderMy(true);
+}, true);
+// 홈 적중률 카드
+function betStats(){
+  gradeBets();
+  if (!BETLOG.length) return "";
+  const today = dkey(new Date().toISOString()), wk = Date.now() - 7 * 864e5;
+  const calc = list => { let h = 0, n = 0; for (const b of list){ for (const x of [b.rHit, b.oHit]) if (x === true || x === false){ n++; if (x) h++; } } return {h, n, pct:n ? Math.round(h / n * 100) : null}; };
+  const pend = BETLOG.filter(b => !b.done).length;
+  const T = calc(BETLOG.filter(b => dkey(b.date) === today)), W = calc(BETLOG.filter(b => new Date(b.date) > wk)), A = calc(BETLOG);
+  const R = calc(BETLOG.map(b => ({rHit:b.rHit}))), O = calc(BETLOG.map(b => ({oHit:b.oHit})));
+  const box = (lab, s) => `<div class="bsbox"><small>${lab}</small><b>${s.pct == null ? "-" : s.pct + "%"}</b><span>${s.h}/${s.n}</span></div>`;
+  return `<div class="betstat"><div class="bsh"><b>🎯 나의 예측 적중률</b><span class="muted">재미용 · My 경기에서 고른 예측 기준${pend ? ` · 결과 대기 ${pend}경기` : ""}</span></div>
+    <div class="bsrow">${box("오늘", T)}${box("최근 7일", W)}${box("전체", A)}${box("승패", R)}${box("언오버", O)}</div></div>`;
+}
 // ================================================================ 🏠 홈: 오늘의 경기 (모든 리그·종목 한곳에)
 const SPORTS = [["all", "전체"], ["soccer", "⚽ 축구"], ["basketball", "🏀 농구"], ["baseball", "⚾ 야구"]];
 const LG_ORDER = SPORT_GROUPS.flatMap(g => g.keys);
@@ -3318,7 +3575,12 @@ function renderHome(fromTick){
     <div class="bar hbar"><div class="chips">${SPORTS.map(([k, l]) => `<button class="chip ${sp === k ? "on" : ""}" data-hsp="${k}">${l}</button>`).join("")}</div>
       <span class="sep"></span>
       <div class="chips">${[["all", "전체"], ["in", "● 진행 중"], ["pre", "예정"], ["post", "종료"]].map(([k, l]) => `<button class="chip ${st === k ? "on" : ""}" data-hst="${k}">${l}<span class="n">${cnt[k] || 0}</span></button>`).join("")}</div></div>`;
+  if (FAVS.length) html += `<div class="strip-h"><h3>⭐ 내 응원팀</h3><span class="muted">팀 분석에서 ☆ 응원팀 등록</span></div><div class="favgrid">${FAVS.filter(f => sp === "all" || (LEAGUES[f.lg] && LEAGUES[f.lg].sport === sp)).map(favCard).join("")}</div>`;
+  html += betStats();
   if (mine.length) html += `<div class="strip-h"><h3><span class="mystar">★</span> 오늘 내가 담은 경기</h3><span class="muted">${mine.length}경기</span></div>${grid(mine)}`;
+  loadBig();
+  const big = (BIG.list || []).filter(x => okSp(x) && (st === "all" || x.m.state === st));
+  if (big.length) html += `<div class="strip-h"><h3>🔥 오늘의 빅매치</h3><span class="muted">상위권·강팀 맞대결</span></div><div class="hgrid">${big.map(x => `<div class="bigw"><span class="bigwhy">${esc(x.why)}</span>${miniRow(x, {today:true})}</div>`).join("")}</div>`;
   if (live.length) html += `<div class="strip-h"><h3 class="live">● 지금 진행 중</h3><span class="muted">${live.length}경기 · 누르면 상세·문자중계</span></div>${grid(live)}`;
   if (soon.length) html += `<div class="strip-h"><h3>⏰ 곧 시작 (1시간 안)</h3><span class="muted">${soon.length}경기</span></div>${grid(soon)}`;
   if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? "오늘은 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
@@ -3790,6 +4052,8 @@ modal.addEventListener("click", e => { if (e.target === modal) modal.close(); })
 // 왼쪽 위 앱 이름 → 홈 (새로고침 없이)
 $("#homeLink").onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); if (modal.open) modal.close(); S.tab = "home"; history.replaceState(null, "", location.pathname); window.scrollTo(0, 0); render(); };
 $("#searchBtn").onclick = () => openSearch();
+$("#notiBtn").onclick = () => openNoti();
+updateNotiBtn(); if (NOTI.on) setTimeout(notiTick, 3000);
 $("#pipBtn").onclick = () => openPip();
 $("#refresh").onclick = () => {
   if (L().disabled) return;
