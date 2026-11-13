@@ -786,6 +786,13 @@ select.gmove{font:inherit;font-size:13px}
 .mytab .mychk2.on{background:var(--accent)}
 .mytab tr.mrw{cursor:default}
 @media (max-width:640px){ .mytab .mth span,.mytab .mta span{max-width:78px} .mytab{font-size:12px} .mytab .ob{min-width:40px;font-size:12px} }
+.mytab td.mtx{text-align:left;max-width:230px;min-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:600;color:#16a34a;cursor:pointer;padding-left:10px}
+.mytab td.mtx span{display:block;overflow:hidden;text-overflow:ellipsis}
+.mytab td.mtx .big{color:#15803d;font-weight:800}
+.mytab td.mtx .cdx{color:#ea580c;font-weight:700}
+@media (prefers-color-scheme: dark){ .mytab td.mtx{color:#4ade80} .mytab td.mtx .big{color:#86efac} }
+@media (max-width:640px){ .mytab td.mtx{max-width:140px;min-width:90px} }
+.mytab td{padding-left:3px;padding-right:3px}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -3041,7 +3048,7 @@ function myTable(list, sel, showGrp){
     const p = it.p, m = it.m, k = it.k, Lg = LEAGUES[p.lg], sp = Lg.sport, bet = p.bet || {}, log = BETLOG.find(b => b.k === k) || {};
     const chk = sel ? `<td class="mtc"><span class="mychk2 ${sel.has(k) ? "on" : ""}">${sel.has(k) ? "✓" : ""}</span></td>` : "";
     const grp = showGrp ? `<td class="mtg"><span class="grpb">${p.grp}</span></td>` : "";
-    if (!m) return `<tr class="mrw" data-mysel="${esc(k)}">${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="9" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td><td>${pickBtn(p.lg, p.id, true)}</td></tr>`;
+    if (!m) return `<tr class="mrw" data-mysel="${esc(k)}">${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="10" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td><td>${pickBtn(p.lg, p.id, true)}</td></tr>`;
     const o = MY.odds[k] || {}, ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
     const pre = m.state === "pre", live = m.state === "in", post = m.state === "post";
     const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
@@ -3061,11 +3068,13 @@ function myTable(list, sel, showGrp){
       <td class="mth" data-mymatch="${esc(p.lg)}|${esc(p.id)}"><span>${esc(nm(m.home))}</span>${logo(m.home.logo)}</td>
       <td class="mts" data-mymatch="${esc(p.lg)}|${esc(p.id)}">${sc}</td>
       <td class="mta" data-mymatch="${esc(p.lg)}|${esc(p.id)}">${logo(m.away.logo)}<span>${esc(nm(m.away))}</span></td>
+      <td class="mtx" data-mymatch="${esc(p.lg)}|${esc(p.id)}">${(() => { if (live){ const x = pbpLatest(k); return x ? `<span class="${x.big ? "big" : ""}" title="${x.t} ${x.txt.replace(/"/g, "&quot;")}">${x.txt}</span>` : '<span class="muted">중계 준비 중…</span>'; }
+        if (pre){ const cd = countdown(m.date); return cd ? `<span class="cdx">⏰ ${cd}</span>` : ""; } return ""; })()}</td>
       ${cell("res", "home", ho.moneyLine, act)}${sp === "soccer" ? cell("res", "draw", (o.drawOdds || {}).moneyLine, act) : '<td class="moc"><span class="na">-</span></td>'}${cell("res", "away", ao.moneyLine, act)}
       <td class="ln">${hasLine ? line : "-"}</td>${hasLine ? cell("ou", "over", o.overOdds, ouAct) + cell("ou", "under", o.underOdds, ouAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}
       <td class="mtp">${pickBtn(p.lg, p.id, true)}</td></tr>`;
   };
-  return `<div class="mtwrap"><table class="mytab"><thead><tr>${sel ? "<th></th>" : ""}${showGrp ? "<th>묶음</th>" : ""}<th>리그</th><th>시간</th><th class="r">홈</th><th></th><th class="l">원정</th>
+  return `<div class="mtwrap"><table class="mytab"><thead><tr>${sel ? "<th></th>" : ""}${showGrp ? "<th>묶음</th>" : ""}<th>리그</th><th>시간</th><th class="r">홈</th><th></th><th class="l">원정</th><th class="l">중계</th>
     <th>승</th><th>무</th><th>패</th><th>기준</th><th>오버</th><th>언더</th><th></th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`;
 }
 async function openMyMatch(lg, id){
@@ -3448,46 +3457,60 @@ const pickT = (id, arr) => arr[[...String(id)].reduce((a, c) => (a * 31 + c.char
 const kp = n => esc(koFull(String(n || "").trim()));
 const tko = n => { n = String(n || "").trim(); const a = ko(n); return a !== n ? a : ko(n.replace(/ and /g, " & ")); };
 function pbpSoccer(sum){
-  const out = [];
+  const out = [], goals = {};  // 선수별 이 경기 골 수 (멀티골·해트트릭)
+  let prevH = 0, prevA = 0;
   for (const c of sum?.commentary || []){
     const tx = c.text || "", ty = (c.play?.type?.type) || "", t = c.time?.displayValue || "", id = c.play?.id || c.sequence;
     const who = (tx.match(/([^.()]+?) \(([^)]+)\)/) || []), name = who[1] ? kp(who[1]) : "", team = who[2] ? esc(tko(who[2])) : "";
+    const hd = /header/.test(tx) ? "헤더" : /left footed/.test(tx) ? "왼발" : /right footed/.test(tx) ? "오른발" : "슈팅";
+    const far = /outside the box/.test(tx), close = /very close range|six yard/.test(tx);
     let txt = "", big = false, low = false;
     if (/^Goal!/.test(tx) || /goal/.test(ty)){
-      const sc = tx.match(/^Goal!\s*(.+?) (\d+), (.+?) (\d+)\./), scorer = kp((tx.match(/\d+\.\s*([^.(]+?) \(/) || [])[1] || who[1]);
+      const sc = tx.match(/^Goal!\s*(.+?) (\d+), (.+?) (\d+)\./), raw = (tx.match(/\d+\.\s*([^.(]+?) \(/) || [])[1] || who[1], scorer = kp(raw);
       const line = sc ? ` (${esc(tko(sc[1]))} ${sc[2]} : ${sc[4]} ${esc(tko(sc[3]))})` : "";
-      const min = parseInt(t) || 0, eq = sc && sc[2] === sc[4];
-      if (/own goal/i.test(tx)) txt = `😱 자책골!!! ${scorer}… 이게 들어가네요${line}`;
-      else if (/penalty/i.test(tx)) txt = pickT(id, [`⚽ ${scorer} PK 성공!!! 골키퍼 완벽하게 속였습니다${line}`, `⚽ ${scorer} 침착하게 PK 꽂습니다!! 골ㄹㄹㄹㄹ${line}`]);
-      else txt = (min >= 85 ? "🔥 극장골!!! " : "") + pickT(id, [`⚽ ${scorer} 골ㄹㄹㄹㄹㄹㄹㄹㄹㄹ!!!${eq ? " 동점골!!" : ""}${line}`, `⚽ 고오오오오올!!! ${scorer}!!! 미쳤습니다!!${line}`, `⚽ 들어갔습니다아아아!!! ${scorer}의 한 방!!${line}`, `⚽ ${scorer}!!! 골망을 흔듭니다!!! 골ㄹㄹㄹㄹ${line}`]);
-      big = true;
+      const min = parseInt(t) || 0, h = sc ? +sc[2] : prevH, a = sc ? +sc[4] : prevA;
+      const was = Math.sign(prevH - prevA), now = Math.sign(h - a);
+      const n = goals[raw] = (goals[raw] || 0) + 1;
+      if (/own goal/i.test(tx)) txt = pickT(id, [`😱 자책골!!! ${scorer}… 이게 들어가네요${line}`, `😱 이럴 수가! ${scorer}의 자책골!!${line}`, `🙈 ${scorer} 걷어낸다는 게… 자기 골문으로!${line}`]);
+      else {
+        const pk = /penalty/i.test(tx);
+        const base = pk ? [`⚽ ${scorer} PK 성공!!! 골키퍼 완벽하게 속였습니다`, `⚽ ${scorer} 침착하게 PK 꽂습니다!! 골ㄹㄹㄹㄹ`, `⚽ 키퍼는 반대로! ${scorer} PK 깔끔하게 마무리!`, `⚽ ${scorer} 강하게! PK 들어갑니다!!`]
+          : far ? [`🚀 ${scorer} 중거리 원더골!!! 이게 들어가네요!!`, `🚀 ${scorer} 그림 같은 중거리 슛!!! 골ㄹㄹㄹㄹ`, `🚀 대포알 슈팅!!! ${scorer} 골망을 찢습니다!!`, `🚀 ${scorer} 박스 밖에서 꽂아버립니다!!!`]
+          : hd === "헤더" ? [`⚽ ${scorer} 헤더 골!!! 머리로 받아 넣습니다!!`, `⚽ 날아오른 ${scorer}!!! 헤딩 골ㄹㄹㄹ`, `⚽ ${scorer} 머리에 정확히 맞습니다!! 골!!!`]
+          : close ? [`⚽ ${scorer} 골문 앞에서 밀어 넣습니다!! 골ㄹㄹㄹ`, `⚽ 문전 혼전 속 ${scorer}!!! 들어갔습니다!!`, `⚽ ${scorer} 침착하게 톡! 골!!!`]
+          : [`⚽ ${scorer} 골ㄹㄹㄹㄹㄹㄹㄹㄹㄹ!!!`, `⚽ 고오오오오올!!! ${scorer}!!! 미쳤습니다!!`, `⚽ 들어갔습니다아아아!!! ${scorer}의 한 방!!`, `⚽ ${scorer}!!! 골망을 흔듭니다!!! 골ㄹㄹㄹㄹ`, `⚽ ${scorer} ${hd}으로 마무리!!! 골!!!`, `⚽ 이걸 넣네요!!! ${scorer}!!!`];
+        const tag = n === 3 ? "🎩 해트트릭!!! " : n === 2 ? "✌️ 멀티골!! " : min >= 85 ? pickT(id + "l", ["🔥 극장골!!! ", "⏰ 막판 극장!!! ", "🔥 경기 끝나기 직전!!! "]) : min > 0 && min <= 3 ? "⚡ 시작하자마자!! " : "";
+        const ctx = was !== 0 && now === 0 ? pickT(id + "e", [" 동점골!!", " 균형을 맞춥니다!!", " 원점으로 돌립니다!!"]) : was !== 0 && now !== 0 && was !== now ? pickT(id + "r", [" 역전골!!!", " 경기를 뒤집습니다!!!", " 뒤집었습니다아아!!"]) : Math.abs(h - a) >= 3 && now !== 0 ? pickT(id + "b", [" 쐐기!", " 사실상 승부 끝?!", " 점수 차를 벌립니다"]) : "";
+        txt = tag + pickT(id, base) + ctx + line;
+      }
+      prevH = h; prevA = a; big = true;
     }
-    else if (/red-card/.test(ty) || /red card/i.test(tx)) { txt = `🟥 퇴장!!! ${name} 레드카드! 경기가 요동칩니다!!`; big = true; }
-    else if (/yellow-card/.test(ty)) txt = pickT(id, [`🟨 ${name} 옐로카드. 조심해야죠~`, `🟨 ${name} 경고 받습니다`]);
-    else if (/hits the (left |right )?(post|bar|crossbar)/i.test(tx)) { txt = `😱 골대!!! ${name} 슈팅이 골대를 강타합니다!!`; big = true; }
-    else if (/shot-on-target/.test(ty) || /^Attempt saved/.test(tx)) txt = pickT(id, [`🧤 ${name} ${/header/.test(tx) ? "헤더" : "슈팅"}! 키퍼 선방!!`, `🧤 ${name}의 ${/header/.test(tx) ? "헤더" : "슈팅"}~ 골키퍼가 막아냅니다`]);
-    else if (/shot-off-target/.test(ty) || /^Attempt missed/.test(tx)) txt = pickT(id, [`${name} ${/header/.test(tx) ? "헤더" : "슈팅"}~ 아깝게 벗어납니다 😩`, `${name} 때려봤지만 빗나갑니다 😮‍💨`]);
-    else if (/shot-blocked/.test(ty) || /^Attempt blocked/.test(tx)) txt = `🛡️ ${name} 슈팅, 수비가 몸 날려 막아냅니다!`;
-    else if (/^Penalty .*draws a foul/i.test(tx) || /penalty---awarded/.test(ty)) { txt = `🚨 페널티킥!!! ${kp((tx.match(/\. (.+?) draws/) || [])[1])} 얻어냅니다!!`; big = true; }
-    else if (/penalty.*(saved|missed)/i.test(tx) || /penalty---(saved|missed)/.test(ty)) { txt = `😱 PK 실축!!! ${name}… 믿을 수가 없습니다`; big = true; }
+    else if (/red-card/.test(ty) || /red card/i.test(tx)) { txt = pickT(id, [`🟥 퇴장!!! ${name} 레드카드! 경기가 요동칩니다!!`, `🟥 ${name} 다이렉트 퇴장!!! 수적 열세에 빠집니다`, `🟥 주심이 레드카드를 꺼냅니다!! ${name} 아웃!`]); big = true; }
+    else if (/yellow-card/.test(ty)) txt = pickT(id, [`🟨 ${name} 옐로카드. 조심해야죠~`, `🟨 ${name} 경고 받습니다`, `🟨 거친 파울, ${name} 카드 받습니다`, `🟨 ${name} 경고 누적 조심!`]);
+    else if (/hits the (left |right )?(post|bar|crossbar)/i.test(tx)) { txt = pickT(id, [`😱 골대!!! ${name} 슈팅이 골대를 강타합니다!!`, `😱 아아악 골대!!! ${name} 땅을 칩니다`, `🔔 땡! ${name}의 슈팅이 골대 맞고 나옵니다!!`]); big = true; }
+    else if (/shot-on-target/.test(ty) || /^Attempt saved/.test(tx)) txt = pickT(id, [`🧤 ${name} ${hd}! 키퍼 선방!!`, `🧤 ${name}의 ${hd}~ 골키퍼가 막아냅니다`, `🧤 슈퍼 세이브!!! ${name} 슈팅을 걷어냅니다`, `🧤 ${name} 유효슈팅! 키퍼 정면`, `🧤 키퍼 손끝에 걸립니다! ${name} 아쉬워요`]);
+    else if (/shot-off-target/.test(ty) || /^Attempt missed/.test(tx)) txt = pickT(id, [`${name} ${hd}~ 아깝게 벗어납니다 😩`, `${name} 때려봤지만 빗나갑니다 😮‍💨`, `😬 ${name} 슈팅이 하늘로~`, `${name} 노렸지만 골문 옆으로 😵`, `${far ? "중거리" : "슈팅"}! ${name}… 살짝 빗나갑니다`]);
+    else if (/shot-blocked/.test(ty) || /^Attempt blocked/.test(tx)) txt = pickT(id, [`🛡️ ${name} 슈팅, 수비가 몸 날려 막아냅니다!`, `🛡️ ${name} 슈팅 블록! 수비벽에 걸립니다`, `🛡️ 육탄방어!! ${name} 슈팅 무산`]);
+    else if (/^Penalty .*draws a foul/i.test(tx) || /penalty---awarded/.test(ty)) { const g = kp((tx.match(/\. (.+?) draws/) || [])[1]); txt = pickT(id, [`🚨 페널티킥!!! ${g} 얻어냅니다!!`, `🚨 휘슬!!! 페널티킥 선언! ${g}가 넘어집니다`, `🚨 PK!!! 절호의 기회가 옵니다 (${g})`]); big = true; }
+    else if (/penalty.*(saved|missed)/i.test(tx) || /penalty---(saved|missed)/.test(ty)) { txt = pickT(id, [`😱 PK 실축!!! ${name}… 믿을 수가 없습니다`, `🧤 PK 선방!!! 키퍼가 막아냅니다!!`, `😱 ${name} 페널티킥을 놓칩니다!!`]); big = true; }
     else if (/substitution/.test(ty) || /^Substitution/.test(tx)){ const s = tx.match(/^Substitution, (.+?)\. (.+?) replaces (.+?)\.?$/); txt = s ? `🔄 ${esc(tko(s[1]))} 교체: ${kp(s[3])} ↘ ${kp(s[2])} ↗` : ""; }
-    else if (/corner/.test(ty) || /^Corner,/.test(tx)) txt = `🚩 ${esc(tko((tx.match(/^Corner, (.+?)\./) || [])[1] || ""))} 코너킥 찬스!`;
-    else if (/offside/.test(ty) || /^Offside/.test(tx)) txt = `🚩 ${kp((tx.match(/\. (.+?) is caught offside/) || [])[1])} 오프사이드~`;
+    else if (/corner/.test(ty) || /^Corner,/.test(tx)) { const tm = esc(tko((tx.match(/^Corner, (.+?)\./) || [])[1] || "")); txt = pickT(id, [`🚩 ${tm} 코너킥 찬스!`, `🚩 ${tm} 코너킥! 세트피스 기회`, `🚩 ${tm} 코너 얻어냅니다`]); }
+    else if (/offside/.test(ty) || /^Offside/.test(tx)) txt = pickT(id, [`🚩 ${kp((tx.match(/\. (.+?) is caught offside/) || [])[1])} 오프사이드~`, `🚩 깃발 올라갑니다, ${kp((tx.match(/\. (.+?) is caught offside/) || [])[1])} 오프사이드`]);
     else if (/start-delay/.test(ty) || /^Delay in match because of an injury/.test(tx)) txt = `🚑 ${kp((tx.match(/injury (.+?) \(/) || [])[1])} 부상으로 잠시 중단됩니다`;
-    else if (/^VAR Decision/.test(tx)) { txt = `📺 VAR 판독 결과 나왔습니다!`; big = true; }
-    else if (/^First Half begins/.test(tx)) txt = `▶️ 킥오프! 경기 시작합니다!`;
-    else if (/^Second Half begins/.test(tx)) txt = `▶️ 후반전 시작!`;
+    else if (/^VAR Decision/.test(tx)) { txt = pickT(id, [`📺 VAR 판독 결과 나왔습니다!`, `📺 VAR 확인 끝! 판정이 나옵니다`, `📺 비디오 판독… 결과는?!`]); big = true; }
+    else if (/^First Half begins/.test(tx)) txt = pickT(id, [`▶️ 킥오프! 경기 시작합니다!`, `▶️ 휘슬 울렸습니다! 킥오프!`, `▶️ 자, 시작합니다!`]);
+    else if (/^Second Half begins/.test(tx)) txt = pickT(id, [`▶️ 후반전 시작!`, `▶️ 후반 휘슬! 다시 시작합니다`]);
     else if (/^(First|Second) Half ends|^Match ends/.test(tx)){ const s = tx.match(/ends, (.+?) (\d+), (.+?) (\d+)\./); const sc = s ? ` ${esc(tko(s[1]))} ${s[2]} : ${s[4]} ${esc(tko(s[3]))}` : "";
-      txt = /^First/.test(tx) ? `⏸️ 전반 종료!${sc}` : /^Match/.test(tx) ? `🏁 경기 종료!${sc}` : `⏱️ 후반 종료!${sc}`; }
-    else if (/minutes? of added time/.test(tx)) txt = `⏳ 추가시간 ${(tx.match(/(\d+)/) || [])[1]}분!`;
+      txt = /^First/.test(tx) ? `⏸️ 전반 종료!${sc}` : /^Match/.test(tx) ? pickT(id, [`🏁 경기 종료!${sc}`, `🏁 종료 휘슬!${sc}`, `🏁 끝났습니다!${sc}`]) : `⏱️ 후반 종료!${sc}`; }
+    else if (/minutes? of added time/.test(tx)) { const n = (tx.match(/(\d+)/) || [])[1]; txt = pickT(id, [`⏳ 추가시간 ${n}분!`, `⏳ 추가시간 ${n}분 주어집니다`, `⏳ 남은 건 추가시간 ${n}분!`]); }
     else if (/^Foul by/.test(tx)) low = true, txt = `${kp((tx.match(/^Foul by (.+?) \(/) || [])[1])} 파울`;
-    else if (/wins a free kick/.test(tx)) low = true, txt = `${name} 프리킥 얻어냅니다`;
+    else if (/wins a free kick/.test(tx)) low = true, txt = /attacking half/.test(tx) ? `${name} 좋은 위치에서 프리킥 얻어냅니다` : `${name} 프리킥 얻어냅니다`;
     if (txt) out.push({id:String(id), t, txt, big, low});
   }
   // ESPN 문자중계가 없는 대회는 주요 장면(골·카드·교체)만
   if (!out.length) for (const k of sum?.keyEvents || []){
     const ty = k.type?.type || "", a = k.participants?.[0]?.athlete?.displayName, t = k.clock?.displayValue || "";
-    if (/goal/.test(ty) || k.scoringPlay) out.push({id:k.id, t, txt:pickT(k.id, [`⚽ ${kp(a)} 골ㄹㄹㄹㄹㄹㄹㄹ!!!`, `⚽ 고오오올!!! ${kp(a)}!!!`]), big:true});
+    if (/goal/.test(ty) || k.scoringPlay) out.push({id:k.id, t, txt:pickT(k.id, [`⚽ ${kp(a)} 골ㄹㄹㄹㄹㄹㄹㄹ!!!`, `⚽ 고오오올!!! ${kp(a)}!!!`, `⚽ ${kp(a)} 들어갔습니다!!!`, `⚽ ${kp(a)}의 한 방!!!`]), big:true});
     else if (/red-card/.test(ty)) out.push({id:k.id, t, txt:`🟥 퇴장!!! ${kp(a)} 레드카드!`, big:true});
     else if (/yellow-card/.test(ty)) out.push({id:k.id, t, txt:`🟨 ${kp(a)} 옐로카드`});
     else if (/substitution/.test(ty)) out.push({id:k.id, t, txt:`🔄 교체: ${kp(a)}`});
@@ -3496,32 +3519,39 @@ function pbpSoccer(sum){
 }
 function pbpBasketball(sum, m){
   const out = [], tn = id => String(id) === m.home.id ? ko(m.home.name).split(" ").pop() : String(id) === m.away.id ? ko(m.away.name).split(" ").pop() : "";
+  const pts = {};  // 선수별 득점 (20·30·40점 돌파)
   let ph = 0, pa = 0, runTeam = null, run = 0;
+  const secs = c => { const x = String(c || "").split(":"); return x.length > 1 ? +x[0] * 60 + +x[1] : parseFloat(x[0]) || 0; };
   for (const p of sum?.plays || []){
     const tx = p.text || "", ty = p.type?.text || "", q = p.period?.number, t = `${q > 4 ? "OT" : q + "Q"} ${p.clock?.displayValue || ""}`, id = p.id;
     const hs = p.homeScore, as = p.awayScore, team = p.team?.id;
+    const clutch = q >= 4 && secs(p.clock?.displayValue) <= 120 && Math.abs(hs - as) <= 6;
     let txt = "", big = false, low = false;
     if (p.scoringPlay){
-      const name = kp((tx.match(/^(.+?) makes /) || [])[1]), ast = (tx.match(/\((.+?) assists\)/) || [])[1], pts = p.scoreValue;
-      if (/free throw/i.test(ty)) low = true, txt = `${name} 자유투 성공`;
-      else if (/alley oop/i.test(ty)) { txt = `🚀 앨리웁!!! ${ast ? kp(ast) + " → " : ""}${name} 꽂아버립니다!!`; big = true; }
-      else if (/dunk/i.test(ty)) { txt = pickT(id, [`💥 ${name} 덩크!!! 림이 흔들립니다!!`, `💥 ${name} 쾅!!! 찍어버립니다!!`, `💥 ${name} 슬램덩크!!! 체육관 들썩!!`]); big = true; }
-      else if (pts === 3) { txt = pickT(id, [`🎯 ${name} 쓰리이이이!!! 3점 꽂습니다!`, `🎯 ${name} 3점슛!! 손끝이 뜨겁습니다🔥`, `🎯 ${name} 깊은 곳에서~ 들어갑니다!!! 3점!`]); big = true; }
-      else txt = `🏀 ${name} ${/layup/i.test(ty) ? "레이업" : /hook/i.test(ty) ? "훅슛" : /tip/i.test(ty) ? "팁인" : /float/i.test(ty) ? "플로터" : "점퍼"} 득점!`;
-      if (ast && !/alley oop/i.test(ty)) txt += ` (어시 ${kp(ast)})`;
+      const raw = (tx.match(/^(.+?) makes /) || [])[1], name = kp(raw), ast = (tx.match(/\((.+?) assists\)/) || [])[1], v = p.scoreValue;
+      const before = pts[raw] || 0; pts[raw] = before + v;
+      if (/free throw/i.test(ty)) low = !clutch, txt = clutch ? pickT(id, [`🎯 ${name} 강심장! 자유투 성공`, `😤 ${name} 침착하게 자유투`]) : `${name} 자유투 성공`;
+      else if (/alley oop/i.test(ty)) { txt = pickT(id, [`🚀 앨리웁!!! ${ast ? kp(ast) + " → " : ""}${name} 꽂아버립니다!!`, `🚀 공중에서 받아 그대로!!! ${name} 앨리웁 덩크!!`, `🚀 하이라이트 각!!! ${ast ? kp(ast) + "의 패스, " : ""}${name} 앨리웁!!`]); big = true; }
+      else if (/dunk/i.test(ty)) { txt = pickT(id, [`💥 ${name} 덩크!!! 림이 흔들립니다!!`, `💥 ${name} 쾅!!! 찍어버립니다!!`, `💥 ${name} 슬램덩크!!! 체육관 들썩!!`, `💥 투핸드 덩크!!! ${name} 파워가 남다릅니다`, `💥 ${name} 포스터 각!!! 덩크!!`]); big = true; }
+      else if (v === 3) { txt = pickT(id, [`🎯 ${name} 쓰리이이이!!! 3점 꽂습니다!`, `🎯 ${name} 3점슛!! 손끝이 뜨겁습니다🔥`, `🎯 ${name} 깊은 곳에서~ 들어갑니다!!! 3점!`, `🎯 스텝백 쓰리!? ${name} 그대로 꽂습니다!!`, `🎯 노룩 수준!! ${name} 3점 성공`, `🎯 ${name} 외곽포 가동!! 3점!`]); big = true; }
+      else txt = pickT(id, [`🏀 ${name} ${/layup/i.test(ty) ? "레이업" : /hook/i.test(ty) ? "훅슛" : /tip/i.test(ty) ? "팁인" : /float/i.test(ty) ? "플로터" : /fade/i.test(ty) ? "페이드어웨이" : "점퍼"} 득점!`,
+        `🏀 ${name} ${/layup/i.test(ty) ? "돌파 후 레이업" : /float/i.test(ty) ? "부드러운 플로터" : /fade/i.test(ty) ? "페이드어웨이" : "미드레인지"} 성공`, `🏀 ${name} 2점 추가!`]);
+      if (ast && !/alley oop/i.test(ty) && !/free throw/i.test(ty)) txt += ` (어시 ${kp(ast)})`;
       const lead0 = Math.sign(ph - pa), lead1 = Math.sign(hs - as);
-      if (lead1 === 0 && lead0 !== 0) { txt += " 동점!!"; big = true; }
-      else if (lead0 !== 0 && lead1 !== 0 && lead0 !== lead1) { txt += " 역전!!!"; big = true; }
+      if (lead1 === 0 && lead0 !== 0) { txt += pickT(id + "t", [" 동점!!", " 다시 원점!!", " 균형 맞춥니다!"]); big = true; }
+      else if (lead0 !== 0 && lead1 !== 0 && lead0 !== lead1) { txt += pickT(id + "r", [" 역전!!!", " 경기를 뒤집습니다!!!", " 리드 체인지!!"]); big = true; }
+      for (const mark of [20, 30, 40, 50]) if (before < mark && pts[raw] >= mark){ txt += ` 🔥 ${name} ${mark}점 돌파!`; big = true; }
+      if (clutch && !/free throw/i.test(ty)) { txt = "⏰ 클러치!! " + txt; big = true; }
       const gained = String(team) === m.home.id ? hs - ph : as - pa;
       if (String(team) === runTeam) run += gained; else { runTeam = String(team); run = gained; }
-      if (run >= 8 && run - gained < 8 || run >= 12 && run - gained < 12){ txt += ` 🔥 ${esc(tn(team))} ${run}-0 런!!`; big = true; }
+      if (run >= 8 && run - gained < 8 || run >= 12 && run - gained < 12){ txt += pickT(id + "u", [` 🔥 ${esc(tn(team))} ${run}-0 런!!`, ` 🔥 ${esc(tn(team))} 무섭게 몰아칩니다 ${run}-0!`, ` 🔥 ${run}-0 런, ${esc(tn(team))} 흐름 탔습니다!`]); big = true; }
       ph = hs; pa = as;
     }
-    else if (/ blocks /.test(tx)) txt = pickT(id, [`🚫 ${kp((tx.match(/^(.+?) blocks /) || [])[1])} 블록슛!!! 어딜~`, `🚫 ${kp((tx.match(/^(.+?) blocks /) || [])[1])} 쳐냅니다!! 블록!`]);
-    else if (/\((.+?) steals\)/.test(tx)) txt = `🕵️ ${kp(tx.match(/\((.+?) steals\)/)[1])} 스틸!`;
+    else if (/ blocks /.test(tx)) { const b = kp((tx.match(/^(.+?) blocks /) || [])[1]); txt = pickT(id, [`🚫 ${b} 블록슛!!! 어딜~`, `🚫 ${b} 쳐냅니다!! 블록!`, `🚫 노노노! ${b}의 블록!`, `🚫 ${b} 림 보호! 슛을 막아냅니다`]); }
+    else if (/\((.+?) steals\)/.test(tx)) { const s = kp(tx.match(/\((.+?) steals\)/)[1]); txt = pickT(id, [`🕵️ ${s} 스틸!`, `🕵️ ${s} 가로챕니다!`, `🕵️ ${s} 손 빠릅니다, 스틸!`]); }
     else if (/^End of the/.test(tx) || ty === "End Period"){ txt = `⏱️ ${q > 4 ? "연장" : q + "쿼터"} 종료! (${ph} : ${pa})`; }
-    else if (/^End of Game/.test(tx)) { txt = `🏁 경기 종료!!! (${ph} : ${pa})`; big = true; }
-    else if (/timeout/i.test(ty)) low = true, txt = `⏸️ ${esc(tn(team) || "")} 작전타임`;
+    else if (/^End of Game/.test(tx)) { txt = pickT(id, [`🏁 경기 종료!!! (${ph} : ${pa})`, `🏁 버저 울립니다! 최종 ${ph} : ${pa}`]); big = true; }
+    else if (/timeout/i.test(ty)) low = true, txt = pickT(id, [`⏸️ ${esc(tn(team) || "")} 작전타임`, `⏸️ ${esc(tn(team) || "")} 타임아웃, 흐름 끊기`]);
     else if (/technical|flagrant/i.test(ty)) { txt = `😤 ${/flagrant/i.test(ty) ? "플래그런트" : "테크니컬"} 파울!`; big = true; }
     else if (/ejected/i.test(tx)) { txt = `🟥 퇴장!!!`; big = true; }
     if (txt) out.push({id:String(id), t, txt, big, low});
@@ -3535,10 +3565,14 @@ function pbpBaseball(sum){
     const tx = p.text || "", ty = p.type?.text || "", per = p.period || {}, t = `${per.number}회${per.type === "Top" ? "초" : "말"}`, id = p.id;
     let txt = "", big = false;
     const name = kp((tx.match(/^([A-Z][\w.'\- ]*?) (homered|tripled|doubled|singled|hit|walked|struck|grounded|flied|lined|reached|popped)/) || [])[1]);
-    if (/homered/.test(tx)){ const ft = (tx.match(/\((\d+) feet\)/) || [])[1]; txt = pickT(id, [`💣 ${name} 홈런!!!! 넘어갔습니다아아아!!`, `💣 ${name} 쳤습니다~ 담장 밖으로!!! 홈런!!!`]) + (ft ? ` (${Math.round(ft * 0.3048)}m)` : ""); big = true; }
-    else if (p.scoringPlay){ const v = (VERB.find(([r]) => r.test(tx)) || [, "타격"])[1]; const runs = (tx.match(/scored/g) || []).length; txt = `🏃 ${name} ${v}!${runs ? ` ${runs}점 들어옵니다!!` : ""}`; big = runs >= 2; }
-    else if (/struck out swinging/.test(tx)) txt = `🔥 ${name} 헛스윙 삼진!`;
-    else if (/struck out looking/.test(tx)) txt = `🔥 ${name} 루킹 삼진!`;
+    if (/homered/.test(tx)){
+      const ft = (tx.match(/\((\d+) feet\)/) || [])[1], runs = (tx.match(/scored/g) || []).length + 1;
+      const kind = runs === 4 ? pickT(id + "g", ["💥 그랜드슬램!!!! 만루홈런!!! ", "💥 만루에서 쾅!!!! 그랜드슬램!!! "]) : runs >= 2 ? `💣 ${runs}점 홈런!!! ` : "";
+      txt = kind + pickT(id, [`💣 ${name} 홈런!!!! 넘어갔습니다아아아!!`, `💣 ${name} 쳤습니다~ 담장 밖으로!!! 홈런!!!`, `💣 크게 뜬 공~ 넘어갑니다!!! ${name}!!`, `💣 ${name} 맞는 순간 홈런!!!`, `💣 ${name} 담장을 넘깁니다!!! 홈런!!`]) + (ft ? ` (${Math.round(ft * 0.3048)}m${ft >= 430 ? " 초대형!" : ""})` : ""); big = true; }
+    else if (p.scoringPlay){ const v = (VERB.find(([r]) => r.test(tx)) || [, "타격"])[1]; const runs = (tx.match(/scored/g) || []).length;
+      txt = pickT(id, [`🏃 ${name} ${v}!${runs ? ` ${runs}점 들어옵니다!!` : ""}`, `🏃 ${name} 적시 ${v}!${runs ? ` ${runs}점!` : ""}`, `🏃 ${name} ${v}로 ${runs || 1}점 추가!`]); big = runs >= 2; }
+    else if (/struck out swinging/.test(tx)) txt = pickT(id, [`🔥 ${name} 헛스윙 삼진!`, `🔥 방망이가 허공을 가릅니다, ${name} 삼진`, `🔥 ${name} 헛스윙 K!`]);
+    else if (/struck out looking/.test(tx)) txt = pickT(id, [`🔥 ${name} 루킹 삼진!`, `🔥 꼼짝 못 하고 삼진, ${name}`, `🔥 ${name} 서서 삼진!`]);
     else if (ty === "End Inning"){ const h = /Middle/.test(tx) ? "초" : "말"; txt = `⏱️ ${per.number}회${h} 종료 (원정 ${p.awayScore} : ${p.homeScore} 홈)`; out.push({id:String(id), t:`${per.number}회${h}`, txt, big, low:true}); continue; }
     if (txt) out.push({id:String(id), t, txt, big});
   }
@@ -3550,6 +3584,8 @@ function pbpBuild(lg, m, sum){
 }
 // 카드 맨 위 초록 글씨 한 줄 (가장 최근 장면)
 const PBP_SEEN = {};
+// 가장 최근 장면 (작은 장면은 최근 4개 안에 더 큰 장면이 있으면 그걸)
+const pbpLatest = k => { const L1 = PBP[k]; if (!L1 || !L1.length) return null; return [...L1.slice(-4)].reverse().find(y => !y.low) || L1[L1.length - 1]; };
 function pbpTicker(lg, m){
   const k = lg + "|" + m.id, L1 = PBP[k]; if (!L1 || !L1.length || m.state === "pre") return "";
   const recent = L1.slice(-4), x = [...recent].reverse().find(y => !y.low) || L1[L1.length - 1], fresh = PBP_SEEN[k] !== undefined && PBP_SEEN[k] !== x.id;
