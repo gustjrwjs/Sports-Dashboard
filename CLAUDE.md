@@ -24,6 +24,7 @@
 - 축구 경기 상세 `fillSoccerIntel`: 주목할 선수 = summary.leaders(득점·도움·슈팅·선방 팀 내 1위), 결장 의심 = 최근 4경기 라인업 비교(이전 3경기 중 2선발 이상인데 직전 경기 미출전 → 명단 제외/벤치, 직전 퇴장 → 출장정지 가능). ESPN은 축구 부상 데이터가 사실상 없음(경기 전·후 summary.injuries 빈 값 확인).
 - 홈 탭 `renderHome`(첫 화면, 주소에 리그 없으면 홈): `loadIndex()` 목록에서 오늘(기기 날짜) + 진행 중. 종목·상태 필터, 내 경기·진행 중·곧 시작(`countdown`)·리그별 묶음. 홈에선 `#lgbar` 숨김, 리그 버튼 누르면 순위표로. My 경기 선택/전체 삭제 `data-myact`.
 - 응원팀 `FAVS`(favTeams.v1, `favBtn`/`favCard`), 알림 `NOTI`(noti.v1, 기본 off, `notiTick` 30초: My+응원팀 경기 점수 스냅샷 비교 → `pushNoti`(SW showNotification, sw.js notificationclick)), 빅매치 `loadBig`(리그 순위·FIFA·승률), 예측 `PICKS[].bet` + `BETLOG`(betLog.v1, `gradeBets`, 홈 `betStats`).
+- 메뉴 2단: 맨 위 `#gnav`(홈·리그·My·커뮤니티, 항상) / 리그 화면(`LG_TABS` 순위표·일정·팀 분석·LIVE)에서만 `#lghead`·`#lgbar`·`#tabs`. 리그 버튼은 마지막 리그 탭(`S.lastLgTab`) 기억.
 - 캡처 이미지는 **절대 서버·저장소로 보내거나 저장하지 않음**(화면에 명시됨, 소유자 요청). 이 원칙 유지.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.

@@ -702,6 +702,15 @@ a.appname:hover{opacity:.85}
 .nck{display:flex;align-items:center;gap:6px;cursor:pointer}
 @media (max-width:480px){ .favgrid{grid-template-columns:1fr} .bsrow{grid-template-columns:repeat(3,1fr)} .nset{grid-template-columns:1fr} }
 @media (max-width:400px){ #upd{display:none} }
+#lghead[hidden],#tabs[hidden]{display:none!important}
+nav.gnav{display:flex;gap:4px;margin:8px 0 2px;overflow-x:auto;scrollbar-width:none}
+nav.gnav::-webkit-scrollbar{display:none}
+nav.gnav button{flex:none;display:inline-flex;align-items:center;gap:5px;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+nav.gnav button.on{background:var(--text);border-color:var(--text);color:var(--bg)}
+nav.gnav button.on .mystar{color:#fbbf24}
+nav.gnav .lcnt:empty{display:none}
+#lghead{border-top:1px solid var(--border);margin-top:8px;padding-top:10px}
+@media (max-width:480px){ nav.gnav button{padding:6px 11px;font-size:13px} }
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -809,7 +818,15 @@ ul.news small{font-size:11px}
       <button class="btn ibtn" id="refresh" title="데이터 새로고침" aria-label="새로고침">↻</button>
       <input type="file" id="myimgIn" accept="image/*" multiple hidden>
     </div>
-    <div class="top-in">
+    <!-- 맨 위 메뉴: 어디서나 보임 -->
+    <nav class="gnav" id="gnav">
+      <button data-gnav="home">🏠 홈</button>
+      <button data-gnav="league">🏆 리그</button>
+      <button data-gnav="my" class="tab-my"><span class="mystar">★</span> My 경기<span class="lcnt" id="mycnt"></span></button>
+      <button data-gnav="talk">💬 커뮤니티</button>
+    </nav>
+    <!-- 리그 화면에서만: 리그 이름 · 리그 버튼 · 순위표/일정/팀 분석/LIVE -->
+    <div class="top-in" id="lghead">
       <div class="brand">
         <div class="mk" id="mark">UNL</div>
         <div><h1 id="lgname">SPORTS LIVE!</h1><div class="sub" id="season">불러오는 중…</div></div>
@@ -817,13 +834,10 @@ ul.news small{font-size:11px}
     </div>
     <div class="lgbar" id="lgbar"></div>
     <nav class="tabs" id="tabs">
-      <button data-tab="home" class="tab-home">🏠 홈</button>
       <button data-tab="standings" class="on">순위표</button>
       <button data-tab="matches"><span class="tl-long">경기 </span>일정·결과</button>
       <button data-tab="teams">팀 분석</button>
       <button data-tab="live" class="tab-live"><span class="ldot"></span>LIVE<span class="lcnt" id="lcnt"></span></button>
-      <button data-tab="my" class="tab-my"><span class="mystar">★</span>My<span class="tl-long"> 경기</span><span class="lcnt" id="mycnt"></span></button>
-      <button data-tab="talk" class="tab-talk">💬 커뮤니티</button>
     </nav>
   </div>
 </header>
@@ -1227,6 +1241,7 @@ const isNeutral = ev => ev.neutral || (/^FIFA World Cup$/.test(ev.competition ||
 const venueKo = (ev, home) => isNeutral(ev) ? "중립" : home ? "홈" : "원정";
 
 // ================================================================ 렌더링
+const LG_TABS = ["standings", "matches", "teams", "live"];
 function renderHeader(){
   const Lg = L(), d = D();
   $("#mark").textContent = Lg.mark; $("#mark").style.background = Lg.color;
@@ -1253,13 +1268,13 @@ function renderHeader(){
       <span class="mk" style="background:${x.color}">${x.mark}</span>${esc(x.short)}${x.disabled ? "<small>준비 중</small>" : ""}</button>`; }).join("")}</div>`;
   try { localStorage.setItem("last." + grp.keys[0], S.lg); } catch {}
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
-  $("#tabs").style.display = Lg.disabled && S.tab !== "my" && S.tab !== "talk" && S.tab !== "home" ? "none" : "";
-  if (S.tab === "home"){  // 홈은 특정 리그가 아니므로 머리글을 앱 이름으로
-    $("#mark").textContent = "HOME"; $("#mark").style.background = "#111827"; $("#lgname").textContent = "오늘의 경기"; $("#season").textContent = "모든 리그 · 모든 종목";
-    $("#lgwm").style.backgroundImage = "none"; $("#lgwmd").style.backgroundImage = "none"; document.title = "SPORTS LIVE!";
-    document.querySelectorAll(".lgchips .lgc.on").forEach(b => b.classList.remove("on"));
-  }
-  $("#lgbar").hidden = S.tab === "home";  // 홈은 아래 종목 버튼으로 거름 (리그별로 보려면 다른 탭)
+  // 리그 화면(순위표·일정·팀 분석·LIVE)에서만 리그 머리글·리그 버튼·리그 메뉴를 보임
+  const inLg = LG_TABS.includes(S.tab), g = inLg ? "league" : S.tab;
+  document.querySelectorAll("#gnav button").forEach(b => b.classList.toggle("on", b.dataset.gnav === g));
+  $("#lghead").hidden = !inLg; $("#lgbar").hidden = !inLg;
+  $("#tabs").hidden = !inLg || !!Lg.disabled;
+  if (!inLg){ $("#lgwm").style.backgroundImage = "none"; $("#lgwmd").style.backgroundImage = "none"; document.title = {home:"홈", my:"My 경기", talk:"커뮤니티"}[S.tab] ? `${({home:"홈", my:"My 경기", talk:"커뮤니티"})[S.tab]} · SPORTS LIVE!` : "SPORTS LIVE!"; }
+  else S.lastLgTab = S.tab;
   const stb = document.querySelector('#tabs [data-tab="standings"]'); if (stb) stb.hidden = !!Lg.nostand;
   updateLiveBadge();
   updateMyBadge();
@@ -4031,14 +4046,15 @@ function setLeague(lg){
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-pick],[data-mymatch],[data-season],[data-stview],[data-lg],[data-tab],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
+  const t = e.target.closest("[data-pick],[data-mymatch],[data-season],[data-stview],[data-lg],[data-tab],[data-gnav],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
   if (!t) return;
   if (t.dataset.pick){ e.preventDefault(); const [lg, id] = t.dataset.pick.split("|"); togglePick(lg, id); return; }
   if (t.dataset.mymatch){ const [lg, id] = t.dataset.mymatch.split("|"); openMyMatch(lg, id); return; }
   if (t.dataset.season !== undefined){ setSeason(t.dataset.season); return; }
   if (t.dataset.stview){ S.stView = t.dataset.stview; try { localStorage.setItem("stView", S.stView); } catch {} render(); return; }
-  if (t.dataset.lg){ if (S.tab === "home") S.tab = "standings"; setLeague(t.dataset.lg); }
+  if (t.dataset.lg){ if (!LG_TABS.includes(S.tab)) S.tab = S.lastLgTab || "standings"; setLeague(t.dataset.lg); }
   else if (t.dataset.tab){ S.tab = t.dataset.tab; window.scrollTo(0, 0); render(); }
+  else if (t.dataset.gnav){ const g = t.dataset.gnav; S.tab = g === "league" ? (S.lastLgTab || "standings") : g; window.scrollTo(0, 0); render(); if (g === "league" && !L().disabled && !D().loaded) loadLeague(S.lg); }
   else if (t.dataset.chip){ S.chip = t.dataset.chip; render(); }
   else if (t.dataset.mstatus){ S.mStatus = t.dataset.mstatus; render(); }
   else if (t.dataset.week){ moveWeek(Number(t.dataset.week)); }
