@@ -1291,6 +1291,54 @@ function hangul(name, en){
   HG_MEMO.set(mk, r); return r;
 }
 
+// ================================================================ 한국 선수 영어 표기 → 한글 이름 (위키데이터에 없을 때)
+// 예: Son Heung-Min → 손흥민, Jung Hoo Lee → 이정후, Hyeseong Kim → 김혜성
+const KR_SUR = {kim:"김",gim:"김",lee:"이",yi:"이",rhee:"이",park:"박",pak:"박",bak:"박",choi:"최",choe:"최",jung:"정",jeong:"정",chung:"정",kang:"강",gang:"강",
+  cho:"조",jo:"조",yoon:"윤",yun:"윤",jang:"장",chang:"장",lim:"임",im:"임",han:"한",oh:"오",seo:"서",suh:"서",shin:"신",sin:"신",kwon:"권",gwon:"권",
+  hwang:"황",ahn:"안",an:"안",song:"송",hong:"홍",jeon:"전",ko:"고",go:"고",moon:"문",mun:"문",yang:"양",son:"손",bae:"배",baek:"백",paik:"백",heo:"허",huh:"허",
+  nam:"남",noh:"노",roh:"노",ha:"하",kwak:"곽",seol:"설",hyun:"현",yoo:"유",yu:"유",ryu:"류",ryoo:"류",um:"엄",eom:"엄",won:"원",cheon:"천",chun:"천",
+  bang:"방",gong:"공",min:"민",ji:"지",byun:"변",byeon:"변",woo:"우",jin:"진",na:"나",do:"도",ki:"기",gi:"기",ma:"마",joo:"주",ju:"주",koo:"구",gu:"구",
+  cha:"차",shim:"심",sim:"심",choo:"추",chu:"추",yeo:"여",pyo:"표",tak:"탁",kook:"국",eun:"은",myung:"명",seong:"성",sung:"성",hyeon:"현"};
+const KR_SYL = {ga:"가",gang:"강",kang:"강",geon:"건",gun:"건",kun:"건",gyeong:"경",kyung:"경",kyeong:"경",go:"고",ko:"고",gu:"구",koo:"구",ku:"구",gwang:"광",kwang:"광",
+  gyu:"규",kyu:"규",gue:"규",geun:"근",keun:"근",gi:"기",ki:"기",gil:"길",kil:"길",guk:"국",gook:"국",kook:"국",gyo:"교",kyo:"교",
+  na:"나",nam:"남",no:"노",da:"다",dae:"대",deok:"덕",duk:"덕",do:"도",dong:"동",du:"두",doo:"두",
+  ra:"라",rae:"래",rok:"록",ro:"로",ryong:"룡",rin:"린",rim:"림",ma:"마",man:"만",myeong:"명",myung:"명",mo:"모",mu:"무",moo:"무",mun:"문",moon:"문",mi:"미",min:"민",
+  bae:"배",baek:"백",beom:"범",bum:"범",bo:"보",bok:"복",bong:"봉",bin:"빈",been:"빈",
+  sa:"사",san:"산",sang:"상",sae:"새",seo:"서",suh:"서",seok:"석",suk:"석",seon:"선",sun:"선",seol:"설",seong:"성",sung:"성",se:"세",so:"소",sol:"솔",su:"수",soo:"수",
+  seung:"승",si:"시",sik:"식",shin:"신",sin:"신",
+  a:"아",an:"안",ahn:"안",ae:"애",yang:"양",yeon:"연",yeol:"열",yul:"율",yeong:"영",young:"영",ye:"예",o:"오",oh:"오",ok:"옥",on:"온",wan:"완",wang:"왕",yo:"요",
+  yong:"용",yueng:"용",u:"우",woo:"우",wu:"우",uk:"욱",wook:"욱",ung:"웅",woong:"웅",won:"원",weon:"원",wi:"위",yu:"유",yoo:"유",yun:"윤",yoon:"윤",
+  eun:"은",ui:"의",eui:"의",i:"이",ik:"익",in:"인",il:"일",im:"임",lim:"임",
+  ja:"자",jae:"재",jea:"재",jeon:"전",jun:"준",joon:"준",jeong:"정",jung:"정",chung:"정",je:"제",jo:"조",cho:"조",jong:"종",ju:"주",joo:"주",ji:"지",jee:"지",jik:"직",jin:"진",
+  cha:"차",chan:"찬",chang:"창",chae:"채",cheol:"철",chul:"철",chun:"춘",chi:"치",tae:"태",taek:"택",pyo:"표",pil:"필",
+  ha:"하",hak:"학",han:"한",hae:"해",hyang:"향",heo:"허",hyeok:"혁",hyuk:"혁",hyeon:"현",hyun:"현",hye:"혜",ho:"호",hong:"홍",hwa:"화",hwan:"환",hwang:"황",
+  hu:"후",hoo:"후",hun:"훈",hoon:"훈",hwi:"휘",heung:"흥",hui:"희",hee:"희",heui:"희",hyo:"효",gyun:"균",kyun:"균",ryun:"륜"};
+// 붙여 쓴 이름 나누기 (Hyeseong → hye + seong), 1~3음절
+function krSplit(w){
+  w = w.toLowerCase(); const best = new Array(w.length + 1).fill(null); best[0] = [];
+  for (let i = 0; i < w.length; i++){ if (!best[i]) continue;
+    for (let j = i + 1; j <= Math.min(w.length, i + 6); j++){ const s = KR_SYL[w.slice(i, j)]; if (s && (!best[j] || best[j].length > best[i].length + 1)) best[j] = [...best[i], s]; } }
+  const r = best[w.length]; return r && r.length >= 1 && r.length <= 3 ? r : null;
+}
+function krGiven(toks){
+  const out = [];
+  for (const t of toks) for (const part of t.split("-").filter(Boolean)){ const s = krSplit(part); if (!s) return null; out.push(...s); }
+  return out.length >= 1 && out.length <= 3 ? out.join("") : null;
+}
+const KR_MEMO = new Map();
+function krName(n){
+  if (!n || /[^A-Za-z\s.\-']/.test(n)) return null;
+  if (KR_MEMO.has(n)) return KR_MEMO.get(n);
+  const t = n.replace(/\./g, "").trim().split(/\s+/); let r = null;
+  if (t.length >= 2 && t.length <= 4){
+    const f = KR_SUR[t[0].toLowerCase()], l = KR_SUR[t[t.length - 1].toLowerCase()];
+    // 한국식(성 먼저)은 이름에 하이픈이 있거나 두 단어일 때, 서양식(성 나중)
+    if (f && t.length <= 3){ const g = krGiven(t.slice(1)); if (g) r = f + g; }
+    if (!r && l){ const g = krGiven(t.slice(0, -1)); if (g) r = l + g; }
+  }
+  KR_MEMO.set(n, r); return r;
+}
+
 // ================================================================ 공통 도우미
 const $ = s => document.querySelector(s);
 const ko = n => KO[n] || (n ? hangul(n) : "?");
@@ -2625,7 +2673,7 @@ async function openMatch(id){
 }
 
 // ================================================================ 선수 한국어 이름·사진 (위키데이터)
-const WD_KEY = "wdPlayers.v2";
+const WD_KEY = "wdPlayers.v3";  // v3: 대소문자·악센트 다른 표기도 조회 (예전 "없음" 기록 버림)
 let WD = {};
 try { WD = JSON.parse(localStorage.getItem(WD_KEY) || "{}") || {}; } catch { WD = {}; }
 const wk = (n, occ) => occ + "|" + n;
@@ -2640,18 +2688,22 @@ async function lookupPlayers(names, occ){
   const need = [...new Set(names)].filter(n => !(wk(n, occ) in WD));
   for (let i = 0; i < need.length; i += 60){
     const chunk = need.slice(i, i + 60);
-    const vals = chunk.map(n => JSON.stringify(n) + "@en").join(" ");
+    const alt = new Map();  // 다른 표기 → 원래 이름
+    for (const n of chunk){ alt.set(n, n); const v = n.replace(/-(\p{Lu})/gu, (x, c) => "-" + c.toLowerCase()); if (v !== n) alt.set(v, n); const v2 = n.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); if (v2 !== n && !alt.has(v2)) alt.set(v2, n); }
+    const vals = [...alt.keys()].map(n => JSON.stringify(n) + "@en").join(" ");
     const q = `SELECT ?name ?ko ?kow ?img WHERE { VALUES ?name { ${vals} } ?item rdfs:label|skos:altLabel ?name ; wdt:P106 wd:${occ} .
       OPTIONAL { ?item rdfs:label ?ko FILTER(LANG(?ko) = "ko") }
       OPTIONAL { ?art schema:about ?item ; schema:isPartOf <https://ko.wikipedia.org/> ; schema:name ?kow }
       OPTIONAL { ?item wdt:P18 ?img } }`;
     try {
-      const r = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(q));
+      const url = "https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(q);
+      let r = await fetch(url);
+      if (!r.ok && r.status >= 500){ await new Promise(z => setTimeout(z, 1500)); r = await fetch(url); }  // 위키데이터가 가끔 502 → 한 번 더
       if (!r.ok) continue;
       const rows = (await r.json()).results.bindings;
       chunk.forEach(n => { WD[wk(n, occ)] = 0; });  // 0 = 조회했지만 정보 없음
       for (const b of rows){
-        const key = wk(b.name.value, occ), cur = WD[key] || {};
+        const key = wk(alt.get(b.name.value) || b.name.value, occ), cur = WD[key] || {};
         const k = b.ko || b.kow;  // 한국어 레이블이 없으면 한국어 위키백과 문서 제목
         if (k && !cur.ko) cur.ko = k.value.replace(/\s*\(.*?\)\s*/g, " ").trim();
         if (b.img && !cur.img) cur.img = b.img.value;
@@ -2662,12 +2714,14 @@ async function lookupPlayers(names, occ){
   try { localStorage.setItem(WD_KEY, JSON.stringify(WD)); } catch {}
 }
 const curOcc = () => OCC[L().sport];
-const wd = (n, occ = curOcc()) => WD[wk(n, occ)] || null;
+// 지금 리그 종목에 없으면 다른 종목 조회 결과도 확인 (홈·My에서는 여러 종목이 섞여 나옴)
+const wd = (n, occ = curOcc()) => WD[wk(n, occ)] || Object.values(OCC).map(o => WD[wk(n, o)]).find(x => x && x.ko) || null;
 const lastName = n => { const p = (n || "").trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(" ") : (n || ""); };
-const koFull = n => (wd(n) && wd(n).ko) || (n ? hangul(n, enSport()) : "");
+// 이름 순서: 위키백과(위키데이터) 한국어 이름 → 한국 선수 영어 표기 되돌리기 → 발음대로 한글
+const koFull = n => (wd(n) && wd(n).ko) || krName(n) || (n ? hangul(n, enSport()) : "");
 function koShort(n, occ){
   const ko = wd(n, occ) && wd(n, occ).ko, en = lastName(n);
-  if (!ko) return hangul(en, enSport());
+  if (!ko) return krName(n) || hangul(en, enSport());
   const kt = ko.split(/\s+/);
   if (kt.length < 2) return ko;
   return kt.slice(-Math.min(en.split(/\s+/).length, kt.length - 1)).join(" ");

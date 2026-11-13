@@ -63,6 +63,8 @@
 
 - 🛡 운영자 계정(2026-11-13): `accounts.is_admin`, `sl_is_admin(p_pass)`를 "운영자 비밀번호 OR 운영자 계정 토큰"으로 재정의(supabase_account.sql 안, setup.sql 다시 돌리면 account.sql도 다시), `acc_make_admin(token, 운영자비번)`. 앱 `ACC.admin`(acc.admin, acc_login/acc_get의 admin), `adminPass()`가 운영자 계정이면 토큰을 돌려줘 고정·답변·삭제가 비번 없이 됨. 머리글 버튼 🛡(`#accBtn.isadm` — `.adm`은 게시판 '운영자 모드' 배지 클래스라 겹치지 않게).
 
+- 선수 이름 순서(2026-11-13 소유자 요청: 위키백과 이름 그대로, 한국 선수 제대로): `koFull` = 위키데이터 한국어 이름(한국어 레이블/한국어 위키백과 제목) → `krName`(한국 선수 영어 표기 되돌리기: 성 `KR_SUR` + 이름 음절 `KR_SYL`, 붙여 쓴 이름은 `krSplit`, 성 앞/뒤 둘 다, 예 Jung Hoo Lee→이정후) → `hangul`. 위키데이터 조회는 대소문자·악센트 다른 표기도 같이 물음(Son Heung-Min ↔ Son Heung-min), 502면 한 번 재시도, `wd()`는 다른 종목 조회 결과도 확인. 캐시 키 `wdPlayers.v3`.
+
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 
 각 작업 후: 로컬 테스트(PC·모바일 375px) → GitHub 업로드 → 공개 링크 확인 → 한국어로 결과 보고 + 링크.
