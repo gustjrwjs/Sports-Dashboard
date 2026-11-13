@@ -58,7 +58,9 @@
 3. **업데이트가 끝나면 항상 마지막에 공개 링크를 줍니다.**
 4. **저작권 표시 유지**: All rights reserved (© 2026 gustjrwjs). MIT/오픈소스로 되돌리지 않습니다.
 
-## 코드 보호·배포 (2026-11-13 소유자 결정: 무료 방법 모두 적용)
+## 코드 보호·배포 (⏸ 보류 · 소유자 결정 2026-11-13: 차차 진행)
+
+- 난독화 빌드(`build.mjs`)만 준비됨. **비공개 전환·Cloudflare 이전은 아직 안 함** → 지금은 GitHub Pages(`static/` 원본) 그대로 배포. 소유자가 다시 요청하면 아래 순서로 진행(Cloudflare 먼저 → 새 주소 확인 → 비공개).
 
 - 저장소는 **비공개(Private)** 로 전환 예정(소유자가 GitHub Settings에서 직접). 비공개가 되면 GitHub Pages(무료)는 꺼짐.
 - 배포는 **Cloudflare Pages**(무료, 비공개 저장소 연결 가능): Build command `npm run build`, Output `dist`, main에 push하면 자동 배포.
