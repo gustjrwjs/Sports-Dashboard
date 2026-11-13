@@ -211,9 +211,27 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .nmrow{display:flex;align-items:center;gap:6px;max-width:100%;min-width:0}
 .nmrow .lg{width:22px;height:22px;flex:none}
 .nmrow .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.lqrow{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px;margin:6px 0 2px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-.lqrow span{background:var(--surface-2);border-radius:6px;padding:1px 6px;white-space:nowrap}
-.lqrow i{font-style:normal;font-size:9px;font-weight:700;margin-right:3px;opacity:.8}
+.ptwrap{overflow-x:auto;margin:8px 0 2px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.ptab{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:12.5px;text-align:center}
+.ptab th{font-size:10.5px;font-weight:700;color:var(--muted);padding:5px 3px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.ptab td{padding:6px 3px;border-bottom:1px solid var(--border)}
+.ptab tr:last-child td{border-bottom:0}
+.ptab .ptm{text-align:left;padding-left:8px;white-space:nowrap}
+.ptab td.ptm{font-weight:600}
+.ptab .ptn{display:flex;align-items:center;gap:5px;max-width:190px}
+.ptab .ptn>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptab td.ptm small{font-size:9.5px;color:var(--muted);font-weight:500}
+.ptab td.ptm .lg{width:18px;height:18px;flex:none}
+.ptab .cur{background:color-mix(in srgb, var(--live) 9%, transparent);color:var(--live);font-weight:800}
+.ptab th.cur{background:color-mix(in srgb, var(--live) 14%, var(--surface-2))}
+.ptab .tot{font-weight:800;border-left:1px solid var(--border);color:var(--text)}
+.ptab.cp{font-size:11.5px}
+.ptab.cp td{padding:4px 2px}
+.ptab.cp td.ptm{padding-left:6px}
+.ptab.cp .ptn{max-width:84px}
+.ptab.cp td.ptm .lg{width:16px;height:16px}
+.ptab.bsb td,.ptab.bsb th{min-width:18px}
+@media (max-width:420px){ .ptab.cp.bsb .ptn>span{display:none} .ptab.cp .ptn{max-width:64px} }
 .lt small{font-size:10.5px;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lc{text-align:center;padding:0 2px}
 .lsc{position:relative;display:inline-flex;align-items:center;gap:5px;font-size:22px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
@@ -556,6 +574,7 @@ tr.dnp td{color:var(--muted)}
 .pastebox{flex:1;min-height:24px;outline:none;font-size:14px;color:var(--text);caret-color:var(--accent);overflow:hidden;white-space:nowrap}
 .pastebox:empty::before{content:attr(data-ph);color:var(--muted);font-size:13.5px;white-space:normal}
 .slipfile,.slipgo{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:16px;cursor:pointer;display:grid;place-items:center;padding:0}
+.slipfile.gal{width:auto;border-radius:999px;padding:0 12px;font-size:13px;font-weight:700;white-space:nowrap}
 .slipgo{background:var(--accent);border-color:var(--accent);color:#fff;font-size:18px;font-weight:700}
 .slipgo:disabled{background:var(--surface-2);border-color:var(--border);color:var(--muted);cursor:default}
 .myimp .privnote{margin:0}
@@ -583,6 +602,8 @@ tr.dnp td{color:var(--muted)}
 .mt.a{justify-content:flex-end;text-align:right}
 .mt .lg{width:18px;height:18px;flex:none}
 .msc{font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.mmid{display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.msum{font-size:10px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mvs{color:var(--muted);font-size:11px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;background:#111827;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:99;transition:.25s;pointer-events:none}
 #toast.on{opacity:1;transform:translate(-50%,0)}
@@ -2172,7 +2193,7 @@ function basketballSection(m, sum){
       <tbody><tr class="grp-row"><td colspan="${cols.length + 1}">선발</td></tr>${starters.map(row).join("")}
       <tr class="grp-row"><td colspan="${cols.length + 1}">벤치</td></tr>${bench.map(row).join("")}</tbody></table></div></div>`;
   }).join("");
-  return `<div class="sec"><div class="sec-h"><h3>선수 기록</h3><span class="muted sp">출전 시간(분) · 득점 최다 선수 굵게</span></div></div>${html}`;
+  return lineScore(m, sum) + `<div class="sec"><div class="sec-h"><h3>선수 기록</h3><span class="muted sp">출전 시간(분) · 득점 최다 선수 굵게</span></div></div>${html}`;
 }
 
 // 경기 전 농구: 팀 명단(ESPN roster) + 직전 경기 선발로 '예상 선발'을 만들고 나머지는 벤치로
@@ -2213,15 +2234,27 @@ async function fillBbPre(m, h, a){
 // ---------------------------------------------------------------- 야구
 const BAT_COLS = [["AB","타수"],["R","득점"],["H","안타"],["RBI","타점"],["HR","홈런"],["BB","볼넷"],["K","삼진"],["AVG","타율"]];
 const PIT_COLS = [["IP","이닝"],["H","피안타"],["R","실점"],["ER","자책"],["BB","볼넷"],["K","삼진"],["HR","피홈런"],["PC","투구수"],["ERA","평균자책"]];
+// 쿼터(농구)·이닝(야구)별 점수표. rows: [{name, logo, ls:[숫자…], total, hits, errors, side}]
+function periodTable(sp, rows, live, period, compact){
+  const bb = sp === "basketball";
+  const n = Math.max(bb ? 4 : 9, ...rows.map(r => r.ls.length));
+  const lab = i => bb ? (i < 4 ? `${i + 1}Q` : `OT${i > 4 ? i - 3 : ""}`) : String(i + 1);
+  const cur = live ? (Number(period) || Math.max(...rows.map(r => r.ls.length))) - 1 : -1;
+  const tail = bb ? ["합"] : ["R", "H", "E"];
+  const short = n => { const k = ko(n), p = k.split(" "); return p.length > 1 ? p[p.length - 1] : k; };
+  return `<div class="ptwrap"><table class="ptab ${compact ? "cp" : ""} ${bb ? "" : "bsb"}"><thead><tr><th class="ptm"></th>${[...Array(n)].map((_, i) => `<th class="${i === cur ? "cur" : ""}">${lab(i)}</th>`).join("")}${tail.map(t => `<th class="tot">${t}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr><td class="ptm"><span class="ptn">${logo(r.logo)}<span>${esc(compact ? short(r.name) : ko(r.name))}</span>${r.side ? `<small>${r.side}</small>` : ""}</span></td>${[...Array(n)].map((_, i) => { const v = r.ls[i];
+      return `<td class="${i === cur ? "cur" : ""}">${v == null || v === "" ? "" : esc(Number.isFinite(Number(v)) ? Number(v) : v)}</td>`; }).join("")}
+      <td class="tot">${esc(r.total ?? "")}</td>${bb ? "" : `<td>${esc(r.hits ?? "")}</td><td>${esc(r.errors ?? "")}</td>`}</tr>`).join("")}</tbody></table></div>`;
+}
 function lineScore(m, sum){
   const comps = sum?.header?.competitions?.[0]?.competitors || [];
   const rows = orderTeams(m, comps, c => c.team?.id || c.id).filter(c => (c.linescores || []).length);
   if (rows.length < 2) return "";
-  const n = Math.max(9, ...rows.map(c => c.linescores.length));
-  const cell = (c, i) => { const v = c.linescores[i]; return v == null ? "" : (v.displayValue ?? v.value ?? ""); };
-  return `<div class="sec"><div class="box-wrap"><table class="box"><thead><tr><th class="tl">팀</th>${[...Array(n)].map((_, i) => `<th>${i + 1}</th>`).join("")}<th>R</th><th>H</th><th>E</th></tr></thead>
-    <tbody>${rows.map(c => `<tr><td class="pn"><span class="pn-in">${logo(c.team?.logo || (c.team?.logos || [{}])[0]?.href)}${esc(ko(c.team?.displayName))}</span></td>
-      ${[...Array(n)].map((_, i) => `<td>${esc(cell(c, i))}</td>`).join("")}<td class="hi">${esc(c.score ?? "")}</td><td>${esc(c.hits ?? "")}</td><td>${esc(c.errors ?? "")}</td></tr>`).join("")}</tbody></table></div></div>`;
+  const sp = L().sport, st = sum?.header?.competitions?.[0]?.status || {};
+  const rs = rows.map(c => ({name:c.team?.displayName, logo:c.team?.logo || (c.team?.logos || [{}])[0]?.href, ls:c.linescores.map(v => v.displayValue ?? v.value),
+    total:c.score, hits:c.hits, errors:c.errors, side:String(c.team?.id || c.id) === m.home.id ? "홈" : "원정"}));
+  return `<div class="sec"><div class="sec-h"><h3>${sp === "basketball" ? "쿼터별 점수" : "이닝별 점수"}</h3></div>${periodTable(sp, rs, m.state === "in", st.period)}</div>`;
 }
 function probablesBlock(m){
   const p = [m.home, m.away];
@@ -2398,9 +2431,12 @@ function liveCard(m, ctx){
       <div class="nmrow">${i ? logo(t.logo) : win}<span class="nm">${nm(t)}</span>${i ? win : logo(t.logo)}</div>${sub}</div>`;
   };
   let extra = "";
-  // 농구 쿼터별 점수: 카드 아래 한 줄 (홈-원정 순). 1쿼터 중엔 총점과 같아서 생략
-  const qh = qs("home"), qa = qs("away");
-  if (qh.length >= 2) extra += `<div class="lqrow" title="쿼터별 점수 (홈-원정)">${qh.map((v, k) => `<span><i>${k < 4 ? k + 1 + "Q" : "OT" + (k > 4 ? k - 3 : "")}</i>${esc(v)}-${esc(qa[k] ?? "")}</span>`).join("")}</div>`;
+  // 쿼터(농구)·이닝(야구)별 점수표
+  if (!pre && sp !== "soccer"){
+    const row = (t, side) => { const c = cOf(side); return {name:t.name, logo:t.logo, ls:(c.linescores || []).map(x => x.value), total:side === "home" ? hs : as, hits:c.hits, errors:c.errors}; };
+    const rs = [row(m.home, "home"), row(m.away, "away")];
+    if (rs.some(r => r.ls.length)) extra += periodTable(sp, rs, m.state === "in", m.period, true);
+  }
   if (sp === "baseball" && comp.situation && m.state === "in"){
     const s = comp.situation;
     const dia = `<span class="dia"><i class="${s.onSecond ? "on" : ""}" style="left:10px;top:0"></i><i class="${s.onThird ? "on" : ""}" style="left:2px;top:8px"></i><i class="${s.onFirst ? "on" : ""}" style="left:18px;top:8px"></i></span>`;
@@ -2841,7 +2877,8 @@ function addPickFrom(lg, m){
 const lgChip = lg => `<span class="mk xs" style="background:${LEAGUES[lg].color}">${LEAGUES[lg].mark}</span>`;
 function miniRow({lg, m}, opt = {}){
   const live = m.state === "in", post = m.state === "post";
-  const mid = live || post ? `<b class="msc">${m.home.score ?? 0} : ${m.away.score ?? 0}</b>` : `<span class="mvs">vs</span>`;
+  const tot = sportOf(lg) !== "soccer" && (live || post) ? `<small class="msum">합 ${(Number(m.home.score) || 0) + (Number(m.away.score) || 0)}</small>` : "";
+  const mid = live || post ? `<span class="mmid"><b class="msc">${m.home.score ?? 0} : ${m.away.score ?? 0}</b>${tot}</span>` : `<span class="mvs">vs</span>`;
   const when = live ? `<span class="live">● ${esc(liveText(m, sportOf(lg)))}</span>` : post ? "종료" : `${md(m.date)} ${timeOnly(m.date)}`;
   return `<div class="mrow ${live ? "is-live" : ""} ${opt.flash ? "flash" : ""}" data-open="${lg}|${m.id}">
     <div class="mtop">${lgChip(lg)}<span class="mlg">${esc(LEAGUES[lg].short)}</span><span class="mwhen">${when}</span>${opt.noPick ? "" : pickBtn(lg, m.id, true)}</div>
@@ -3027,7 +3064,8 @@ function runSlipQ(){
   clearSlipQ();
   importSlips(files);
 }
-let IMP_EL = null, IMP_FOCUS = false;  // 화면이 자동 새로고침돼도 같은 붙여넣기 칸(썸네일·커서)을 유지
+let IMP_EL = null, IMP_FOCUS = false;
+const TOUCH = matchMedia("(pointer:coarse)").matches;  // 화면이 자동 새로고침돼도 같은 붙여넣기 칸(썸네일·커서)을 유지
 function mountImp(){
   const slot = document.getElementById("myimpSlot"); if (!slot) return;
   let el = IMP_EL;
@@ -3037,8 +3075,8 @@ function mountImp(){
     el.innerHTML = `<div class="pastewrap" id="pastewrap">
         <div class="slipthumbs" id="slipthumbs"></div>
         <div class="pasterow">
-          <div class="pastebox" id="pastebox" contenteditable="true" role="textbox" aria-label="베팅내역 캡처 붙여넣기" data-ph="${matchMedia("(pointer:coarse)").matches ? "📋 여기를 길게 눌러 베팅내역 캡처 붙여넣기 · 📎로 사진 고르기" : "📋 베팅내역 캡처를 여기에 붙여넣기 (Ctrl+V) · 여러 장 가능 · Enter로 찾기"}"></div>
-          <button class="slipfile" data-myimg title="파일에서 고르기" aria-label="파일에서 고르기">📎</button>
+          <div class="pastebox" id="pastebox" contenteditable="true" role="textbox" aria-label="베팅내역 캡처 붙여넣기" data-ph="${TOUCH ? "🖼️ 눌러서 갤러리에서 캡처 고르기 · 길게 누르면 붙여넣기" : "📋 베팅내역 캡처를 여기에 붙여넣기 (Ctrl+V) · 여러 장 가능 · Enter로 찾기"}"></div>
+          <button class="slipfile ${TOUCH ? "gal" : ""}" data-myimg title="갤러리·파일에서 고르기" aria-label="갤러리에서 고르기">${TOUCH ? "🖼️ 갤러리" : "📎"}</button>
           <button class="slipgo" id="slipgo" title="경기 찾기 (Enter)" aria-label="경기 찾기" disabled>↵</button>
         </div></div>${PRIVACY_NOTE}`;
     const box = el.querySelector("#pastebox");
@@ -3056,7 +3094,8 @@ function mountImp(){
     wrap.addEventListener("dragover", e => { e.preventDefault(); wrap.classList.add("drag"); });
     wrap.addEventListener("dragleave", () => wrap.classList.remove("drag"));
     wrap.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); wrap.classList.remove("drag"); queueSlips(e.dataTransfer?.files || []); });
-    wrap.addEventListener("click", e => { if (!e.target.closest("button")) box.focus(); });
+    // 휴대폰: 칸을 짧게 누르면 바로 갤러리(사진 선택) 열기, 길게 누르면 붙여넣기 메뉴
+    wrap.addEventListener("click", e => { if (e.target.closest("button")) return; if (TOUCH && !SLIPQ.length) document.getElementById("myimgIn").click(); else box.focus(); });
   }
   slot.replaceWith(el);
   drawSlipQ();
@@ -3124,6 +3163,8 @@ const MINI_CSS = `
 .mt.a{justify-content:flex-end;text-align:right}
 .mt .lg{width:18px;height:18px;flex:none}
 .msc{font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.mmid{display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.msum{font-size:10px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mvs{color:var(--muted);font-size:11px}
 `;
 function pipCollect(){
