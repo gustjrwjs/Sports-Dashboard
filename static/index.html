@@ -655,6 +655,12 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.rankc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.rankt{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+.rankt th{font-size:11.5px;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--border)}
+.rankt td{text-align:center;padding:6px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.rankt .tl{text-align:left}.rankt td.rk{width:34px}.rankt tr.me td{background:var(--accent-soft);font-weight:700}
+.rankj{margin-top:10px;display:flex;justify-content:flex-end;align-items:center}
 .livest{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:color-mix(in srgb, #ef4444 8%, var(--surface));border:1px solid color-mix(in srgb, #ef4444 35%, var(--border));border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:13px}
 .livest b{color:#ef4444}.livest span{color:var(--muted)}
 .dlt{display:block;font-size:10px;font-weight:800;line-height:1}.dlt.up{color:#16a34a}.dlt.dn{color:#ef4444}
@@ -3409,12 +3415,14 @@ const SYNC_AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";  // 헷갈리는 0·O·1·I 
 const fmtCode = c => c.replace(/(.{4})(?=.)/g, "$1-");
 const normCode = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 function newCode(){ const a = new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(x => SYNC_AB[x % 32]).join(""); }
-function syncState(){ return {v:1, t:SYNC.t, picks:PICKS, groups:MYGRPS, addGrp:lsGet("my.addGrp", "1"), betlog:BETLOG, favs:FAVS}; }
+function syncState(){ return {v:1, t:SYNC.t, picks:PICKS, groups:MYGRPS, addGrp:lsGet("my.addGrp", "1"), betlog:BETLOG, favs:FAVS,
+  rank:lsGet("rank.on", "") === "1" ? {on:1, sec:rankSecret(), nick:myNick()} : null}; }
 function applySync(d){
   PICKS = Array.isArray(d.picks) ? d.picks : []; MYGRPS = Array.isArray(d.groups) ? d.groups : [];
   BETLOG = Array.isArray(d.betlog) ? d.betlog : []; FAVS = Array.isArray(d.favs) ? d.favs : [];
   try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); localStorage.setItem("my.groups", JSON.stringify(MYGRPS)); localStorage.setItem(BETLOG_KEY, JSON.stringify(BETLOG)); localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); } catch {}
   lsSet("my.addGrp", String(d.addGrp || "1"));
+  if (d.rank && d.rank.sec && String(d.rank.sec).length >= 32){ lsSet("rank.sec", d.rank.sec); lsSet("rank.on", "1"); RANK.on = true; if (!myNick() && d.rank.nick) lsSet("tk.nick", d.rank.nick); RANK.t = 0; }
   SYNC.t = Number(d.t) || Date.now(); lsSet("sync.t", String(SYNC.t));
   MY.t = 0; updateMyBadge();
   if (["home", "my"].includes(S.tab) && !modal.open) render();
@@ -3425,7 +3433,7 @@ function mergeSync(a, b){
   for (const p of [...(a.picks || []), ...(b.picks || [])]){ const k = p.lg + "|" + p.id, o = by.get(k); if (!o || (!o.bet && p.bet)) by.set(k, p); }
   const bl = new Map(); for (const x of [...(a.betlog || []), ...(b.betlog || [])]) if (!bl.has(x.k) || x.done) bl.set(x.k, x);
   const fv = new Map(); for (const f of [...(a.favs || []), ...(b.favs || [])]) fv.set(f.lg + "|" + f.id, f);
-  return {v:1, t:Date.now(), picks:[...by.values()], groups:[...new Set([...(a.groups || []), ...(b.groups || [])])], addGrp:a.addGrp || b.addGrp || "1", betlog:[...bl.values()], favs:[...fv.values()]};
+  return {v:1, t:Date.now(), picks:[...by.values()], groups:[...new Set([...(a.groups || []), ...(b.groups || [])])], addGrp:a.addGrp || b.addGrp || "1", betlog:[...bl.values()], favs:[...fv.values()], rank:a.rank || b.rank || null};
 }
 // 내 기기에서 바뀌면 2초 뒤 올림
 function syncDirty(){
@@ -3657,7 +3665,7 @@ async function tkAction(t){
       if (n.length < 2 || n.length > 12) return err("닉네임은 2~12자로 정해 주세요.");
       if (RESERVED.test(n.replace(/\s/g, ""))) return err("운영자로 오해될 수 있는 닉네임은 쓸 수 없습니다.");
       lsSet("tk.nick", n); modal.close();
-      if (v && v.startsWith("write:")) writeForm(v.slice(6)); else if (S.tab === "talk") renderTalk();
+      if (v && v.startsWith("write:")) writeForm(v.slice(6)); else if (v === "rank") rankJoin(); else if (S.tab === "talk") renderTalk();
     }
     else if (a === "write") writeForm(v);
     else if (a === "wcat"){ document.querySelectorAll('[data-tk="wcat"]').forEach(b => b.classList.toggle("on", b === t)); $("#tksubmit").dataset.v = v; $("#tkimgrow").style.display = v === "brag" ? "" : "none"; }
@@ -4241,6 +4249,7 @@ function setBet(k, field, val){
   p.bet[field] = p.bet[field] === val ? null : val;
   if (field === "ou") p.bet.line = p.bet.ou ? Number((MY.odds[k] || {}).overUnder) : null;
   savePicks();
+  if (field === "res") predPush(p);
   const i = BETLOG.findIndex(b => b.k === k);
   if (!p.bet.res && !p.bet.ou){ if (i >= 0) BETLOG.splice(i, 1); }
   else { const e = {k, lg:p.lg, date:p.date, home:p.home, away:p.away, res:p.bet.res || null, ou:p.bet.ou || null, line:p.bet.line ?? null, rHit:null, oHit:null}; if (i >= 0) BETLOG[i] = e; else BETLOG.push(e); }
@@ -4288,6 +4297,56 @@ document.addEventListener("click", e => {
   e.preventDefault(); e.stopPropagation();
   const [lg, id, f, v] = b.dataset.bet.split("|"); setBet(lg + "|" + id, f, v); renderMy(true);
 }, true);
+// ---------------------------------------------------------------- 🏆 모두 함께 예측 랭킹 (주간 적중왕, supabase_rank.sql)
+// 승패 예측만 참가. 서버가 ESPN 결과로 직접 채점하고, 경기 시작 뒤 바꾼 예측은 무효
+const RANK = {on:lsGet("rank.on", "") === "1", t:0, rows:null, off:false, busy:false};
+// 랭킹 전용 비밀값 (게시판 비밀값과 별개 · 기기 연동으로 같은 사람으로 이어짐)
+function rankSecret(){
+  let v = lsGet("rank.sec", "");
+  if (v.length < 32){ const a = new Uint8Array(20); crypto.getRandomValues(a); v = [...a].map(x => x.toString(16).padStart(2, "0")).join(""); lsSet("rank.sec", v); }
+  return v;
+}
+function weekRange(){  // 월요일 0시(한국 시간) ~ 다음 월요일
+  const k = new Date(Date.now() + 9 * 36e5), dow = (k.getUTCDay() + 6) % 7;
+  const mon = Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() - dow) - 9 * 36e5;
+  return [new Date(mon).toISOString(), new Date(mon + 7 * 864e5).toISOString()];
+}
+function predPush(p, quiet){
+  if (!RANK.on || !sbOn() || !myNick() || RANK.off) return Promise.resolve();
+  if (new Date(p.date) <= Date.now()) return Promise.resolve();
+  const Lg = LEAGUES[p.lg];
+  return rpc("pred_put", {p_secret:rankSecret(), p_nick:myNick(), p_sport:Lg.sport, p_slug:Lg.slug, p_event:String(p.id), p_pick:(p.bet || {}).res || null, p_kickoff:p.date})
+    .catch(e => { if (/pred_put|404|PGRST202/.test(e.message)) RANK.off = true; else if (!quiet) toast("랭킹 저장 실패: " + e.message); });
+}
+async function rankJoin(){
+  if (!sbOn()) return toast("서버가 아직 준비되지 않았습니다");
+  if (!myNick()) return nickForm("rank");
+  RANK.on = true; lsSet("rank.on", "1"); syncDirty?.();
+  const pre = PICKS.filter(p => (p.bet || {}).res && new Date(p.date) > Date.now());
+  await Promise.all(pre.map(p => predPush(p, true)));
+  toast(`랭킹에 참가했습니다${pre.length ? ` · 예측 ${pre.length}개 등록` : ""}`); RANK.t = 0; if (S.tab === "home") renderHome(true);
+}
+function loadRank(){
+  if (RANK.off || RANK.busy || !sbOn() || Date.now() - RANK.t < 60000) return;
+  RANK.busy = true; const [f, to] = weekRange();
+  rpc("pred_rank", {p_from:f, p_to:to, p_secret:RANK.on ? rankSecret() : null})
+    .then(r => { RANK.rows = r || []; })
+    .catch(e => { if (/pred_rank|404|PGRST202/.test(e.message)) RANK.off = true; })
+    .finally(() => { RANK.busy = false; RANK.t = Date.now(); if (S.tab === "home" && RANK.rows) renderHome(true); });
+}
+function rankCard(){
+  loadRank();
+  if (RANK.off || !sbOn()) return "";
+  const rows = RANK.rows || [], top = rows.filter(r => r.rank <= 10), me = rows.find(r => r.is_me);
+  const medal = n => n === 1 ? "🥇" : n === 2 ? "🥈" : n === 3 ? "🥉" : n;
+  const tr = r => `<tr class="${r.is_me ? "me" : ""}"><td class="rk">${medal(r.rank)}</td><td class="tl">${esc(r.nickname)}${r.is_me ? ' <em class="me">나</em>' : ""}</td><td>${r.hits}</td><td>${r.total}</td><td>${r.pct}%</td></tr>`;
+  const join = RANK.on ? `<span class="muted">${esc(myNick())} 님 참가 중 · My 경기에서 고른 승패 예측이 자동 등록</span>`
+    : `<button class="btn tkbtn" data-rank="join">🏆 랭킹 참가하기</button>`;
+  return `<div class="rankc"><div class="bsh"><b>🏆 이번 주 적중왕</b><span class="muted">월요일 0시 시작 · 승패 예측 · 서버가 ESPN 결과로 채점</span></div>
+    ${RANK.rows == null ? '<div class="muted" style="padding:8px 2px">순위를 불러오는 중…</div>' : top.length ? `<table class="rankt"><thead><tr><th>#</th><th class="tl">닉네임</th><th>적중</th><th>예측</th><th>적중률</th></tr></thead><tbody>${top.map(tr).join("")}${me && me.rank > 10 ? tr(me) : ""}</tbody></table>` : '<div class="muted" style="padding:8px 2px">이번 주 채점된 예측이 아직 없습니다. 첫 적중왕이 되어 보세요!</div>'}
+    <div class="rankj">${join}</div></div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-rank]"); if (b){ e.preventDefault(); rankJoin(); } });
 // 홈 적중률 카드
 function betStats(){
   gradeBets();
@@ -4346,7 +4405,7 @@ function renderHome(fromTick){
       <span class="sep"></span>
       <div class="chips">${[["all", "전체"], ["in", "● 진행 중"], ["pre", "예정"], ["post", "종료"]].map(([k, l]) => `<button class="chip ${st === k ? "on" : ""}" data-hst="${k}">${l}<span class="n">${cnt[k] || 0}</span></button>`).join("")}</div></div>`;
   if (FAVS.length) html += `<div class="strip-h"><h3>⭐ 내 응원팀</h3><span class="muted">팀 분석에서 ☆ 응원팀 등록</span></div><div class="favgrid">${FAVS.filter(f => sp === "all" || (LEAGUES[f.lg] && LEAGUES[f.lg].sport === sp)).map(favCard).join("")}</div>`;
-  html += betStats();
+  html += betStats() + rankCard();
   if (mine.length) html += `<div class="strip-h"><h3><span class="mystar">★</span> ${dy === "all" ? "어제·오늘·내일" : DAYW[dy]} 내가 담은 경기</h3><span class="muted">${mine.length}경기</span></div>${grid(mine)}`;
   loadBig();
   const big = (BIG.list || []).filter(x => okSp(x) && (st === "all" || x.m.state === st));
