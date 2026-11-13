@@ -655,6 +655,10 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.hlrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.hlbtn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:99px;background:#ff0033;color:#fff;font-weight:800;font-size:13px;text-decoration:none}
+@media (max-width:520px){.hlbtn{padding:7px 12px;font-size:12.5px}}
+.hlbtn.en{background:var(--surface);color:var(--text);border:1px solid var(--border)}.hlrow .muted{font-size:12px}
 .rankc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
 .rankt{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
 .rankt th{font-size:11.5px;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--border)}
@@ -2208,6 +2212,14 @@ function renderTeams(){
 // ================================================================ 모달
 const modal = $("#modal");
 function openModal(html){ $("#mbody").innerHTML = html; if (!modal.open) modal.showModal(); }
+// ▶ 하이라이트: 유튜브 검색으로 연결만 (영상 삽입·저장 안 함)
+function hlLinks(m){
+  if (m.state !== "post") return "";
+  const d = new Date(m.date), ds = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const yt = q => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+  const kq = `${ko(m.home.name)} ${ko(m.away.name)} 하이라이트`, eq = `${m.home.name} vs ${m.away.name} highlights ${d.getFullYear()}`;
+  return `<div class="hlrow"><a class="hlbtn" href="${esc(yt(kq))}" target="_blank" rel="noopener">▶ 하이라이트</a><a class="hlbtn en" href="${esc(yt(eq))}" target="_blank" rel="noopener">▶ 영어 영상</a><span class="muted">유튜브 검색 · ${ds} 경기</span></div>`;
+}
 // summary.seasonseries(축구: 최근 5번 맞대결 / NBA·MLB: 시즌 시리즈) → 팀 일정과 같은 모양
 function seriesEvents(sum){
   const out = [];
@@ -2543,9 +2555,10 @@ async function openMatch(id){
     const ob = oddsBlock(m, pickOdds(sum), false);
     const pbp = m.state !== "pre" && sum ? pbpSection(lg, m, sum) : "";
     const stx = statsSection(m, sum, sp);
+    const hl = hlLinks(m);
     const detail = sp === "soccer" ? goalsLine(m, sum) + ob + `<div class="sec" id="sintel" data-mid="${esc(m.id)}"><div class="loading">주목할 선수·결장 선수를 불러오는 중…</div></div>` + pbp + stx + lineupSection(m, sum ? parseLineups(sum) : null)
                  : ob + lineScore(m, sum) + pbp + stx + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
-    openModal(head + detail + adSlot("detail") + `
+    openModal(head + hl + detail + adSlot("detail") + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
           <div class="r"><div>${strip(h5)}</div><div class="k">최근 5경기 흐름</div><div>${strip(a5)}</div></div>

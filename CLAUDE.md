@@ -10,11 +10,10 @@
 ## 📋 다음 할 일 (소유자가 요청함 · 묻지 말고 순서대로 진행, 끝나면 이 목록에서 지우기)
 
 1. **(소유자가 할 일)** `supabase_rank.sql`을 Supabase SQL Editor에서 실행해야 예측 랭킹이 켜짐(실행 전엔 홈 카드가 숨겨짐). 실행 뒤 실제 서버에서 `pred_rank` 호출·10분 자동 채점(cron.job `sl-pred-grade`) 확인할 것.
-2. **(소유자 요청 2026-11-13)** 하이라이트 버튼: 종료된 경기 상세에 유튜브 검색 링크(`"홈 vs 원정 하이라이트"`, 공식 채널 우선 검색어). 영상 직접 삽입·저장 안 함.
-3. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
-4. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
-5. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
-6. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+2. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
+3. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
+4. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
+5. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 완료(2026-11-12): EFL 챔피언십(`eng.2`) 추가, K리그1·2·NPB "준비 중"(ESPN `baseball` 리그 12개에 NPB 없음, `jpn.npb`/`npb` 빈 응답), 대진표 미리보기.
 
@@ -56,6 +55,8 @@
 - ● 실시간 순위(2026-11-13 완료): `liveGroups`가 `D().matches` 중 진행 중 경기 점수를 순위표 행에 더해(축구 승점·득실, 농구·야구 승패·승률) 다시 정렬, `r.delta`로 ▲▼, 경기 중 팀 옆 `● 득:실`. 지난 시즌 보기에선 안 함. 게임차(gb)는 다시 계산 안 함.
 
 - 🏆 예측 랭킹(2026-11-13 코드 완료): `supabase_rank.sql` — 표 `preds`(직접 읽기·쓰기 불가), RPC `pred_put`(시작 전만·닉네임 사칭·주소 형식 검사, 1분 40회 제한)·`pred_rank`(주간 상위 20 + 내 줄). 채점은 서버가 pg_cron 10분마다 `pred_collect`→`pred_fetch`(pg_net으로 ESPN summary) → 시작 시간(ESPN 값) 뒤 변경은 void. 앱: `RANK`(rank.on), 랭킹 전용 비밀값 `rankSecret()`(rank.sec, 기기 연동 `syncState().rank`로 이어짐), `setBet`의 승패 예측 → `predPush`, 홈 `rankCard`(SQL 없으면 숨김), 주 = 월요일 0시 KST(`weekRange`). 로컬 PostgreSQL 16 + net/cron 흉내로 SQL 검증함.
+
+- ▶ 하이라이트(2026-11-13 완료): 종료 경기 상세 머리 아래 `hlLinks` — 유튜브 검색 링크만(한국어 팀명 + "하이라이트" / 영어 팀명 + highlights 연도). 영상 삽입·저장 없음.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 
