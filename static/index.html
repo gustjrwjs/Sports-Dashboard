@@ -1425,8 +1425,8 @@ function matchCard(m, compact){
   </button>`;
 }
 function liveText(m, sp = L().sport){
-  if (/HALFTIME/.test(m.status || "")) return sp === "soccer" ? "전종" : "하프";
-  if (/END_PERIOD/.test(m.status || "") && sp === "basketball") return `${m.period > 4 ? "연장" : m.period + "쿼"} 종료`;
+  if (/HALFTIME/.test(m.status || "")) return "하프타임";
+  if (/END_PERIOD/.test(m.status || "") && sp === "basketball") return `${m.period > 4 ? "연장" : m.period + "Q"} 종료`;
   if (sp === "soccer") return m.clock || "LIVE";
   if (sp === "basketball") return m.period ? `${m.period > 4 ? "연장" + (m.period > 5 ? m.period - 4 : "") : m.period + "Q"} ${m.clock || ""}`.trim() : "LIVE";
   const x = (m.detail || "").match(/^(Top|Bot|Bottom|Mid|End)\s+(\d+)/i);
@@ -2704,7 +2704,7 @@ function updateModalScore(){
   if (!m || !sc || m.state === "pre") return;
   sc.textContent = `${m.home.score ?? "-"} : ${m.away.score ?? "-"}`;
   const w = document.querySelector("#mbody .mh .when .live");
-  if (w) w.textContent = "● " + (m.state === "in" ? liveText(m) : "경종");
+  if (w) w.textContent = "● " + (m.state === "in" ? liveText(m) : "경기 종료");
 }
 
 // 축구 득점·퇴장 [홈[], 원정[]]
@@ -2781,7 +2781,7 @@ function liveCard(m, ctx){
   const center = pre
     ? `<div class="lsc"><b style="font-size:.8em">${timeOnly(m.date)}</b></div><div class="lclk muted">${esc(new Date(m.date).toLocaleDateString("ko-KR", {month:"numeric", day:"numeric", weekday:"short"}))} 예정</div>`
     : `<div class="lsc"><b class="${up[0] ? "up" : ""}">${hs}</b><span>:</span><b class="${up[1] ? "up" : ""}">${as}</b>${sum}</div>
-        <div class="lclk ${fin ? "muted" : "live"}">${fin ? "경종" : "● " + esc(liveText(m, sp))}</div>`;
+        <div class="lclk ${fin ? "muted" : "live"}">${fin ? "경기 종료" : "● " + esc(liveText(m, sp))}</div>`;
   const head = ctx.my ? `<div class="myhd">${pickBtn(ctx.lg, m.id, true)}<span class="mk" style="background:${Lg.color}">${Lg.mark}</span>${Lg.short !== Lg.mark ? esc(Lg.short) : ""}</div>` : pickBtn(ctx.lg, m.id);
   const open = ctx.my ? `data-mymatch="${ctx.lg}|${m.id}"` : `data-match="${m.id}"`;
   return `<div class="lcard ${fin ? "fin" : pre ? "pre" : ""} ${up[0] || up[1] ? "flash" : ""}" ${open} role="button" tabindex="0">
@@ -3063,7 +3063,7 @@ function myTable(list, sel, showGrp){
     // 배당 칸 = 예측 고르기 버튼. 고른 칸 파랑, 실제(진행 중이면 현재) 결과 칸 초록 테두리, 끝나면 ✅/❌
     const cell = (f, v, ml, a) => { const d = ml != null ? fOdds(ml) : "-", on = bet[f] === v, hit = f === "res" ? log.rHit : log.oHit;
       return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
-    const when = live ? `<span class="live">● ${esc(liveText(m, sp))}</span>` : post ? "경종" : `${md(m.date)} <b>${timeOnly(m.date)}</b>`;
+    const when = live ? `<span class="live">● ${esc(liveText(m, sp))}</span>` : post ? "종료" : `${md(m.date)} <b>${timeOnly(m.date)}</b>`;
     const sc = pre ? '<span class="vs">vs</span>' : `<b class="msc2 ${live ? "lv" : ""}">${hs} : ${as}</b>`;
     const nm = t => { const n = ko(t.name), q = n.split(" "); return sp === "soccer" ? n : q[q.length - 1]; };
     return `<tr class="mrw ${live ? "is-live" : ""} ${sel && sel.has(k) ? "selon" : ""}" data-mysel="${esc(k)}"><td class="mtp">${pickBtn(p.lg, p.id, true)}</td>${chk}${grp}
@@ -3712,7 +3712,7 @@ function miniRow({lg, m}, opt = {}){
   const tot = sportOf(lg) !== "soccer" && (live || post) ? `<small class="msum">합 ${(Number(m.home.score) || 0) + (Number(m.away.score) || 0)}</small>` : "";
   const mid = live || post ? `<span class="mmid"><b class="msc">${m.home.score ?? 0} : ${m.away.score ?? 0}</b>${tot}</span>` : `<span class="mvs">vs</span>`;
   const cd = opt.today && m.state === "pre" ? countdown(m.date) : "";
-  const when = live ? `<span class="live">● ${esc(liveText(m, sportOf(lg)))}</span>` : post ? "경종" : opt.today ? `${timeOnly(m.date)}${cd ? ` <b class="cd">· ${cd}</b>` : ""}` : `${md(m.date)} ${timeOnly(m.date)}`;
+  const when = live ? `<span class="live">● ${esc(liveText(m, sportOf(lg)))}</span>` : post ? "종료" : opt.today ? `${timeOnly(m.date)}${cd ? ` <b class="cd">· ${cd}</b>` : ""}` : `${md(m.date)} ${timeOnly(m.date)}`;
   return `<div class="mrow ${live ? "is-live" : ""} ${opt.flash ? "flash" : ""}" data-open="${lg}|${m.id}">
     <div class="mtop">${lgChip(lg)}<span class="mlg">${esc(LEAGUES[lg].short)}</span><span class="mwhen">${when}</span>${opt.noPick ? "" : pickBtn(lg, m.id, true)}</div>
     <div class="mteams"><span class="mt h">${logo(m.home.logo)}<span>${esc(ko(m.home.name))}</span></span>${mid}<span class="mt a"><span>${esc(ko(m.away.name))}</span>${logo(m.away.logo)}</span></div></div>`;
