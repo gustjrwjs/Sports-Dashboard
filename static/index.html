@@ -655,6 +655,9 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.hday h3 .muted{font-size:13px;font-weight:600;margin-left:4px;white-space:nowrap}
+.hday{flex-wrap:nowrap}
+.hday h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-bottom:14px}
 .hlg{margin-bottom:6px}
 .hlgh{display:flex;align-items:center;gap:8px;background:none;border:0;padding:4px 0 6px;cursor:pointer;color:var(--text);font:inherit;width:100%;text-align:left}
@@ -3926,6 +3929,7 @@ function loadIndex(force){
   IDX.t = Date.now();
   const now = new Date(), months = [ym(now)];
   if (now.getDate() > 18){ const n = new Date(now.getFullYear(), now.getMonth() + 1, 1); months.push(ym(n)); }
+  if (now.getDate() <= 2){ const pv = new Date(now.getFullYear(), now.getMonth() - 1, 1); months.unshift(ym(pv)); }  // 홈의 '어제'가 지난달일 때
   IDX.p = Promise.all(Object.entries(LEAGUES).filter(([, x]) => !x.disabled).map(async ([lg, Lg]) => {
     const base = `site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard`;
     const paths = [base, `${base}?dates=${ymd(now)}`, ...months.map(m => `${base}?dates=${m}&limit=500`)];
@@ -4190,6 +4194,7 @@ const SPORTS = [["all", "전체"], ["soccer", "⚽ 축구"], ["basketball", "�
 const LG_ORDER = SPORT_GROUPS.flatMap(g => g.keys);
 S.homeSport = lsGet("home.sport", "all"); S.homeState = "all";
 const countdown = iso => { const mi = Math.round((new Date(iso) - Date.now()) / 6e4); return mi <= 0 ? "곧 시작" : mi < 60 ? `${mi}분 후` : mi < 180 ? `${Math.floor(mi / 60)}시간 ${mi % 60 ? (mi % 60) + "분 " : ""}후` : ""; };
+const DAYW = {"-1":"어제", "0":"오늘", "1":"내일"};
 function renderHome(fromTick){
   clearTimeout(S.homePoll);
   if (!IDX.list.length){
@@ -4197,10 +4202,16 @@ function renderHome(fromTick){
     loadIndex().then(() => { if (S.tab === "home") renderHome(); });
     return;
   }
-  const today = dkey(new Date().toISOString()), now = Date.now();
+  const now = Date.now();
   const sp = S.homeSport, okSp = x => sp === "all" || sportOf(x.lg) === sp;
-  // 오늘(이 기기 날짜 기준) 경기 + 어제 시작해서 아직 진행 중인 경기
-  const all = IDX.list.filter(x => okSp(x) && (dkey(x.m.date) === today || x.m.state === "in"));
+  // 어제·오늘·내일 (이 기기 날짜 기준) — 한국은 유럽·미국 경기가 새벽이라 3일을 같이 봄
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  const offOf = x => { const t = new Date(x.m.date); t.setHours(0, 0, 0, 0); return Math.round((t - d0) / 864e5); };
+  const inRange = x => { const o = offOf(x); return o >= -1 && o <= 1; };
+  const span = IDX.list.filter(x => okSp(x) && (inRange(x) || x.m.state === "in"));
+  const dcnt = {all:span.length, "-1":0, "0":0, "1":0}; span.forEach(x => { const o = x.m.state === "in" ? 0 : offOf(x); if (o in dcnt) dcnt[o]++; });
+  const dy = S.homeDay || "all", dayOk = x => dy === "all" || String(x.m.state === "in" ? 0 : offOf(x)) === dy;
+  const all = span.filter(dayOk);
   const cnt = {all:all.length, in:0, pre:0, post:0}; all.forEach(x => cnt[x.m.state] = (cnt[x.m.state] || 0) + 1);
   const st = S.homeState, list = st === "all" ? all : all.filter(x => x.m.state === st);
   const live = list.filter(x => x.m.state === "in").sort((a, b) => a.m.date.localeCompare(b.m.date));
@@ -4218,25 +4229,33 @@ function renderHome(fromTick){
   const d = new Date();
   let html = `<div class="hhead"><h2>📅 ${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]}) 오늘의 경기</h2>
     <span class="auto"><i></i>30초마다 자동 업데이트</span></div>
+    <div class="bar hbar"><div class="chips">${[["all", "3일 전체"], ["-1", "어제"], ["0", "오늘"], ["1", "내일"]].map(([k, l]) => `<button class="chip ${dy === k ? "on" : ""}" data-hday="${k}">${l}<span class="n">${dcnt[k] || 0}</span></button>`).join("")}</div></div>
     <div class="bar hbar"><div class="chips">${SPORTS.map(([k, l]) => `<button class="chip ${sp === k ? "on" : ""}" data-hsp="${k}">${l}</button>`).join("")}</div>
       <span class="sep"></span>
       <div class="chips">${[["all", "전체"], ["in", "● 진행 중"], ["pre", "예정"], ["post", "종료"]].map(([k, l]) => `<button class="chip ${st === k ? "on" : ""}" data-hst="${k}">${l}<span class="n">${cnt[k] || 0}</span></button>`).join("")}</div></div>`;
   if (FAVS.length) html += `<div class="strip-h"><h3>⭐ 내 응원팀</h3><span class="muted">팀 분석에서 ☆ 응원팀 등록</span></div><div class="favgrid">${FAVS.filter(f => sp === "all" || (LEAGUES[f.lg] && LEAGUES[f.lg].sport === sp)).map(favCard).join("")}</div>`;
   html += betStats();
-  if (mine.length) html += `<div class="strip-h"><h3><span class="mystar">★</span> 오늘 내가 담은 경기</h3><span class="muted">${mine.length}경기</span></div>${grid(mine)}`;
+  if (mine.length) html += `<div class="strip-h"><h3><span class="mystar">★</span> ${dy === "all" ? "어제·오늘·내일" : DAYW[dy]} 내가 담은 경기</h3><span class="muted">${mine.length}경기</span></div>${grid(mine)}`;
   loadBig();
   const big = (BIG.list || []).filter(x => okSp(x) && (st === "all" || x.m.state === st));
   if (big.length) html += `<div class="strip-h"><h3>🔥 오늘의 빅매치</h3><span class="muted">상위권·강팀 맞대결</span></div><div class="hgrid">${big.map(x => `<div class="bigw"><span class="bigwhy">${esc(x.why)}</span>${miniRow(x, {today:true})}</div>`).join("")}</div>`;
   if (live.length) html += `<div class="strip-h"><h3 class="live">● 지금 진행 중</h3><span class="muted">${live.length}경기 · 누르면 상세·문자중계</span></div>${grid(live)}`;
   if (soon.length) html += `<div class="strip-h"><h3>⏰ 곧 시작 (1시간 안)</h3><span class="muted">${soon.length}경기</span></div>${grid(soon)}`;
-  if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? "오늘은 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
+  if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? (dy === "all" ? "어제·오늘·내일" : DAYW[dy]) + " 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
   else {
-    html += `<div class="strip-h"><h3>오늘 전체 일정</h3><span class="muted">리그별 · 시간 순</span></div>`;
     let gi = 0;
-    for (const [lg, arr] of byLg){
+    // 날짜 묶음: 오늘 → 내일 → 어제(결과)
+    for (const off of ["0", "1", "-1"].filter(o => dy === "all" || dy === o)){
+      const dd = new Date(d0); dd.setDate(dd.getDate() + Number(off));
+      const sub = new Map();
+      for (const [lg, arr] of byLg){ const a = arr.filter(x => String(x.m.state === "in" ? 0 : offOf(x)) === off); if (a.length) sub.set(lg, a); }
+      if (!sub.size) continue;
+      html += `<div class="strip-h hday"><h3>${DAYW[off]} 전체 일정 <span class="muted">${dd.getMonth() + 1}월 ${dd.getDate()}일 (${"일월화수목금토"[dd.getDay()]})</span></h3><span class="muted">${[...sub.values()].reduce((n, a) => n + a.length, 0)}경기</span></div>`;
+    for (const [lg, arr] of sub){
       const Lg = LEAGUES[lg];
       if (gi++ === 3) html += adSlot("home");
       html += `<section class="hlg"><button class="hlgh" data-golg="${lg}"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span><b>${esc(Lg.name)}</b><span class="muted">${arr.length}경기 ›</span></button><div class="hgrid">${arr.map(x => miniRow(x, {today:true, compact:true})).join("")}</div></section>`;
+    }
     }
   }
   if (byLg.size && byLg.size <= 3) html += adSlot("home");
@@ -4248,10 +4267,11 @@ function renderHome(fromTick){
     try { await loadIndex(true); } catch {} if (S.tab === "home" && !modal.open) renderHome(true); else if (S.tab === "home") S.homePoll = setTimeout(() => renderHome(true), 30000); }, 30000);
 }
 document.addEventListener("click", e => {
-  const a = e.target.closest("[data-hsp],[data-hst],[data-golg]");
+  const a = e.target.closest("[data-hsp],[data-hst],[data-golg],[data-hday]");
   if (!a || S.tab !== "home") return;
   if (a.dataset.hsp){ S.homeSport = a.dataset.hsp; lsSet("home.sport", S.homeSport); renderHome(); }
   else if (a.dataset.hst){ S.homeState = a.dataset.hst; renderHome(); }
+  else if (a.dataset.hday){ S.homeDay = a.dataset.hday; renderHome(); }
   else if (a.dataset.golg){ S.tab = LEAGUES[a.dataset.golg].nostand ? "matches" : "matches"; setLeague(a.dataset.golg); }
 });
 // ---------------------------------------------------------------- 🔍 경기 검색 (예정 · 진행 중)
