@@ -2543,6 +2543,13 @@ function pickOdds(sum){
   const list = [...((sum && sum.pickcenter) || []), ...((sum && sum.odds) || [])].filter(Boolean);
   return list.find(x => x.overUnder != null || x.spread != null || (x.homeTeamOdds && x.homeTeamOdds.moneyLine != null)) || null;
 }
+// 진행 중 언더오버: "지금 0골 · 언더 (3골 더 나면 오버)" — 기준점을 넘으려면 몇 골/점이 더 필요한지
+function ouNow(tot, line, soccer){
+  const u = soccer ? "골" : "점";
+  if (tot > line) return `지금 ${tot}${u} · 오버 확정`;
+  const need = Math.floor(line - tot) + 1;
+  return `지금 ${tot}${u} · ${tot === line ? "적특" : "언더"} (${need}${u} 더 나면 오버)`;
+}
 function oddsBlock(m, o, compact){
   if (!o) return "";
   if (!compact) return oddsTable(m, o);
@@ -2557,13 +2564,13 @@ function oddsBlock(m, o, compact){
   if (o.spread != null && !isNaN(Number(o.spread))){
     const sp = Number(o.spread), adj = hs + sp - as;  // 홈 핸디 적용 후 차이
     const fin = m.state === "post";
-    const st = started ? `<span class="onow">${fin ? "결과 " : ""}${adj > 0 ? (fin ? "홈" : "홈 우세") : adj < 0 ? (fin ? "원정" : "원정 우세") : "동점"}</span>` : "";
+    const st = started ? `<span class="onow">${fin ? "결과 " : "지금 "}${adj > 0 ? `홈 ${sgn(sp)} 적중` : adj < 0 ? `원정 ${sgn(-sp)} 적중` : "적특"}</span>` : "";
     rows.push(`<div class="orow"><span class="ok">핸디</span>${cell("홈 " + sgn(sp), fOdds(ho.spreadOdds), started && adj > 0)}${cell("원정 " + sgn(-sp), fOdds(ao.spreadOdds), started && adj < 0)}${st}</div>`);
   }
   if (o.overUnder != null && !isNaN(Number(o.overUnder))){
     const line = Number(o.overUnder), tot = hs + as;
     const st = !started ? "" : m.state === "post" ? `<span class="onow">결과 ${tot} · ${tot > line ? "오버" : tot < line ? "언더" : "적특"}</span>`
-      : `<span class="onow">현재 ${tot}${tot > line ? " · 오버" : ` · ${+(line - tot).toFixed(1)} 남음`}</span>`;
+      : `<span class="onow">${ouNow(tot, line, soccer)}</span>`;
     rows.push(`<div class="orow"><span class="ok">언더오버</span>${cell("기준", line, false)}${cell("오버", fOdds(o.overOdds), started && tot > line)}${cell("언더", fOdds(o.underOdds), started && tot < line)}${st}</div>`);
   }
   if (!rows.length) return "";
@@ -2578,17 +2585,17 @@ function oddsTable(m, o){
   const res = (txt, good) => `<td class="ores ${good ? "on" : ""}">${txt}</td>`;
   const rows = [];
   if (ho.moneyLine != null || ao.moneyLine != null){
-    const r = !started ? "-" : hs > as ? (fin ? "홈승" : "홈 우세") : hs < as ? (fin ? "원정승" : "원정 우세") : (fin ? "무승부" : "동점");
+    const r = !started ? "-" : hs > as ? (fin ? "홈승" : "지금 홈 리드") : hs < as ? (fin ? "원정승" : "지금 원정 리드") : (fin ? "무승부" : "지금 무승부");
     rows.push(`<tr><th>${soccer ? "승무패" : "승패"}</th><td class="ln">-</td>${td(fOdds(ho.moneyLine), hs > as)}${soccer ? td(fOdds((o.drawOdds || {}).moneyLine), hs === as) : ""}${td(fOdds(ao.moneyLine), hs < as)}${res(r, started)}</tr>`);
   }
   if (o.spread != null && !isNaN(Number(o.spread))){
     const sp = Number(o.spread), adj = hs + sp - as;
-    const r = !started ? "-" : adj > 0 ? (fin ? "홈 적중" : "홈 우세") : adj < 0 ? (fin ? "원정 적중" : "원정 우세") : (fin ? "적특" : "동점");
+    const r = !started ? "-" : adj > 0 ? `${fin ? "" : "지금 "}홈 ${sgn(sp)} 적중` : adj < 0 ? `${fin ? "" : "지금 "}원정 ${sgn(-sp)} 적중` : (fin ? "적특" : "지금 적특");
     rows.push(`<tr><th>핸디</th><td class="ln">홈 ${sgn(sp)}</td>${td(fOdds(ho.spreadOdds), adj > 0)}${soccer ? '<td class="na"></td>' : ""}${td(fOdds(ao.spreadOdds), adj < 0)}${res(r, started)}</tr>`);
   }
   if (o.overUnder != null && !isNaN(Number(o.overUnder))){
     const line = Number(o.overUnder), tot = hs + as;
-    const r = !started ? "-" : fin ? `${tot}점 · ${tot > line ? "오버" : tot < line ? "언더" : "적특"}` : `현재 ${tot}${tot > line ? " · 오버" : ` · ${+(line - tot).toFixed(1)} 남음`}`;
+    const r = !started ? "-" : fin ? `${tot}${soccer ? "골" : "점"} · ${tot > line ? "오버" : tot < line ? "언더" : "적특"}` : ouNow(tot, line, soccer);
     rows.push(`<tr><th>언더오버</th><td class="ln">${line}</td>${td(fOdds(o.overOdds), tot > line, "오버")}${soccer ? '<td class="na"></td>' : ""}${td(fOdds(o.underOdds), tot < line, "언더")}${res(r, started)}</tr>`);
   }
   if (!rows.length) return "";
@@ -2784,15 +2791,24 @@ async function fillSoccerIntel(lg, m, h, a, sum){
     for (const p of last.starters.concat(last.subs)) if (p.ev && p.ev.r.length) out.push({p, why:"직전 경기 퇴장 · 출장정지 가능", red:true});
     return out.sort((x, y) => (y.red ? 1 : 0) - (x.red ? 1 : 0) || (x.why === "명단 제외" ? -1 : 1) - (y.why === "명단 제외" ? -1 : 1));
   };
-  const [ah, aa] = await Promise.all([absences(h, m.home.id).catch(() => []), absences(a, m.away.id).catch(() => [])]);
+  let [ah, aa] = await Promise.all([absences(h, m.home.id).catch(() => []), absences(a, m.away.id).catch(() => [])]);
+  // 오늘 라인업이 나왔으면 반영: 선발·교체 투입 = 목록에서 빼기, 벤치 = '오늘 벤치', 명단에 없음 = '오늘 명단 제외(확정)'
+  const curLu = sum ? parseLineups(sum) : null, luOK = hasLineup(curLu);
+  const applyLu = (list, tid) => {
+    const t = luOK && [curLu.home, curLu.away].find(x => x && x.teamId === tid && x.starters.length); if (!t) return list;
+    const st = new Set(t.starters.map(p => p.id)), sb = new Map(t.subs.map(p => [p.id, p]));
+    return list.filter(x => !st.has(x.p.id) && !(sb.get(x.p.id) && (sb.get(x.p.id).subIn || sb.get(x.p.id).ev?.in)))
+      .map(x => ({...x, why:sb.has(x.p.id) ? "이 경기 벤치 (교체 명단)" : x.red ? "출장정지 · 이 경기 명단 제외(확정)" : "이 경기 명단 제외(확정)", conf:!sb.has(x.p.id)}));
+  };
+  ah = applyLu(ah, m.home.id); aa = applyLu(aa, m.away.id);
   const lh = leaders(m.home.id), la = leaders(m.away.id);
   await withTimeout(lookupPlayers([...lh, ...la].map(x => x.name).concat([...ah, ...aa].map(x => x.p.name)), OCC.soccer), 4000);
   const el = box(); if (!el) return;
   const col = (t, L1, A1, last) => `<div>${teamHead(m, t.id)}
     ${L1.length ? `<ul class="slead">${L1.map(x => `<li>${headImg(x.img || imgOf(x.name, 80))}<span class="sl">${x.lab}</span><b title="${nameTitle(x.name)}">${esc(koFull(x.name))}</b><span class="sv">${esc(x.v)}</span></li>`).join("")}</ul>` : '<div class="card empty">이번 시즌 선수 기록이 없습니다.</div>'}
-    <div class="sabs-h">🚑 결장 의심 <small class="muted">${last ? `직전 경기(${md(last.date)}) 기준` : ""}</small></div>
+    <div class="sabs-h">🚑 ${luOK ? "결장 (이 경기 라인업 반영)" : "결장 의심"} <small class="muted">${luOK ? "라인업 발표됨 · 선발로 나온 선수는 뺐습니다" : last ? `직전 경기(${md(last.date)}) 기준` : ""}</small></div>
     ${A1.length ? `<ul class="inj">${A1.map(x => `<li>${headImg(imgOf(x.p.name, 80))}<span class="inn"><span title="${nameTitle(x.p.name)}">${esc(koFull(x.p.name))}</span><small class="muted">${esc(x.p.pos || "")}${x.n ? ` · 이전 ${x.of}경기 중 ${x.n}경기 선발` : ""}</small></span><span class="stt">${esc(x.why)}</span></li>`).join("")}</ul>`
-      : '<div class="card empty" style="font-size:12px">최근 주전 중 빠진 선수가 없습니다.</div>'}</div>`;
+      : `<div class="card empty" style="font-size:12px">${luOK ? "최근 주전이 모두 이 경기 명단에 있습니다." : "최근 주전 중 빠진 선수가 없습니다."}</div>`}</div>`;
   const lastOf = t => t.past.find(e => e.id !== m.id && e.date < m.date);
   el.innerHTML = `<div class="sec-h"><h3>주목할 선수 · 결장 의심</h3><span class="muted sp">${m.state === "pre" ? "이번 시즌" : "이 경기"} 팀 내 1위 · 결장은 라인업 기록으로 추정(부상·징계·로테이션 구분 불가)</span></div>
     <div class="cols">${col(m.home, lh, ah, lastOf(h))}${col(m.away, la, aa, lastOf(a))}</div>`;
