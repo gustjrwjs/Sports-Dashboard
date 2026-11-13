@@ -40,6 +40,8 @@
 
 - 광고 자리 `ADS`/`adSlot(name)`(기본 꺼짐 → 빈 문자열). 자리: home(오늘 일정 리그 3개 뒤)·league(순위표 범례 아래)·matches(일정 둘째 날 뒤)·detail(경기 상세 중계·라인업 뒤, 두 팀 비교 앞)·my(My 맨 아래). `?adtest`로 노란 점선 미리보기. 켜려면 `ADS.on/client/slots` + `<head>`에 애드센스 스크립트. PiP·검색·캡처 창·배당 버튼 옆·글쓰기 창엔 넣지 않음.
 
+- 게시판 📌 공지 고정: `posts.pinned` + RPC `admin_pin_post`(운영자 비밀번호를 서버가 확인, supabase_pin.sql). 목록은 `pinned.desc,created_at.desc`. pinned 칸이 없으면(`TK.pinOk=false`) 고정 없이 불러오고 버튼 숨김.
+
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 
 각 작업 후: 로컬 테스트(PC·모바일 375px) → GitHub 업로드 → 공개 링크 확인 → 한국어로 결과 보고 + 링크.

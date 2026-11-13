@@ -143,6 +143,8 @@ table.blegs td.live{color:var(--live)}
 .tkpost:hover{border-color:var(--lgc, var(--accent))}
 .tkthumb{width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none;background:var(--surface-2)}
 .tkmain{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.tkpost.pinned{border-color:var(--accent,#2563eb);background:color-mix(in srgb, var(--accent,#2563eb) 6%, var(--surface))}
+.pinb{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--accent,#2563eb);border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:1px}
 .tkt{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tkb{color:var(--muted);font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
 .tkm{font-size:12px;color:var(--muted)}
@@ -3280,7 +3282,9 @@ async function loadTalk(cat, force){
   if (!force && TK.t[cat] && Date.now() - TK.t[cat] < 30000) return;
   TK.loading = true;
   try {
-    TK.posts[cat] = await sb(`/rest/v1/posts?select=id,created_at,category,nickname,title,body,image_url,likes,comment_count&category=eq.${cat}&order=created_at.desc&limit=60`);
+    const q = pin => `/rest/v1/posts?select=id,created_at,category,nickname,title,body,image_url,likes,comment_count${pin ? ",pinned" : ""}&category=eq.${cat}&order=${pin ? "pinned.desc," : ""}created_at.desc&limit=60`;
+    // pinned 칸이 아직 없으면(supabase_pin.sql 실행 전) 고정 없이 불러옴
+    try { TK.posts[cat] = await sb(q(TK.pinOk !== false)); } catch (e) { if (TK.pinOk === false) throw e; TK.pinOk = false; TK.posts[cat] = await sb(q(false)); }
     TK.t[cat] = Date.now(); TK.err = null;
   } catch (e) { TK.err = e.message; }
   finally { TK.loading = false; }
@@ -3324,9 +3328,9 @@ function renderTalk(fromLoad){
   if (TK.err) html += `<div class="card empty" style="margin-bottom:10px">불러오지 못했습니다: ${esc(TK.err)}</div>`;
   if (!list) html += '<div class="loading">글을 불러오는 중…</div>';
   else if (!list.length) html += `<div class="card live-empty"><b>아직 글이 없습니다</b><span class="muted">첫 글을 남겨 보세요!</span></div>`;
-  else html += `<div class="tklist">${list.map(p => `<div class="tkpost" data-tk="open" data-v="${p.id}" role="button" tabindex="0">
+  else html += `<div class="tklist">${list.map(p => `<div class="tkpost${p.pinned ? " pinned" : ""}" data-tk="open" data-v="${p.id}" role="button" tabindex="0">
       ${imgOk(p.image_url) ? `<img class="tkthumb" src="${esc(p.image_url)}" alt="" loading="lazy">` : ""}
-      <div class="tkmain"><b class="tkt">${esc(p.title)}</b><span class="tkb">${esc(p.body)}</span>
+      <div class="tkmain"><b class="tkt">${p.pinned ? '<span class="pinb">📌 공지</span>' : ""}${esc(p.title)}</b><span class="tkb">${esc(p.body)}</span>
         <span class="tkm">${esc(p.nickname)}${isMine("p", p.id) ? ' <em class="me">나</em>' : ""} · ${esc(timeAgo(p.created_at))}${p.category === "brag" ? ` · 👍 ${p.likes}` : ""} · 💬 ${p.comment_count}</span></div></div>`).join("")}</div>`;
   $("#main").innerHTML = html;
 }
@@ -3398,6 +3402,7 @@ async function openPost(id){
     <div class="tkbody">${esc(p.body)}</div>
     <div class="tkacts">${p.category === "brag" ? `<button class="btn ${liked ? "on" : ""}" data-tk="like" data-v="${p.id}" ${liked ? "disabled" : ""}>👍 추천 ${p.likes}</button>` : ""}
       ${isMine("p", p.id) ? `<button class="btn" data-tk="del" data-v="${p.id}">🗑 내 글 삭제</button>` : ""}
+      ${adm && TK.pinOk !== false ? `<button class="btn" data-tk="pin" data-v="${p.id}" data-p="${p.pinned ? 0 : 1}">${p.pinned ? "📌 고정 해제" : "📌 맨 위 고정"}</button>` : ""}
       ${adm ? `<button class="btn danger" data-tk="adel" data-v="${p.id}">운영자 삭제</button>` : ""}</div>
     <div class="sec"><div class="sec-h"><h3>댓글 ${cs.length}</h3></div>
       <ul class="tkcs">${cs.map(c => `<li class="${c.is_admin ? "adm" : ""}"><b>${c.is_admin ? "🛡 운영자" : esc(c.nickname)}</b>${isMine("c", c.id) ? ' <em class="me">나</em>' : ""}<small class="muted"> · ${esc(timeAgo(c.created_at))}</small>
@@ -3430,6 +3435,11 @@ async function tkAction(t){
       const l = lsJson("tk.liked", []); l.push(Number(v)); lsSet("tk.liked", JSON.stringify(l.slice(-500)));
       const p = Object.values(TK.posts).flat().find(x => x && x.id === Number(v)); if (p) p.likes = n ?? p.likes + 1;
       t.disabled = true; t.classList.add("on"); t.textContent = "👍 추천 " + (p ? p.likes : "");
+    }
+    else if (a === "pin"){
+      const on = t.dataset.p === "1";
+      if (!await rpc("admin_pin_post", {p_id:Number(v), p_pin:on, p_pass:adminPass()})) return err("고정하지 못했습니다.");
+      modal.close(); TK.t[TK.cat] = 0; await loadTalk(TK.cat, true);
     }
     else if (a === "del" || a === "adel"){
       if (!confirm("이 글을 삭제할까요? 되돌릴 수 없습니다.")) return;

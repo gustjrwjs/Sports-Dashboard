@@ -189,6 +189,21 @@ grant execute on function public.admin_comment(bigint, text, text)              
 grant execute on function public.admin_delete_post(bigint, text)                 to anon, authenticated;
 grant execute on function public.admin_delete_comment(bigint, text)              to anon, authenticated;
 
+-- ---------------------------------------------------------------- 📌 공지 고정 (운영자만)
+alter table public.posts add column if not exists pinned boolean not null default false;
+create index if not exists posts_cat_pin_time on public.posts (category, pinned desc, created_at desc);
+grant select (pinned) on public.posts to anon, authenticated;
+
+create or replace function public.admin_pin_post(p_id bigint, p_pin boolean, p_pass text)
+returns boolean language plpgsql security definer set search_path = public, extensions as $$
+begin
+  if not sl_is_admin(p_pass) then raise exception '운영자 비밀번호가 틀렸습니다'; end if;
+  update posts set pinned = coalesce(p_pin, false) where id = p_id;
+  return found;
+end $$;
+revoke all on function public.admin_pin_post(bigint, boolean, text) from public;
+grant execute on function public.admin_pin_post(bigint, boolean, text) to anon, authenticated;
+
 -- ---------------------------------------------------------------- 사진 저장소 (자랑하기 첨부 이미지)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('brag', 'brag', true, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
