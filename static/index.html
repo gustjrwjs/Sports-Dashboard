@@ -542,7 +542,21 @@ tr.dnp td{color:var(--muted)}
 .srch .chips{margin-bottom:10px}
 .sres-n{font-size:12px;margin-bottom:6px}
 .privnote{flex-basis:100%;font-size:11.5px;line-height:1.5;color:var(--text);background:color-mix(in srgb, #22c55e 10%, var(--surface));border:1px solid color-mix(in srgb, #22c55e 35%, var(--border));border-radius:8px;padding:6px 10px;margin:0 0 8px}
-.myimp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;font-size:12px}
+.myimp{display:flex;flex-direction:column;gap:8px;margin:0 0 14px;font-size:12px}
+.pastewrap{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:8px 8px 8px 14px;box-shadow:var(--shadow);cursor:text;transition:border-color .15s}
+.pastewrap:focus-within,.pastewrap.drag{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
+.slipthumbs{display:flex;flex-wrap:wrap;gap:8px}
+.pastewrap.has .slipthumbs{margin:2px 0 8px}
+.sth{position:relative;width:88px;height:88px;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--surface-2)}
+.sth img{width:100%;height:100%;object-fit:cover;object-position:top left}
+.sth button{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:11px;line-height:20px;padding:0;cursor:pointer}
+.pasterow{display:flex;align-items:center;gap:6px}
+.pastebox{flex:1;min-height:24px;outline:none;font-size:14px;color:var(--text);caret-color:var(--accent);overflow:hidden;white-space:nowrap}
+.pastebox:empty::before{content:attr(data-ph);color:var(--muted);font-size:13.5px;white-space:normal}
+.slipfile,.slipgo{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:16px;cursor:pointer;display:grid;place-items:center;padding:0}
+.slipgo{background:var(--accent);border-color:var(--accent);color:#fff;font-size:18px;font-weight:700}
+.slipgo:disabled{background:var(--surface-2);border-color:var(--border);color:var(--muted);cursor:default}
+.myimp .privnote{margin:0}
 .ocr-it{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .ocr-it>.mrow{flex:1;min-width:0}
 .ocr-it input{width:18px;height:18px;flex:none}
@@ -2536,11 +2550,12 @@ function renderMy(fromRefresh){
     ? `<span class="auto"><i></i>${Object.values(MY.ev).some(m => m.state === "in") ? LIVE_FAST / 1000 : LIVE_SLOW / 1000}초마다 자동 업데이트 · ${new Date(MY.t).toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</span>` : ""}</div>`;
   if (!PICKS.length){
     clearTimeout(S.myPoll);
-    $("#main").innerHTML = bar(0) + myImportBar() + `<div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
-      <span class="muted">경기 카드 오른쪽 위의 <b class="mystar">☆</b>를 누르면 여기에 모입니다.<br>여러 리그 경기를 섞어서 담을 수 있고, 진행 중인 경기는 점수가 자동으로 바뀝니다.</span></div>`;
+    $("#main").innerHTML = bar(0) + '<div id="myimpSlot"></div>' + `<div class="card live-empty"><b>아직 담은 경기가 없습니다</b>
+      <span class="muted">경기 카드 오른쪽 위의 <b class="mystar">☆</b>를 누르거나, 위 칸에 베팅내역 캡처를 붙여넣으면 여기에 모입니다.<br>여러 리그 경기를 섞어서 담을 수 있고, 진행 중인 경기는 점수가 자동으로 바뀝니다.</span></div>`;
+    mountImp();
     return;
   }
-  if (!MY.t){ $("#main").innerHTML = bar(PICKS.length) + '<div class="loading">담은 경기를 불러오는 중…</div>'; refreshMy(); return; }
+  if (!MY.t){ $("#main").innerHTML = bar(PICKS.length) + '<div id="myimpSlot"></div><div class="loading">담은 경기를 불러오는 중…</div>'; mountImp(); refreshMy(); return; }
   if (!fromRefresh && Date.now() - MY.t > 15000) refreshMy();
   else if (!fromRefresh) scheduleMy();
   const items = PICKS.map(p => ({p, k:p.lg + "|" + p.id, m:MY.ev[p.lg + "|" + p.id]}))
@@ -2553,7 +2568,7 @@ function renderMy(fromRefresh){
   };
   const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
   const sec = (title, list) => list.length ? `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div><div class="lgrid">${list.map(card).join("")}</div>` : "";
-  let html = bar(PICKS.length) + myImportBar();
+  let html = bar(PICKS.length) + '<div id="myimpSlot"></div>';
   if (MY.err) html += `<div class="card empty" style="margin-bottom:10px">업데이트 실패: ${esc(MY.err)} · 잠시 후 다시 시도합니다.</div>`;
   if (done.length){
     const w = done.filter(x => x.m.home.winner || x.m.away.winner).length;
@@ -2562,6 +2577,7 @@ function renderMy(fromRefresh){
   html += sec("● 진행 중", live) + sec("예정", soon) + sec("결과", done);
   html += `<div class="muted" style="font-size:11px;margin:-8px 0 16px">담은 경기는 이 기기에만 저장되고, 경기(또는 담은 날) 후 7일이 지나면 자동으로 빠집니다. ★를 다시 누르면 뺄 수 있습니다.${Object.keys(MY.odds).some(k => MY.odds[k]) ? " · 배당: DraftKings 경기 전 기준 · 초록색은 현재(최종) 점수 기준 맞는 쪽" : ""}</div>`;
   $("#main").innerHTML = html;
+  mountImp();
 }
 async function openMyMatch(lg, id){
   if (S.lg !== lg){ setLeague(lg); }
@@ -2983,8 +2999,69 @@ async function importSlips(files){
       <p class="note">지난 2일 ~ 앞으로 10일 경기 중에서 찾습니다.</p>`;
   } catch (e) { st(`<span class="live">오류: ${esc(e.message || e)}</span>`); }
 }
+// 붙여넣기 칸(채팅 입력창처럼): Ctrl+V → 썸네일 → Enter/↵로 경기 찾기
+const SLIPQ = [];  // 아직 검색 안 한 캡처 (이 페이지 메모리에만, 저장 안 함)
+function queueSlips(files){
+  files = [...files].filter(f => f && /^image\//.test(f.type));
+  if (!files.length) return false;
+  for (const f of files) if (SLIPQ.length < 6) SLIPQ.push({f, url:URL.createObjectURL(f)});
+  drawSlipQ();
+  document.getElementById("pastebox")?.focus();
+  return true;
+}
+function clearSlipQ(){ for (const x of SLIPQ) URL.revokeObjectURL(x.url); SLIPQ.length = 0; drawSlipQ(); }
+function drawSlipQ(){
+  const th = document.getElementById("slipthumbs"), go = document.getElementById("slipgo");
+  if (th) th.innerHTML = SLIPQ.map((x, i) => `<span class="sth"><img src="${x.url}" alt="캡처 ${i + 1}"><button data-slipdel="${i}" title="빼기" aria-label="빼기">✕</button></span>`).join("");
+  if (go) go.disabled = !SLIPQ.length;
+  document.getElementById("pastewrap")?.classList.toggle("has", SLIPQ.length > 0);
+}
+function runSlipQ(){
+  if (!SLIPQ.length) return;
+  const files = SLIPQ.map(x => x.f);
+  clearSlipQ();
+  importSlips(files);
+}
+let IMP_EL = null, IMP_FOCUS = false;  // 화면이 자동 새로고침돼도 같은 붙여넣기 칸(썸네일·커서)을 유지
+function mountImp(){
+  const slot = document.getElementById("myimpSlot"); if (!slot) return;
+  let el = IMP_EL;
+  if (!el){
+    el = IMP_EL = document.createElement("div");
+    el.id = "myimp"; el.className = "myimp";
+    el.innerHTML = `<div class="pastewrap" id="pastewrap">
+        <div class="slipthumbs" id="slipthumbs"></div>
+        <div class="pasterow">
+          <div class="pastebox" id="pastebox" contenteditable="true" role="textbox" aria-label="베팅내역 캡처 붙여넣기" data-ph="${matchMedia("(pointer:coarse)").matches ? "📋 여기를 길게 눌러 베팅내역 캡처 붙여넣기 · 📎로 사진 고르기" : "📋 베팅내역 캡처를 여기에 붙여넣기 (Ctrl+V) · 여러 장 가능 · Enter로 찾기"}"></div>
+          <button class="slipfile" data-myimg title="파일에서 고르기" aria-label="파일에서 고르기">📎</button>
+          <button class="slipgo" id="slipgo" title="경기 찾기 (Enter)" aria-label="경기 찾기" disabled>↵</button>
+        </div></div>${PRIVACY_NOTE}`;
+    const box = el.querySelector("#pastebox");
+    box.addEventListener("paste", e => {
+      e.preventDefault(); e.stopPropagation();
+      const fs = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith("image/")).map(i => i.getAsFile());
+      if (!queueSlips(fs)) toast("이미지를 복사한 뒤 붙여넣어 주세요 (캡처: Win+Shift+S)");
+    });
+    box.addEventListener("beforeinput", e => { if (e.inputType !== "insertFromPaste") e.preventDefault(); });  // 글자 입력은 막음
+    box.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); runSlipQ(); } });
+    box.addEventListener("input", () => { box.textContent = ""; });
+    box.addEventListener("focus", () => { IMP_FOCUS = true; });
+    box.addEventListener("blur", () => setTimeout(() => { if (box.isConnected) IMP_FOCUS = false; }, 0));
+    const wrap = el.querySelector("#pastewrap");
+    wrap.addEventListener("dragover", e => { e.preventDefault(); wrap.classList.add("drag"); });
+    wrap.addEventListener("dragleave", () => wrap.classList.remove("drag"));
+    wrap.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); wrap.classList.remove("drag"); queueSlips(e.dataTransfer?.files || []); });
+    wrap.addEventListener("click", e => { if (!e.target.closest("button")) box.focus(); });
+  }
+  slot.replaceWith(el);
+  drawSlipQ();
+  if (IMP_FOCUS && !modal.open) el.querySelector("#pastebox").focus({preventScroll:true});
+}
 document.addEventListener("click", e => {
   if (e.target.closest("[data-myimg]")){ document.getElementById("myimgIn").click(); return; }
+  const d = e.target.closest("[data-slipdel]");
+  if (d){ const i = Number(d.dataset.slipdel); URL.revokeObjectURL(SLIPQ[i].url); SLIPQ.splice(i, 1); drawSlipQ(); return; }
+  if (e.target.closest("#slipgo")){ runSlipQ(); return; }
   if (e.target.id === "ocrAdd"){
     let n = 0;
     document.querySelectorAll("[data-oi]:checked:not(:disabled)").forEach(c => { const x = S.ocrFound[Number(c.dataset.oi)]; if (x && addPickFrom(x.lg, x.m)) n++; });
@@ -2993,21 +3070,22 @@ document.addEventListener("click", e => {
     toast(n ? `${n}경기를 My 경기에 담았습니다` : "새로 담은 경기가 없습니다");
   }
 });
-document.addEventListener("change", e => { if (e.target.id === "myimgIn"){ importSlips(e.target.files); e.target.value = ""; } });
+document.addEventListener("change", e => { if (e.target.id === "myimgIn"){ queueSlips(e.target.files); e.target.value = ""; } });
+// My 탭 어디서든 Ctrl+V 하면 붙여넣기 칸에 담김
 document.addEventListener("paste", e => {
   if (S.tab !== "my" || modal.open) return;
   const fs = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith("image/")).map(i => i.getAsFile());
-  if (fs.length){ e.preventDefault(); importSlips(fs); }
+  if (fs.length){ e.preventDefault(); queueSlips(fs); }
 });
 document.addEventListener("dragover", e => { if (S.tab === "my") e.preventDefault(); });
-document.addEventListener("drop", e => { if (S.tab === "my" && e.dataTransfer?.files?.length){ e.preventDefault(); importSlips(e.dataTransfer.files); } });
+document.addEventListener("drop", e => { if (S.tab === "my" && e.dataTransfer?.files?.length){ e.preventDefault(); queueSlips(e.dataTransfer.files); } });
 function toast(msg){
   let t = document.getElementById("toast");
   if (!t){ t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
   t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2600);
 }
 const PRIVACY_NOTE = `<div class="privnote">🔒 캡처 이미지는 <b>경기 검색에만</b> 쓰이고, 서버나 별도 저장소에 <b>저장·전송되지 않습니다.</b> 글자 인식은 이 기기 브라우저 안에서만 이뤄지고, 끝나면 이미지는 바로 버려집니다.</div>`;
-const myImportBar = () => `<div class="myimp"><button class="btn" data-myimg>📷 베팅내역 캡처로 담기</button><span class="muted">캡처를 올리거나 이 화면에서 붙여넣기(Ctrl+V)·끌어다 놓기 하면 경기를 찾아 담아 줍니다</span>${PRIVACY_NOTE}</div>`;
+
 
 // ---------------------------------------------------------------- 📺 미니 라이브 (PiP · 다른 일 하면서 보기)
 // Chrome·Edge(PC)는 항상 위에 떠 있는 작은 창(Document Picture-in-Picture), 안 되는 브라우저는 화면 구석 작은 창
