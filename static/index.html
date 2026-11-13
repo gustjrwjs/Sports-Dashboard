@@ -625,6 +625,13 @@ tr.dnp td{color:var(--muted)}
 .pill.fifa{background:color-mix(in srgb, #0ea5e9 14%, var(--surface));color:#0369a1;border:1px solid color-mix(in srgb, #0ea5e9 35%, var(--border))}
 @media (prefers-color-scheme: dark){ .pill.fifa{color:#7dd3fc} }
 .fup{color:var(--win);font-size:.85em;font-weight:700}.fdn{color:var(--loss);font-size:.85em;font-weight:700}
+.slead{list-style:none;margin:6px 0 10px;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.slead li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:13px;min-width:0}
+.slead li:last-child{border-bottom:0}
+.slead .sl{flex:none;font-size:11px;color:var(--muted);width:52px}
+.slead b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.slead .sv{flex:none;font-size:12px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.sabs-h{font-size:12.5px;font-weight:700;margin:4px 0 6px}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -2052,7 +2059,7 @@ async function openMatch(id){
     const sp = L().sport;
     const ob = oddsBlock(m, pickOdds(sum), false);
     const pbp = m.state !== "pre" && sum ? pbpSection(lg, m, sum) : "";
-    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + pbp + lineupSection(m, sum ? parseLineups(sum) : null)
+    const detail = sp === "soccer" ? goalsLine(m, sum) + ob + `<div class="sec" id="sintel" data-mid="${esc(m.id)}"><div class="loading">주목할 선수·결장 선수를 불러오는 중…</div></div>` + pbp + lineupSection(m, sum ? parseLineups(sum) : null)
                  : ob + lineScore(m, sum) + pbp + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
     openModal(head + detail + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
@@ -2067,6 +2074,7 @@ async function openMatch(id){
       <div class="sec"><div class="sec-h"><h3>맞대결 기록</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 조회 범위 안의 최근 경기</span></div>
         ${h2h.length ? resList(h2h) : '<div class="card empty">조회 범위 안에 맞대결 기록이 없습니다.</div>'}</div>`);
     if (sp === "soccer" && m.state === "pre" && !hasLineup(sum ? parseLineups(sum) : null)) fillPrevLineups(m, h, a);
+    if (sp === "soccer") fillSoccerIntel(lg, m, h, a, sum);
     if (sp === "basketball" && document.getElementById("bb-pre")) fillBbPre(m, h, a);
     if (m.state === "in") pbpLoop(lg, m);
   } catch (e) { openModal(head + errBox(e)); }
@@ -2152,6 +2160,45 @@ const parseLineups = sum => {
   }
   return out;
 };
+// ---------------------------------------------------------------- 축구 경기 상세: 주목할 선수 + 결장 의심 선수
+// 주목할 선수 = ESPN 경기 데이터의 팀별 득점·도움·슈팅·선방 1위 / 결장 의심 = 최근 주전인데 직전 경기에 안 뛴 선수
+// (ESPN은 축구 부상 정보를 거의 주지 않아서 라인업 기록으로 추정)
+async function fillSoccerIntel(lg, m, h, a, sum){
+  const box = () => { const el = document.getElementById("sintel"); return el && el.dataset.mid === m.id && modal.open && S.modalMatch === m.id ? el : null; };
+  const LEAD = [["goals", "⚽ 득점", /^goals$/i], ["goalAssists", "🅰️ 도움", /assist/i], ["totalShots", "🎯 슈팅", /shot/i], ["saves", "🧤 선방", /save/i]];
+  const val = (cat, dv) => { const g = String(dv || "").match(/Matches:\s*(\d+),\s*\w+:\s*(\d+)/); return g ? `${g[1]}경기 ${g[2]}${cat === "goals" ? "골" : "도움"}` : `${dv}${cat === "saves" ? "회" : cat === "totalShots" ? "개" : ""}`; };
+  const leaders = tid => { const t = (sum?.leaders || []).find(x => String(x.team?.id) === tid); if (!t) return [];
+    return LEAD.map(([k, lab, re]) => { const c = (t.leaders || []).find(x => x.name === k || re.test(x.name || "") || re.test(x.displayName || "")); const x = c?.leaders?.[0]; return x ? {lab, name:x.athlete?.displayName, img:x.athlete?.headshot?.href, v:val(k, x.displayValue)} : null; }).filter(Boolean); };
+  const absences = async (t, tid) => {
+    const games = t.past.filter(e => e.id !== m.id && e.date < m.date).slice(0, 4);
+    if (games.length < 2) return [];
+    const sums = await Promise.all(games.map(e => getSummary(e, lg).catch(() => null)));
+    const lus = sums.map(s => { if (!s) return null; const lu = parseLineups(s); return [lu.home, lu.away].find(x => x && x.teamId === tid && x.starters.length) || null; });
+    const last = lus[0]; if (!last) return [];
+    const inLast = new Set([...last.starters, ...last.subs].map(p => p.id)), playedLast = new Set([...last.starters, ...last.subs.filter(p => p.subIn || (p.ev && p.ev.in))].map(p => p.id));
+    const starts = {}, info = {};
+    for (const lu of lus.slice(1)) if (lu) for (const p of lu.starters){ starts[p.id] = (starts[p.id] || 0) + 1; info[p.id] = p; }
+    const older = lus.slice(1).filter(Boolean).length;
+    const out = [];
+    for (const [id, n] of Object.entries(starts)) if (n >= Math.min(2, older) && !playedLast.has(id))
+      out.push({p:info[id], why:inLast.has(id) ? "벤치(미출전)" : "명단 제외", n, of:older});
+    // 직전 경기 퇴장 → 다음 경기 출장정지 가능
+    for (const p of last.starters.concat(last.subs)) if (p.ev && p.ev.r.length) out.push({p, why:"직전 경기 퇴장 · 출장정지 가능", red:true});
+    return out.sort((x, y) => (y.red ? 1 : 0) - (x.red ? 1 : 0) || (x.why === "명단 제외" ? -1 : 1) - (y.why === "명단 제외" ? -1 : 1));
+  };
+  const [ah, aa] = await Promise.all([absences(h, m.home.id).catch(() => []), absences(a, m.away.id).catch(() => [])]);
+  const lh = leaders(m.home.id), la = leaders(m.away.id);
+  await withTimeout(lookupPlayers([...lh, ...la].map(x => x.name).concat([...ah, ...aa].map(x => x.p.name)), OCC.soccer), 4000);
+  const el = box(); if (!el) return;
+  const col = (t, L1, A1, last) => `<div>${teamHead(m, t.id)}
+    ${L1.length ? `<ul class="slead">${L1.map(x => `<li>${headImg(x.img || imgOf(x.name, 80))}<span class="sl">${x.lab}</span><b title="${nameTitle(x.name)}">${esc(koFull(x.name))}</b><span class="sv">${esc(x.v)}</span></li>`).join("")}</ul>` : '<div class="card empty">이번 시즌 선수 기록이 없습니다.</div>'}
+    <div class="sabs-h">🚑 결장 의심 <small class="muted">${last ? `직전 경기(${md(last.date)}) 기준` : ""}</small></div>
+    ${A1.length ? `<ul class="inj">${A1.map(x => `<li>${headImg(imgOf(x.p.name, 80))}<span class="inn"><span title="${nameTitle(x.p.name)}">${esc(koFull(x.p.name))}</span><small class="muted">${esc(x.p.pos || "")}${x.n ? ` · 이전 ${x.of}경기 중 ${x.n}경기 선발` : ""}</small></span><span class="stt">${esc(x.why)}</span></li>`).join("")}</ul>`
+      : '<div class="card empty" style="font-size:12px">최근 주전 중 빠진 선수가 없습니다.</div>'}</div>`;
+  const lastOf = t => t.past.find(e => e.id !== m.id && e.date < m.date);
+  el.innerHTML = `<div class="sec-h"><h3>주목할 선수 · 결장 의심</h3><span class="muted sp">${m.state === "pre" ? "이번 시즌" : "이 경기"} 팀 내 1위 · 결장은 라인업 기록으로 추정(부상·징계·로테이션 구분 불가)</span></div>
+    <div class="cols">${col(m.home, lh, ah, lastOf(h))}${col(m.away, la, aa, lastOf(a))}</div>`;
+}
 const hasLineup = lu => !!lu && ((lu.home?.starters.length || 0) + (lu.away?.starters.length || 0)) > 0;
 function rowOf(pos){
   pos = pos.toUpperCase();

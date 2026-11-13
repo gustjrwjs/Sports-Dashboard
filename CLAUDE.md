@@ -21,6 +21,7 @@
 - PiP 창 위의 주소 바·창 틀, 창 투명도는 브라우저(OS 창)가 정하는 것이라 웹에서 못 바꿈 — 소유자에게 설명함.
 - 문자중계 `pbpBuild`(축구 commentary·keyEvents / 농구·야구 plays → 한국어 템플릿, `pickT`로 장면마다 고정 멘트), 카드 위 초록 한 줄 `pbpTicker`(작은 장면 low는 뒤로), 상세 창 `pbpSection` + `pbpLoop` 20초 갱신. AI 챗봇 중계는 키 숨길 서버 필요해서 보류.
 - 국가대표 친선경기 `intfr`(ESPN `fifa.friendly`, `nostand:true` → 순위표 탭 숨김·팀 분석은 이번 주 경기 팀). FIFA 랭킹 `loadFifa()`: 위키백과 `Module:SportsRankings/data/FIFA_World_Rankings`를 api.php `origin=*`(CORS)로 받음. FIFA 공식 API는 CORS 없음·봇 차단이라 쓰지 않음. 팀 이름 맞추기 `fnorm` + 모듈의 코드 별칭 + `FIFA_EXTRA`.
+- 축구 경기 상세 `fillSoccerIntel`: 주목할 선수 = summary.leaders(득점·도움·슈팅·선방 팀 내 1위), 결장 의심 = 최근 4경기 라인업 비교(이전 3경기 중 2선발 이상인데 직전 경기 미출전 → 명단 제외/벤치, 직전 퇴장 → 출장정지 가능). ESPN은 축구 부상 데이터가 사실상 없음(경기 전·후 summary.injuries 빈 값 확인).
 - 캡처 이미지는 **절대 서버·저장소로 보내거나 저장하지 않음**(화면에 명시됨, 소유자 요청). 이 원칙 유지.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
