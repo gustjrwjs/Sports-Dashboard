@@ -830,6 +830,9 @@ select.gmove{font:inherit;font-size:13px}
   .mytools{gap:6px}
   .mytools .btn{padding:6px 10px}
 }
+.adslot{margin:16px 0;min-height:90px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;overflow:hidden}
+.adslot small{font-size:10px;color:var(--muted);text-align:left;margin-bottom:2px}
+.adslot.test{border:2px dashed #f59e0b;background:color-mix(in srgb, #f59e0b 10%, var(--surface));color:#b45309;font-weight:800;border-radius:12px;align-items:center;font-size:13px}
 #fab{position:fixed;right:14px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #fab[hidden]{display:none}
 #fab .fbtn{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -1133,6 +1136,17 @@ const dedupe = evs => { const seen = new Set(), out = []; for (const e of evs){ 
 const ST = {};
 const S = {lg:"unl", tab:"standings", chip:"ALL", mStatus:"ALL", modalMatch:null, poll:null, livePoll:null, myPoll:null, stView:"table"};
 const L = () => LEAGUES[S.lg];
+// ================================================================ 💰 광고 자리 (지금은 꺼짐)
+// 켜는 법: ADS.on = true, client = "ca-pub-…", slots에 자리별 광고 단위 번호 → <head>에 애드센스 스크립트 추가.
+// 미리보기: 주소 끝에 ?adtest 를 붙이면 노란 점선으로 광고 자리만 보임.
+// 넣지 않는 곳: PiP 미니 창, 검색·캡처 창, 예측(배당) 버튼 바로 옆, 글쓰기 창 — 잘못 눌림·정책 위반 방지
+const ADS = {on:false, test:/[?&]adtest\b/.test(location.search), client:"", slots:{home:"", league:"", matches:"", detail:"", my:""}};
+function adSlot(name){
+  if (ADS.test) return `<div class="adslot test" data-ad="${name}">📢 광고 자리 · ${name}</div>`;
+  if (!ADS.on || !ADS.client || !ADS.slots[name]) return "";
+  setTimeout(() => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch {} }, 0);
+  return `<div class="adslot" data-ad="${name}"><small>광고</small><ins class="adsbygoogle" style="display:block" data-ad-client="${ADS.client}" data-ad-slot="${ADS.slots[name]}" data-ad-format="auto" data-full-width-responsive="true"></ins></div>`;
+}
 const isNL = lg => lg === "unl" || lg === "cnl";  // 네이션스리그(리그 A~D, 조별 순위)
 // 지난 시즌을 보고 있으면(S.season) 그 리그의 데이터는 "리그@연도" 칸에 따로 보관
 const seasonOf = lg => lg === S.lg ? S.season : null;
@@ -1516,7 +1530,7 @@ function renderStandings(){
         </table></div>
       </section>`).join("")}</div>
     <div class="legend">${[...zones].map(([l, c]) => `<span><i style="background:${esc(c)}"></i>${esc(l)}</span>`).join("")}
-      <span>최근 5경기: ${L().scope === "all" ? "모든 대회 기준, " : ""}왼쪽이 과거 → 오른쪽이 최근 (마우스를 올리면 상세)</span></div>`;
+      <span>최근 5경기: ${L().scope === "all" ? "모든 대회 기준, " : ""}왼쪽이 과거 → 오른쪽이 최근 (마우스를 올리면 상세)</span></div>${adSlot("league")}`;
 }
 
 // ================================================================ 토너먼트 대진표
@@ -1912,8 +1926,8 @@ function renderMatches(){
   const st = [["ALL","전체"],["pre","예정"],["in","진행 중"],["post","종료"]];
   $("#main").innerHTML = `<div class="bar">${weekNav()}${chipsBar() ? chipsBar() + '<span class="sep"></span>' : ""}
       <div class="chips">${st.map(([k, l]) => `<button class="chip ${S.mStatus === k ? "on" : ""}" data-mstatus="${k}">${l}<span class="n">${cnt[k] || 0}</span></button>`).join("")}</div></div>
-    ${days.length ? days.map(x => `<div class="day" data-day="${x.k}"><h4>${dayLabel(x.iso)}${x.k === today ? '<span class="today">오늘</span>' : ""}</h4>
-      <div class="mlist">${x.ms.map(m => matchCard(m)).join("")}</div></div>`).join("") : `<div class="card empty">${L().sched === "week" ? "이 주에는 경기가 없습니다. 이전 주·다음 주를 눌러 보세요." : "해당하는 경기가 없습니다."}</div>`}
+    ${days.length ? days.map((x, i) => `<div class="day" data-day="${x.k}"><h4>${dayLabel(x.iso)}${x.k === today ? '<span class="today">오늘</span>' : ""}</h4>
+      <div class="mlist">${x.ms.map(m => matchCard(m)).join("")}</div></div>${i === 1 || (i === 0 && days.length === 1) ? adSlot("matches") : ""}`).join("") : `<div class="card empty">${L().sched === "week" ? "이 주에는 경기가 없습니다. 이전 주·다음 주를 눌러 보세요." : "해당하는 경기가 없습니다."}</div>`}
     <p class="note">시간은 이 컴퓨터의 시간대 기준입니다. 경기를 누르면 라인업·기록, 두 팀 비교, 최근 5경기, 맞대결을 볼 수 있습니다.</p>`;
   if (!d.scrolled){
     d.scrolled = true;
@@ -2291,7 +2305,7 @@ async function openMatch(id){
     const pbp = m.state !== "pre" && sum ? pbpSection(lg, m, sum) : "";
     const detail = sp === "soccer" ? goalsLine(m, sum) + ob + `<div class="sec" id="sintel" data-mid="${esc(m.id)}"><div class="loading">주목할 선수·결장 선수를 불러오는 중…</div></div>` + pbp + lineupSection(m, sum ? parseLineups(sum) : null)
                  : ob + lineScore(m, sum) + pbp + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
-    openModal(head + detail + `
+    openModal(head + detail + adSlot("detail") + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
           <div class="r"><div>${strip(h5)}</div><div class="k">최근 5경기 흐름</div><div>${strip(a5)}</div></div>
@@ -3032,6 +3046,7 @@ function renderMy(fromRefresh){
     html += `<div class="muted" style="font-size:12px;margin:-4px 0 10px">끝난 경기 ${done.length} · 진행 중 ${live.length} · 예정 ${soon.length}${w < done.length ? ` · 무승부 ${done.length - w}` : ""}</div>`;
   }
   html += sec("● 진행 중", live) + sec("예정", soon) + sec("결과", done);
+  html += adSlot("my");
   html += `<div class="muted" style="font-size:11px;margin:-8px 0 16px">담은 경기는 ${SYNC.code ? "연동된 기기끼리 함께 저장되고" : "이 기기에만 저장되고(🔗 기기 연동으로 폰·PC 함께 쓰기)"}, 경기(또는 담은 날) 후 7일이 지나면 자동으로 빠집니다. ★를 다시 누르면 뺄 수 있습니다.${Object.keys(MY.odds).some(k => MY.odds[k]) ? " · 배당: DraftKings 경기 전 기준 · 초록색은 현재(최종) 점수 기준 맞는 쪽" : ""}</div>`;
   $("#main").innerHTML = html;
   mountImp();
@@ -4051,11 +4066,14 @@ function renderHome(fromTick){
   if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? "오늘은 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
   else {
     html += `<div class="strip-h"><h3>오늘 전체 일정</h3><span class="muted">리그별 · 시간 순</span></div>`;
+    let gi = 0;
     for (const [lg, arr] of byLg){
       const Lg = LEAGUES[lg];
+      if (gi++ === 3) html += adSlot("home");
       html += `<section class="hlg"><button class="hlgh" data-golg="${lg}"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span><b>${esc(Lg.name)}</b><span class="muted">${arr.length}경기 ›</span></button><div class="hgrid">${arr.map(x => miniRow(x, {today:true, compact:true})).join("")}</div></section>`;
     }
   }
+  if (byLg.size && byLg.size <= 3) html += adSlot("home");
   html += `<p class="note">시간은 이 기기 시간대 기준입니다. ☆를 누르면 My 경기에 담기고, 경기를 누르면 라인업·기록·배당·문자중계를 볼 수 있습니다.</p>`;
   const y = window.scrollY;
   $("#main").innerHTML = html;
