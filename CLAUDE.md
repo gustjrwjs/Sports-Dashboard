@@ -10,7 +10,8 @@
 ## 📋 다음 할 일 (소유자가 요청함 · 묻지 말고 순서대로 진행, 끝나면 이 목록에서 지우기)
 
 1. (선택) 지난 시즌 메뉴에서 ESPN에 데이터가 없는 시즌 숨기기 — 지금은 고르면 "기록이 없습니다" 안내.
-2. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+2. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
+3. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 완료(2026-11-12): EFL 챔피언십(`eng.2`) 추가, K리그1·2·NPB "준비 중"(ESPN `baseball` 리그 12개에 NPB 없음, `jpn.npb`/`npb` 빈 응답), 대진표 미리보기.
 
