@@ -655,6 +655,10 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.livest{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:color-mix(in srgb, #ef4444 8%, var(--surface));border:1px solid color-mix(in srgb, #ef4444 35%, var(--border));border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+.livest b{color:#ef4444}.livest span{color:var(--muted)}
+.dlt{display:block;font-size:10px;font-weight:800;line-height:1}.dlt.up{color:#16a34a}.dlt.dn{color:#ef4444}
+.lvsc{font-style:normal;font-size:11px;font-weight:800;color:#ef4444;margin-left:6px;white-space:nowrap}
 .h2hs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .h2hs>div{flex:1 1 90px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 10px;text-align:center;box-shadow:var(--shadow)}
 .h2hs b{display:block;font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1683,14 +1687,41 @@ function columns(){
 }
 const streakKo = s => { const m = String(s || "").match(/^([WL])(\d+)$/); return m ? `${m[2]}${m[1] === "W" ? "연승" : "연패"}` : (s || "-"); };
 
+// 실시간 순위: 진행 중 경기가 지금 점수대로 끝나면 바뀌는 순위 (경기 끝나면 ESPN 공식 순위로 돌아감)
+function liveGroups(groups){
+  const live = S.season ? [] : (D().matches || []).filter(m => m.state === "in" && m.home.score != null && m.away.score != null);
+  if (!live.length) return {groups, n:0};
+  const sp = L().sport; let n = 0;
+  const out = groups.map(g => {
+    const rows = g.rows.map(r => ({...r, orig:r.rank}));
+    const byId = new Map(rows.map(r => [r.id, r]));
+    for (const m of live){
+      const H = byId.get(String(m.home.id)), A = byId.get(String(m.away.id));
+      if (!H && !A) continue; n++;
+      const hs = Number(m.home.score), as = Number(m.away.score);
+      for (const [t, f, a] of [[H, hs, as], [A, as, hs]]){
+        if (!t) continue;
+        t.live = `${f}:${a}`; t.p++; t.gf += f; t.ga += a; t.gd += f - a;
+        if (f > a) { t.w++; t.pts += 3; } else if (f < a) t.l++; else if (sp === "soccer") { t.d++; t.pts += 1; }
+        if (sp !== "soccer"){ const gp = t.w + t.l; t.wp = gp ? t.w / gp : 0; t.pct = t.wp.toFixed(3).replace(/^0/, ""); }
+      }
+    }
+    if (sp === "soccer") rows.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.orig - b.orig);
+    else rows.sort((a, b) => b.wp - a.wp || b.w - a.w || a.orig - b.orig);
+    rows.forEach((r, i) => { r.rank = i + 1; r.delta = r.orig - r.rank; });
+    return {...g, rows};
+  });
+  return {groups:out, n};
+}
 function renderStandings(){
   if (L().cup) return renderBracket();  // 컵대회: 순위표 대신 대진표
   if (BR_KIND[S.lg] && S.stView === "bracket") return renderBracket();
   const d = D(), cols = columns();
-  const groups = d.groups.filter(g => !isNL(S.lg) || S.chip === "ALL" || g.letter === S.chip);
+  const LV = liveGroups(d.groups.filter(g => !isNL(S.lg) || S.chip === "ALL" || g.letter === S.chip)), groups = LV.groups;
   const zones = new Map();
   for (const g of groups) for (const r of g.rows) if (r.noteColor && r.zone) zones.set(r.zone, r.noteColor);
   $("#main").innerHTML = `${stViewBar()}${nextStrip()}
+    ${LV.n ? `<div class="livest"><b>● 실시간 순위</b><span>진행 중 ${LV.n}경기를 지금 점수대로 반영했습니다 · 경기가 끝나면 공식 순위로 돌아갑니다</span></div>` : ""}
     ${chipsBar() ? `<div class="bar">${chipsBar()}</div>` : ""}
     <div class="groups ${L().wide ? "wide" : ""}">${groups.map(g => `
       <section class="card">
@@ -1698,8 +1729,8 @@ function renderStandings(){
         <div class="tbl-wrap"><table class="st">
           <thead><tr><th>#</th><th class="tl">팀</th>${cols.map(c => `<th class="${c[2] === "hide-sm" ? "hide-sm" : ""}">${c[0]}</th>`).join("")}<th class="tl">최근 5경기</th></tr></thead>
           <tbody>${g.rows.map(r => `<tr data-team="${r.id}" tabindex="0">
-            <td class="rk" style="--zone:${esc(r.noteColor || "transparent")}" title="${esc(r.zone || "")}">${r.rank}</td>
-            <td class="tl"><span class="tm">${logo(r.logo)}<span>${esc(ko(r.name))}</span></span></td>
+            <td class="rk" style="--zone:${esc(r.noteColor || "transparent")}" title="${esc(r.zone || "")}">${r.rank}${r.delta ? `<small class="dlt ${r.delta > 0 ? "up" : "dn"}">${r.delta > 0 ? "▲" : "▼"}${Math.abs(r.delta)}</small>` : ""}</td>
+            <td class="tl"><span class="tm">${logo(r.logo)}<span>${esc(ko(r.name))}</span>${r.live ? `<em class="lvsc">● ${esc(r.live)}</em>` : ""}</span></td>
             ${cols.map(c => `<td class="${c[2] || ""}">${esc(c[1](r))}</td>`).join("")}
             <td class="tl">${formStrip(r.id)}</td></tr>`).join("")}</tbody>
         </table></div>
