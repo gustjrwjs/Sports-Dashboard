@@ -920,6 +920,11 @@ select.gmove{font:inherit;font-size:13px}
 #fab #fabToday{background:var(--accent);border-color:var(--accent);color:#fff}
 #fab #fabToday span{color:#fff}
 #fab #fabTop{opacity:0;pointer-events:none;transition:opacity .2s}
+#fab:not(.scrolled):has(#fabToday[hidden]){pointer-events:none}
+.mtop{position:sticky;bottom:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:-48px 14px 0 auto;width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:15px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .2s;z-index:3}
+.mtop span{font-size:9.5px;font-weight:700;color:var(--muted);margin-top:2px}
+#modal.scrolled .mtop{opacity:1;pointer-events:auto}
+@media (max-width:480px){ .mtop{width:42px;height:42px;margin-top:-42px;font-size:14px} .mtop span{font-size:8.5px} }
 #fab.scrolled #fabTop{opacity:1;pointer-events:auto}
 #fab .fbtn[hidden]{display:none}
 @media (max-width:480px){ #fab{right:10px;bottom:14px;gap:6px} #fab .fbtn{width:42px;height:42px;font-size:14px} #fab .fbtn span{font-size:8.5px} }
@@ -1050,7 +1055,7 @@ ul.news small{font-size:11px}
   <div>이 앱의 코드·디자인·이름·아이콘을 허락 없이 복제·수정·배포하는 것을 금지합니다.</div>
   <div>경기 데이터 ESPN · 리그·팀 명칭과 로고, 선수 사진은 각 권리자 소유 · 비공식 앱</div>
 </footer>
-<dialog id="modal"><div class="m-bar"><button class="btn" id="mclose">닫기</button></div><div class="m-in" id="mbody"></div></dialog>
+<dialog id="modal"><div class="m-bar"><button class="btn" id="mclose">닫기</button></div><div class="m-in" id="mbody"></div><button class="mtop" id="mtop" title="맨 위로" aria-label="맨 위로">▲<span>맨 위</span></button></dialog>
 
 <script>
 // ================================================================ 리그 설정
@@ -2247,7 +2252,7 @@ function renderMatches(){
     if (target){ document.querySelector(`[data-day="${target.k}"]`)?.scrollIntoView({block:"start"}); window.scrollBy(0, -12); }
   }
 }
-// ---------------------------------------------------------------- 경기 일정: 맨 위로 · 오늘 경기로 (떠 있는 버튼)
+// ---------------------------------------------------------------- 떠 있는 버튼: ▲ 맨 위로(모든 화면, 300px 넘게 내리면) · 📅 오늘(경기 일정만)
 function updateFab(){
   let f = document.getElementById("fab");
   if (!f){
@@ -2258,9 +2263,8 @@ function updateFab(){
     f.querySelector("#fabToday").onclick = goToday;
     window.addEventListener("scroll", () => f.classList.toggle("scrolled", window.scrollY > 300), {passive:true});
   }
-  const on = S.tab === "matches" && !L().disabled;
-  f.hidden = !on;
-  f.querySelector("#fabToday").hidden = !!S.season;  // 지난 시즌 보기 중엔 '오늘'이 없음
+  f.hidden = false;
+  f.querySelector("#fabToday").hidden = !(S.tab === "matches" && !L().disabled) || !!S.season;  // 지난 시즌 보기 중엔 '오늘'이 없음
   f.classList.toggle("scrolled", window.scrollY > 300);
 }
 async function goToday(){
@@ -2307,7 +2311,10 @@ function renderTeams(){
 
 // ================================================================ 모달
 const modal = $("#modal");
-function openModal(html){ $("#mbody").innerHTML = html; if (!modal.open) modal.showModal(); }
+function openModal(html){ $("#mbody").innerHTML = html; if (!modal.open){ modal.showModal(); modal.scrollTop = 0; } }
+// 경기 상세 등 긴 창: 400px 넘게 내리면 ▲ 맨 위
+modal.addEventListener("scroll", () => modal.classList.toggle("scrolled", modal.scrollTop > 400), {passive:true});
+document.getElementById("mtop").onclick = () => modal.scrollTo({top:0, behavior:"smooth"});
 // ▶ 하이라이트: 유튜브 검색으로 연결만 (영상 삽입·저장 안 함)
 function hlLinks(m){
   if (m.state !== "post") return "";
