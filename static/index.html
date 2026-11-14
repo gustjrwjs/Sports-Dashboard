@@ -480,7 +480,7 @@ td.pts{font-weight:800}
 .live{color:var(--live)!important;font-weight:700}
 .strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
 .strip .match{min-width:310px;grid-template-columns:1fr 86px 1fr}
-.strip .match .mvenue{grid-column:1/-1}
+.strip .match .mvenue,.match.nogrp .mvenue{grid-column:1/-1}
 .strip .sc{white-space:nowrap}
 .strip-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
 .strip-h h3{margin:0;font-size:15px}
@@ -677,6 +677,8 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+#lgbar .haslive::after{content:"";display:inline-block;flex:none;width:7px;height:7px;margin-left:5px;border-radius:50%;background:#ef4444;vertical-align:1px;animation:lgpulse 1.6s ease-in-out infinite}
+@keyframes lgpulse{0%,100%{opacity:1}50%{opacity:.35}}
 #inappbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between;padding:10px 14px;background:#fef3c7;color:#78350f;border-bottom:1px solid #f59e0b;font-size:13px;position:relative;z-index:50}
 #inappbar span{display:block;font-size:12px;margin-top:2px}#inappbar .iab{display:flex;gap:6px;align-items:center}
 #inappbar .btn{padding:6px 12px;font-size:12.5px;text-decoration:none}#inappbar .iax{padding:6px 9px;background:transparent;border:0;color:#78350f}
@@ -1741,10 +1743,11 @@ function renderHeader(){
   // 리그 메뉴: [종목 선택] + 그 종목의 리그 칩 한 줄
   const grp = SPORT_GROUPS.find(g => g.keys.includes(S.lg)) || SPORT_GROUPS[0];
   const lastOf = g => { let k = null; try { k = localStorage.getItem("last." + g.keys[0]); } catch {} return g.keys.includes(k) ? k : g.keys.find(x => !LEAGUES[x].disabled) || g.keys[0]; };
-  $("#lgbar").innerHTML = `<div class="sportseg" role="tablist">${SPORT_GROUPS.map(g => `<button class="${g === grp ? "on" : ""}" data-lg="${g === grp ? S.lg : lastOf(g)}">${g.label}</button>`).join("")}</div>
+  $("#lgbar").innerHTML = `<div class="sportseg" role="tablist">${SPORT_GROUPS.map(g => `<button class="${g === grp ? "on" : ""}" data-lg="${g === grp ? S.lg : lastOf(g)}" data-sgk="${g.keys.join(",")}">${g.label}</button>`).join("")}</div>
     <div class="lgchips">${grp.keys.map(k => { const x = LEAGUES[k]; return `<button class="lgc ${k === S.lg ? "on" : ""} ${x.disabled ? "off" : ""}" data-lg="${k}" style="--c:${x.color}">
       <span class="mk" style="background:${x.color}">${x.mark}</span>${esc(x.short)}${x.disabled ? "<small>준비 중</small>" : ""}</button>`; }).join("")}</div>`;
   try { localStorage.setItem("last." + grp.keys[0], S.lg); } catch {}
+  lgLiveDots();
   { const box = document.querySelector("#lgbar .lgchips"), on = box && box.querySelector(".lgc.on"); if (box && on && box.scrollWidth > box.clientWidth) box.scrollLeft = on.offsetLeft - box.clientWidth / 2 + on.offsetWidth / 2; }
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
   // 리그 화면(순위표·일정·팀 분석·LIVE)에서만 리그 머리글·리그 버튼·리그 메뉴를 보임
@@ -2324,6 +2327,17 @@ function sbarShow(){
   SBAR.classList.toggle("show", on);
   document.documentElement.style.scrollPaddingTop = on ? (SBAR.offsetHeight + 8) + "px" : "";
 }
+// ---------------------------------------------------------------- 리그 버튼·종목 버튼에 ● 빨간 점 = 지금 진행 중인 경기 있음 (전체 리그 목록 IDX 기준, 1분마다)
+function lgLiveDots(){
+  const paint = () => {
+    const live = new Set(IDX.list.filter(x => x.m.state === "in").map(x => x.lg));
+    document.querySelectorAll("#lgbar .lgc[data-lg]").forEach(b => b.classList.toggle("haslive", live.has(b.dataset.lg)));
+    document.querySelectorAll("#lgbar [data-sgk]").forEach(b => b.classList.toggle("haslive", b.dataset.sgk.split(",").some(k => live.has(k))));
+  };
+  paint();
+  if (Date.now() - IDX.t > 60000) loadIndex().then(paint).catch(() => {});
+}
+setInterval(() => { if (!document.hidden && LG_TABS.includes(S.tab)) lgLiveDots(); }, 60000);
 // ---------------------------------------------------------------- 떠 있는 버튼: ▲ 맨 위로(모든 화면, 300px 넘게 내리면) · 📅 오늘(경기 일정만)
 function updateFab(){
   let f = document.getElementById("fab");

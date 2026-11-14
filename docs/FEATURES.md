@@ -62,3 +62,5 @@
 - 카톡 등 앱 안 브라우저(2026-11-14 소유자 요청: 카톡 공유 시 앱 설치 안 됨): `<head>` 맨 앞 스크립트가 카카오톡이면 `kakaotalk://web/openExternal?url=`(카카오 공식)로 바깥 브라우저 열기, LINE은 `openExternalBrowser=1`. 그래도 남은 경우·네이버·인스타 등은 노란 안내 띠 `#inappbar`(안드로이드 = Chrome intent 링크, 아이폰 = Safari로 여는 법 + 주소 복사). 공유 미리보기 og:title/description/image(icon-512) 추가. 휴대폰(≤480px) 머리글 '앱 설치'는 📲 동그란 버튼, ≤420px에선 📺·↻ 숨김(자동 갱신 있음).
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
+
+- 리그 ● 빨간 점(2026-11-15 소유자 요청): `lgLiveDots` — IDX(전체 리그 목록)에서 진행 중 경기가 있는 리그 칩 `.lgc.haslive`·종목 버튼(`data-sgk`)에 빨간 점, 1분마다. 경기 카드 경기장 줄: 4칸 카드는 grid-column 2/-1, 3칸(`.nogrp`·`.strip`)은 1/-1.
