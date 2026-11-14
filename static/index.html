@@ -656,6 +656,17 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+#sbar{position:fixed;top:0;left:0;right:0;z-index:45;background:color-mix(in srgb, var(--surface) 94%, transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.08);transform:translateY(-110%);transition:transform .18s ease;visibility:hidden}
+#sbar.show{transform:none;visibility:visible}
+#sbar .sbin{max-width:1280px;margin:0 auto;padding:6px 16px 0}
+#sbar .sbtop{display:flex;align-items:center;gap:14px;padding-bottom:6px}
+#sbar .sbrand{display:flex;align-items:center;gap:6px;text-decoration:none;color:var(--text);font-weight:900;font-style:italic;font-size:15px;white-space:nowrap;flex:none}
+#sbar .sbrand b{color:#e11d48}
+#sbar .sbg{margin:0;padding:0;border:0;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+#sbar .sbg::-webkit-scrollbar{display:none}
+#sbar .sbt{margin:0;border-top:1px solid var(--border)}
+#sbar .sbt button{padding-top:7px;padding-bottom:7px}
+@media (max-width:640px){ #sbar .sbin{padding:5px 10px 0} #sbar .sbrand span{display:none} #sbar .sbtop{gap:8px;padding-bottom:5px} #sbar nav.gnav button{padding:5px 9px;font-size:12.5px;gap:3px} }
 .impsearch{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:10px}
 .isgrp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.isgl{font-size:12.5px;font-weight:700;color:var(--muted);margin-right:2px}
 .isgrp .chip.isnew{border-style:dashed}
@@ -1722,6 +1733,7 @@ function renderHeader(){
   const stb = document.querySelector('#tabs [data-tab="standings"]'); if (stb){ stb.hidden = !!Lg.nostand && !Lg.cup; stb.textContent = Lg.cup ? "🏆 대진표" : "순위표"; }
   updateLiveBadge();
   updateMyBadge();
+  syncSbar();
 }
 function render(){
   if (L().nostand && !L().cup && S.tab === "standings") S.tab = "matches";  // 순위표가 없는 대회(친선경기)
@@ -2263,6 +2275,30 @@ function renderMatches(){
     const target = days.find(x => x.ms.some(m => m.state !== "post"));
     if (target){ document.querySelector(`[data-day="${target.k}"]`)?.scrollIntoView({block:"start"}); window.scrollBy(0, -12); }
   }
+}
+// ---------------------------------------------------------------- 스크롤하면 위에 따라오는 얇은 메뉴 (로고·홈/리그/My/커뮤니티 + 리그 화면이면 순위표/일정/팀 분석/LIVE)
+// 원래 머리글은 고정하지 않음(소유자 요청) → 메뉴가 화면 밖으로 나가면 이 줄만 보임. 버튼은 같은 data-gnav/data-tab이라 누르면 똑같이 동작
+let SBAR = null;
+function syncSbar(){
+  if (!SBAR){
+    SBAR = document.createElement("div"); SBAR.id = "sbar"; document.body.appendChild(SBAR);
+    SBAR.addEventListener("click", e => { if (e.target.closest(".sbrand")){ e.preventDefault(); document.querySelector('#gnav [data-gnav="home"]')?.click(); } });
+    window.addEventListener("scroll", sbarShow, {passive:true}); window.addEventListener("resize", sbarShow);
+    const mo = new MutationObserver(() => syncSbar());  // 배지 숫자·선택 표시가 바뀌면 따라 바꿈
+    ["gnav", "tabs"].forEach(id => { const el = document.getElementById(id); if (el) mo.observe(el, {subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:["class", "hidden"]}); });
+  }
+  const strip = el => el.innerHTML.replace(/\sid="[^"]*"/g, "");
+  const tabs = document.getElementById("tabs");
+  SBAR.innerHTML = `<div class="sbin"><div class="sbtop"><a class="sbrand" href="./" aria-label="홈으로"><img src="icons/favicon-64.png" alt="" width="22" height="22"><span>SPORTS <b>LIVE!</b></span></a>
+    <nav class="gnav sbg">${strip(document.getElementById("gnav"))}</nav></div>${tabs && !tabs.hidden ? `<nav class="tabs sbt">${strip(tabs)}</nav>` : ""}</div>`;
+  sbarShow();
+}
+function sbarShow(){
+  if (!SBAR) return;
+  const tabs = document.getElementById("tabs"), ref = tabs && !tabs.hidden ? tabs : document.getElementById("gnav");
+  const on = !!ref && ref.getBoundingClientRect().bottom < 0;
+  SBAR.classList.toggle("show", on);
+  document.documentElement.style.scrollPaddingTop = on ? (SBAR.offsetHeight + 8) + "px" : "";
 }
 // ---------------------------------------------------------------- 떠 있는 버튼: ▲ 맨 위로(모든 화면, 300px 넘게 내리면) · 📅 오늘(경기 일정만)
 function updateFab(){
