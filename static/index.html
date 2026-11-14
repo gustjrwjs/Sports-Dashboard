@@ -764,7 +764,7 @@ a.appname:hover{opacity:.85}
 .betstat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:0 0 14px}
 .bsh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:8px}
 .bsh .muted{font-size:11.5px}
-.bsrow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.bsrow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .bsbox{background:var(--surface-2);border-radius:10px;padding:6px 4px;text-align:center;display:flex;flex-direction:column;gap:1px}
 .bsbox small{font-size:10.5px;color:var(--muted)}
 .bsbox b{font-size:18px;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -4601,10 +4601,11 @@ function betStats(){
   const calc = list => { let h = 0, n = 0; for (const b of list){ for (const x of [b.rHit, b.oHit]) if (x === true || x === false){ n++; if (x) h++; } } return {h, n, pct:n ? Math.round(h / n * 100) : null}; };
   const pend = BETLOG.filter(b => !b.done).length;
   const T = calc(BETLOG.filter(b => dkey(b.date) === today)), W = calc(BETLOG.filter(b => new Date(b.date) > wk)), A = calc(BETLOG);
-  const R = calc(BETLOG.map(b => ({rHit:b.rHit}))), O = calc(BETLOG.map(b => ({oHit:b.oHit})));
+  // 종목별 (승패·언오버 합쳐서)
+  const SP = [["soccer", "⚽ 축구"], ["basketball", "🏀 농구"], ["baseball", "⚾ 야구"]].map(([k, l]) => [l, calc(BETLOG.filter(b => LEAGUES[b.lg] && LEAGUES[b.lg].sport === k))]);
   const box = (lab, s) => `<div class="bsbox"><small>${lab}</small><b>${s.pct == null ? "-" : s.pct + "%"}</b><span>${s.h}/${s.n}</span></div>`;
-  return `<div class="betstat"><div class="bsh"><b>🎯 나의 예측 적중률</b><span class="muted">재미용 · My 경기에서 고른 예측 기준${pend ? ` · 결과 대기 ${pend}경기` : ""}</span></div>
-    <div class="bsrow">${box("오늘", T)}${box("최근 7일", W)}${box("전체", A)}${box("승패", R)}${box("언오버", O)}</div></div>`;
+  return `<div class="betstat"><div class="bsh"><b>🎯 나의 예측 적중률</b><span class="muted">재미용 · 승패·언오버 합산 · My 경기에서 고른 예측 기준${pend ? ` · 결과 대기 ${pend}경기` : ""}</span></div>
+    <div class="bsrow">${box("오늘", T)}${box("최근 7일", W)}${box("전체", A)}${SP.map(([l, x]) => box(l, x)).join("")}</div></div>`;
 }
 // ================================================================ 🏠 홈: 오늘의 경기 (모든 리그·종목 한곳에)
 const SPORTS = [["all", "전체"], ["soccer", "⚽ 축구"], ["basketball", "🏀 농구"], ["baseball", "⚾ 야구"]];
