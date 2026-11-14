@@ -73,6 +73,8 @@
 
 - 따라오는 얇은 메뉴(2026-11-14 소유자 요청): 머리글은 그대로 고정 안 함, 대신 `#sbar`(fixed) = 로고 + `#gnav` 복제 + 리그 화면이면 `#tabs` 복제. 원래 메뉴(탭 있으면 #tabs, 없으면 #gnav)가 화면 위로 나가면 `.show`(`sbarShow`). `syncSbar`는 화면 갱신 때 + MutationObserver(배지 숫자·선택)로 다시 그림, 버튼은 같은 data-gnav/data-tab 위임 처리. 보일 때 `scroll-padding-top` 설정.
 
+- 카톡 등 앱 안 브라우저(2026-11-14 소유자 요청: 카톡 공유 시 앱 설치 안 됨): `<head>` 맨 앞 스크립트가 카카오톡이면 `kakaotalk://web/openExternal?url=`(카카오 공식)로 바깥 브라우저 열기, LINE은 `openExternalBrowser=1`. 그래도 남은 경우·네이버·인스타 등은 노란 안내 띠 `#inappbar`(안드로이드 = Chrome intent 링크, 아이폰 = Safari로 여는 법 + 주소 복사). 공유 미리보기 og:title/description/image(icon-512) 추가. 휴대폰(≤480px) 머리글 '앱 설치'는 📲 동그란 버튼, ≤420px에선 📺·↻ 숨김(자동 갱신 있음).
+
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 
 각 작업 후: 로컬 테스트(PC·모바일 375px) → GitHub 업로드 → 공개 링크 확인 → 한국어로 결과 보고 + 링크.

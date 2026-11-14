@@ -10,6 +10,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SPORTS LIVE!</title>
 <meta name="description" content="축구·농구·야구 순위표, 경기 일정·결과, 라인업을 한곳에서">
+<!-- 카카오톡·SNS 공유 미리보기 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SPORTS LIVE!">
+<meta property="og:title" content="SPORTS LIVE! · 실시간 스코어·순위·배당">
+<meta property="og:description" content="축구·농구·야구 실시간 점수, 순위표, 라인업, 배당, 문자중계를 한곳에서. 홈 화면에 앱으로 설치해서 쓰세요.">
+<meta property="og:image" content="https://gustjrwjs.github.io/Sports-Dashboard/static/icons/icon-512.png">
+<meta property="og:url" content="https://gustjrwjs.github.io/Sports-Dashboard/static/">
+<meta name="twitter:card" content="summary">
+<script>
+// 카카오톡·LINE 안 브라우저에서는 앱 설치(PWA)·알림이 안 됨 → 공식 방법으로 바깥 브라우저(크롬·사파리)에서 다시 열기
+(function(){
+  var u = navigator.userAgent, h = location.href;
+  try {
+    if (/KAKAOTALK/i.test(u)) { location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(h); return; }
+    if (/ Line\//i.test(u)) { var x = new URL(h); if (x.searchParams.get("openExternalBrowser") !== "1") { x.searchParams.set("openExternalBrowser", "1"); location.replace(x.href); } }
+  } catch (e) {}
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -186,6 +204,9 @@ body{padding-bottom:env(safe-area-inset-bottom)}
 .wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
 #install{border-color:var(--accent);color:var(--accent);font-weight:600}
 #install[hidden]{display:none}
+#install .is{display:none}
+@media (max-width:420px){ #pipBtn,#refresh{display:none!important} .appbar .ibtn,#install{flex:none} }
+@media (max-width:480px){ #install{width:34px;height:34px;padding:0!important;display:inline-grid;place-items:center;border-radius:50%;font-size:16px} #install:not([hidden]) .il{display:none} #install .is{display:inline} .appbar{gap:4px} }
 .ios-steps{margin:8px 0 0;padding-left:20px;line-height:1.9}
 /* LIVE 탭 */
 nav.tabs button.tab-live{color:var(--live);display:inline-flex;align-items:center;gap:6px;letter-spacing:.3px}
@@ -656,6 +677,9 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+#inappbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between;padding:10px 14px;background:#fef3c7;color:#78350f;border-bottom:1px solid #f59e0b;font-size:13px;position:relative;z-index:50}
+#inappbar span{display:block;font-size:12px;margin-top:2px}#inappbar .iab{display:flex;gap:6px;align-items:center}
+#inappbar .btn{padding:6px 12px;font-size:12.5px;text-decoration:none}#inappbar .iax{padding:6px 9px;background:transparent;border:0;color:#78350f}
 #sbar{position:fixed;top:0;left:0;right:0;z-index:45;background:color-mix(in srgb, var(--surface) 94%, transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.08);transform:translateY(-110%);transition:transform .18s ease;visibility:hidden}
 #sbar.show{transform:none;visibility:visible}
 #sbar .sbin{max-width:1280px;margin:0 auto;padding:6px 16px 0}
@@ -1041,7 +1065,7 @@ ul.news small{font-size:11px}
     <div class="appbar">
       <a class="appname" href="./" id="homeLink" title="홈으로" aria-label="SPORTS LIVE! 홈으로"><img src="icons/favicon-64.png" alt="" width="30" height="30"><span>SPORTS <b>LIVE!</b></span></a>
       <span class="upd" id="upd"></span>
-      <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치">앱 설치</button>
+      <button class="btn" id="install" hidden title="휴대폰 홈 화면에 앱으로 설치" aria-label="앱 설치"><span class="il">앱 설치</span><span class="is">📲</span></button>
       <button class="btn ibtn" id="accBtn" title="로그인 · 회원가입" aria-label="로그인">👤</button>
       <button class="btn ibtn" id="notiBtn" title="경기 알림" aria-label="경기 알림">🔕</button>
       <button class="btn ibtn" id="searchBtn" title="경기 검색 (예정·진행 중)" aria-label="경기 검색">🔍</button>
@@ -5303,6 +5327,23 @@ if (!LEAGUES[start]) S.tab = fromSyncLink ? "my" : "home";  // 주소에 리그�
 if (!LEAGUES[start]) { try { start = localStorage.getItem("league") || DEFAULT_LG; } catch { start = DEFAULT_LG; } }
 setLeague(start);
 
+// ================================================================ 앱 안 브라우저(카톡·네이버·인스타 등) 안내 띠
+// 자동으로 안 넘어간 경우를 위해: 안드로이드는 크롬으로 바로 열기(intent), 아이폰은 Safari로 여는 방법 + 주소 복사
+(() => {
+  const ua = navigator.userAgent;
+  const app = /KAKAOTALK/i.test(ua) ? "카카오톡" : /NAVER\(inapp|NAVER/i.test(ua) ? "네이버" : /Instagram/i.test(ua) ? "인스타그램" : /FBAN|FBAV/i.test(ua) ? "페이스북"
+    : / Line\//i.test(ua) ? "LINE" : /DaumApps/i.test(ua) ? "다음" : /everytimeApp/i.test(ua) ? "에브리타임" : /BAND\//i.test(ua) ? "밴드" : /; wv\)/.test(ua) ? "앱" : "";
+  if (!app) return;
+  const ios = /iPhone|iPad|iPod/.test(ua), url = location.href.split("#")[0];
+  const kakao = /KAKAOTALK/i.test(ua) ? "kakaotalk://web/openExternal?url=" + encodeURIComponent(location.href) : "";
+  const intent = "intent://" + url.replace(/^https?:\/\//, "") + "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" + encodeURIComponent(url) + ";end";
+  const bar = document.createElement("div"); bar.id = "inappbar";
+  bar.innerHTML = `<div><b>📱 ${app} 안에서는 앱 설치·알림이 안 돼요</b><span>${ios ? "아래 버튼이 안 되면 오른쪽 아래 <b>⋯ / 공유</b> → <b>Safari로 열기</b>" : "크롬으로 열면 홈 화면에 앱으로 설치할 수 있어요"}</span></div>
+    <div class="iab"><a class="btn primary" href="${kakao || (ios ? url : intent)}">${ios ? "Safari로 열기" : "크롬으로 열기"}</a><button class="btn" id="iacopy">주소 복사</button><button class="btn iax" id="iax" aria-label="닫기">✕</button></div>`;
+  document.body.prepend(bar);
+  bar.querySelector("#iacopy").onclick = async () => { try { await navigator.clipboard.writeText(url); toast("주소를 복사했어요 · 크롬/사파리 주소창에 붙여넣으세요"); } catch { prompt("이 주소를 복사해서 크롬/사파리에 붙여넣으세요", url); } };
+  bar.querySelector("#iax").onclick = () => bar.remove();
+})();
 // ================================================================ 앱 설치 (PWA)
 (() => {
   const btn = $("#install");
