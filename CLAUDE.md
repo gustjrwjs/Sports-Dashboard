@@ -45,7 +45,7 @@
 
 - 게시판 📌 공지 고정: `posts.pinned` + RPC `admin_pin_post`(운영자 비밀번호를 서버가 확인, supabase_pin.sql). 목록은 `pinned.desc,created_at.desc`. pinned 칸이 없으면(`TK.pinOk=false`) 고정 없이 불러오고 버튼 숨김.
 
-- 영어 이름 → 한국어 발음 표기(2026-11-13 완료): `hangul(name, en)` 규칙 변환기(사전 `HG_WORD` → 글자를 소리 조각으로 `hgPhones` → 음절 조립 `hgWord`, 메모 `HG_MEMO`). `en` true=영어식(농구·야구, `enSport()`), false=라틴식, 생략=단어마다 `looksEn`으로 자동. `ko()`(팀)·`koFull`/`koShort`(선수, 위키데이터 없을 때)·경기장 이름에 적용(원래 영어는 title에). 상태 `stKo`(Final→종료, Canceled→취소 등)·메모 `mnoteKo`(1st Leg→1차전)·DNP 사유 한국어. 이상한 표기는 `HG_WORD`에 단어 추가로 고침.
+- 영어 이름 → 한국어 발음 표기(2026-11-13 완료): `hangul(name, en)` 규칙 변환기(사전 `HG_WORD` → 글자를 소리 조각으로 `hgPhones` → 음절 조립 `hgWord`, 메모 `HG_MEMO`). `en` true=영어식(농구·야구, `enSport()`), false=라틴식, 생략=단어마다 `looksEn`으로 자동. `ko()`(팀)·`koFull`/`koShort`(선수, 위키데이터 없을 때)에 적용. **경기장 이름은 영어 그대로**(2026-11-14 소유자 요청), 경기 카드 경기장 줄은 점수 칸 기준 가운데(`.mvenue` grid-column 2/-1). 상태 `stKo`(Final→종료, Canceled→취소 등)·메모 `mnoteKo`(1st Leg→1차전)·DNP 사유 한국어. 이상한 표기는 `HG_WORD`에 단어 추가로 고침.
 
 - 홈 어제·오늘·내일(2026-11-13 완료): `renderHome`이 기기 날짜 기준 -1~+1일(`offOf`) + 진행 중을 모음. 날짜 칩 `data-hday`(3일 전체·어제·오늘·내일, `S.homeDay`), 일정은 날짜별 테두리 상자 `.dayp`(오늘=파란 테두리, 오늘 → 내일 → 어제) 안에 **리그 섞어 시간순 한 줄** `lsRow`(시간·상태 | 종목 공 ⚽🏀⚾ `.lsp` | 리그 표시 | 홈 | 점수 | 원정 | ☆, 진행 중 → 예정 → 종료(맨 아래) 순, `STO`). 휴대폰(≤640px)은 `.lmb`로 두 팀 위아래 두 줄 + 점수 오른쪽(소유자 요청: 리그별 묶음이 난잡). 진행 중 경기는 오늘로 침. `loadIndex`는 1~2일엔 지난달, 19일 이후엔 다음 달도 받음.
 
@@ -68,6 +68,8 @@
 - 배당 '현재' 문구(2026-11-13): 계산은 그대로, 진행 중은 `지금 무승부/홈 리드`, 핸디 `지금 홈 +0.5 적중`, 언오버 `ouNow` = `지금 0골 · 언더 (3골 더 나면 오버)`(필요 = floor(기준-합계)+1), 축구는 '골' 단위. 결장 의심은 이 경기 라인업이 나오면 `applyLu`로 반영(선발·교체 투입 → 목록에서 뺌, 벤치 → '이 경기 벤치', 명단에 없음 → '이 경기 명단 제외(확정)').
 
 - ▲ 맨 위로(2026-11-14 소유자 요청: 스크롤 긴 모든 페이지): `updateFab`의 `#fabTop`은 모든 탭에서 300px 넘게 내리면 보임(📅 오늘 `#fabToday`는 경기 일정 탭만). 경기 상세 등 창(`#modal`)은 안쪽 `#mtop`(sticky, 400px 넘게 내리면 `.scrolled`).
+
+- My 붙여넣기 칸 위 직접 검색(2026-11-14 소유자 요청): `.impsearch` — 담을 묶음 칩 `drawIsGrp`(`data-isg`, ＋ 새 묶음 = `newGrp()`, 고른 묶음은 my.addGrp = ☆ 담기와 같은 대상) + 입력 `#impq` → `impSearch`(loadIndex에서 진행 중·2주 안 예정, 최대 8개) → `data-isadd`로 `addPickFrom(lg, m, addGrp())`.
 
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 

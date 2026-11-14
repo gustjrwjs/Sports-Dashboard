@@ -105,7 +105,7 @@ table.otbl td.ores.on{color:var(--live)}
 .bleg .hn{margin-left:auto;color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px;min-width:0}
 /* 경기 카드: 홈 배지 · 경기장 */
 .match .hb{font-style:normal;flex:none;font-size:9.5px;font-weight:800;line-height:1;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 4px}
-.match .mvenue{grid-column:1/-1;text-align:center;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-2px;line-height:1.2}
+.match .mvenue{grid-column:2/-1;text-align:center;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-2px;line-height:1.2}
 .bleg .hb{flex:none;font-size:9px;font-weight:800;line-height:1;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 3px;margin-right:-1px}
 .bleg.live b{color:var(--live)}
 /* 1·2차전 표 (이전 방식, 미사용) */
@@ -459,6 +459,7 @@ td.pts{font-weight:800}
 .live{color:var(--live)!important;font-weight:700}
 .strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
 .strip .match{min-width:310px;grid-template-columns:1fr 86px 1fr}
+.strip .match .mvenue{grid-column:1/-1}
 .strip .sc{white-space:nowrap}
 .strip-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
 .strip-h h3{margin:0;font-size:15px}
@@ -655,6 +656,17 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.impsearch{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.isgrp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.isgl{font-size:12.5px;font-weight:700;color:var(--muted);margin-right:2px}
+.isgrp .chip.isnew{border-style:dashed}
+#impq{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);font:inherit;font-size:14px}
+.isl{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.isl li{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid var(--border)}.isl li:last-child{border-bottom:0}
+.isw{font-size:12px;color:var(--muted);white-space:nowrap;min-width:78px}.ist{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ist small{color:var(--muted)}.ist i{font-style:normal;color:var(--muted);font-size:12px}
+.isadd{padding:5px 10px!important;font-size:12.5px;white-space:nowrap}.isdone{font-size:12.5px;font-weight:700;color:#16a34a;white-space:nowrap}
+.isnote{font-size:12.5px;padding:8px 2px 0}
+@media (max-width:520px){ .isl li{flex-wrap:wrap;gap:4px 8px} .isw{min-width:0} .ist{flex-basis:100%;order:3;white-space:normal} }
 #accBtn.isadm{background:#fef3c7;border-color:#f59e0b}.admtag{display:inline-block;font-size:12px;font-weight:800;color:#b45309;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:1px 7px;vertical-align:2px}
 #accBtn.on{background:var(--accent-soft);border-color:var(--accent)}
 .acc .accl{display:block;font-size:13px;font-weight:700;margin:10px 0 0}.acc .accl input{display:block;width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-weight:400}
@@ -1759,7 +1771,7 @@ function matchCard(m, compact){
     <span class="side home ${won("home")}">${wb("home")}${m.neutral ? "" : '<em class="hb">홈</em>'}<span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
     <span class="mid">${mid}</span>
     <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span>${wb("away")}</span>
-    ${m.venue ? `<span class="mvenue" title="${esc(m.venue)}">${m.neutral ? "중립 · " : ""}${esc(hangul(m.venue, enSport()))}</span>` : ""}
+    ${m.venue ? `<span class="mvenue" title="${esc(m.venue)}">${m.neutral ? "중립 · " : ""}${esc(m.venue)}</span>` : ""}
   </button>`;
 }
 function liveText(m, sp = L().sport){
@@ -2032,7 +2044,7 @@ function brTieCard(t, kind){
       const venue = (g.comp.venue || g.ev.venue || {}).fullName || "";
       return `<div class="bleg ${g.state === "in" ? "live" : ""}"><span class="lk">${i + 1}차전</span>
         <span class="hb" title="${esc(hn)} 홈">홈</span>${em(h)}<b>${played ? esc(h.score) : ""}</b><span class="col">${played ? ":" : "vs"}</span><b>${played ? esc(a.score) : ""}</b>${em(a)}
-        <span class="hn" title="${esc(venue)}">${played ? esc(hangul(venue, enSport())) : esc(md(g.date)) + (venue ? " · " + esc(hangul(venue, enSport())) : "")}</span></div>`;
+        <span class="hn" title="${esc(venue)}">${played ? esc(venue) : esc(md(g.date)) + (venue ? " · " + esc(venue) : "")}</span></div>`;
     };
     const info = t.live ? '<span class="live">● 진행 중</span>' : t.pens ? '<span class="muted">승부차기</span>' : "";
     return `<div class="btie legs ${t.live ? "live" : ""}">${top(ids[0])}${top(ids[1])}<div class="blegbox">${t.games.map(leg).join("")}</div>${info ? `<div class="binfo">${info}</div>` : ""}</div>`;
@@ -2634,7 +2646,7 @@ async function openMatch(id){
       <div class="t" data-team="${m.home.id}">${logo(m.home.logo, "big")}${esc(ko(m.home.name))}<small>${sub(hi, "홈", m.home.name)}</small></div>
       <div class="ctr">${center}</div>
       <div class="t" data-team="${m.away.id}">${logo(m.away.logo, "big")}${esc(ko(m.away.name))}<small>${sub(ai, "원정", m.away.name)}</small></div>
-    </div><div class="meta-line">${esc(L().name)}${roundOf(m) ? " " + esc(roundOf(m)) : ""}${isNL(S.lg) && groupOf(m) ? " " + esc((infoOf(m.home.id) || infoOf(m.away.id) || {}).groupLabel || groupOf(m)) : ""}${m.note ? " · " + esc(mnoteKo(m.note)) : ""}${m.venue ? ` · <span title="${esc(m.venue)}">${esc(hangul(m.venue, enSport()))}</span>` : ""}</div>`;
+    </div><div class="meta-line">${esc(L().name)}${roundOf(m) ? " " + esc(roundOf(m)) : ""}${isNL(S.lg) && groupOf(m) ? " " + esc((infoOf(m.home.id) || infoOf(m.away.id) || {}).groupLabel || groupOf(m)) : ""}${m.note ? " · " + esc(mnoteKo(m.note)) : ""}${m.venue ? ` · <span title="${esc(m.venue)}">${esc(m.venue)}</span>` : ""}</div>`;
   openModal(head + '<div class="loading">두 팀 데이터를 불러오는 중…</div>');
   try {
     // 경기 상세는 가끔 실패하므로 한 번 더 시도 (실패한 요청은 캐시에서 빠져 있음)
@@ -4892,13 +4904,55 @@ function runSlipQ(){
 }
 let IMP_EL = null, IMP_FOCUS = false;
 const TOUCH = matchMedia("(pointer:coarse)").matches;  // 화면이 자동 새로고침돼도 같은 붙여넣기 칸(썸네일·커서)을 유지
+// ---------------------------------------------------------------- 🔍 직접 검색해서 담기 + 담을 묶음 고르기
+function drawIsGrp(){
+  const b = document.getElementById("isgrp"); if (!b) return;
+  const cur = addGrp();
+  b.innerHTML = `<span class="isgl">담을 묶음</span>${grpList().map(g => `<button class="chip ${g === cur ? "on" : ""}" data-isg="${g}">${g}묶음</button>`).join("")}<button class="chip isnew" data-isg="new" title="새 묶음 만들기">＋ 새 묶음</button>`;
+}
+function impSearch(){
+  const q = document.getElementById("impq"), box = document.getElementById("isres"); if (!q || !box) return;
+  const words = q.value.trim().split(/\s+/).map(normS).filter(Boolean);
+  if (!words.length){ box.innerHTML = ""; return; }
+  if (!IDX.list.length){ box.innerHTML = '<div class="muted isnote">전체 리그 경기를 불러오는 중…</div>'; loadIndex().then(() => impSearch()); return; }
+  const until = Date.now() + 14 * 864e5;
+  const res = IDX.list.filter(({lg, m}) => (m.state === "in" || (m.state === "pre" && new Date(m.date) < until)) &&
+      words.every(w => normS([ko(m.home.name), m.home.name, m.home.abbr, ko(m.away.name), m.away.name, m.away.abbr, LEAGUES[lg].name, LEAGUES[lg].short].join("|")).includes(w)))
+    .sort((a, b) => (b.m.state === "in") - (a.m.state === "in") || a.m.date.localeCompare(b.m.date)).slice(0, 8);
+  const SPI = {soccer:"⚽", basketball:"🏀", baseball:"⚾"};
+  box.innerHTML = res.length ? `<ul class="isl">${res.map(({lg, m}) => { const p = PICKS.find(x => x.lg === lg && x.id === m.id);
+      return `<li><span class="isw">${m.state === "in" ? '<b class="live">● 진행 중</b>' : `${md(m.date)} ${timeOnly(m.date)}`}</span><span class="ist">${SPI[sportOf(lg)] || ""} <small>${esc(LEAGUES[lg].short)}</small> ${esc(ko(m.home.name))} <i>vs</i> ${esc(ko(m.away.name))}</span>
+        ${p ? `<span class="isdone">✓ ${p.grp}묶음</span>` : `<button class="btn primary isadd" data-isadd="${lg}|${esc(m.id)}">＋ ${addGrp()}묶음에 담기</button>`}</li>`; }).join("")}</ul>`
+    : '<div class="muted isnote">찾는 경기가 없습니다 (예정 2주 안·진행 중 경기만). 다른 이름·영어로도 해 보세요.</div>';
+}
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-isg]");
+  if (g){
+    // ＋ 새 묶음: 지금 보이는 묶음 다음 번호 (빈 My에서도 1묶음 다음 = 2묶음)
+    const v = g.dataset.isg === "new" ? (() => { const used = new Set(grpList()); let n = 1; while (used.has(n)) n++; MYGRPS.push(n); saveGrps(); return n; })() : Number(g.dataset.isg);
+    lsSet("my.addGrp", String(v)); try { syncDirty(); } catch {}
+    if (g.dataset.isg === "new") { toast(`${v}묶음을 만들었습니다 · 이제 담는 경기는 ${v}묶음으로`); if (S.tab === "my") render(); }
+    drawIsGrp(); impSearch(); return;
+  }
+  const a = e.target.closest("[data-isadd]");
+  if (a){
+    const [lg, id] = a.dataset.isadd.split("|"), x = IDX.list.find(z => z.lg === lg && z.m.id === id); if (!x) return;
+    const grp = addGrp();
+    if (addPickFrom(lg, x.m, grp)) toast(`${ko(x.m.home.name)} vs ${ko(x.m.away.name)} → ${grp}묶음에 담았습니다`);
+    if (S.tab === "my") render(); impSearch();
+  }
+});
 function mountImp(){
   const slot = document.getElementById("myimpSlot"); if (!slot) return;
   let el = IMP_EL;
   if (!el){
     el = IMP_EL = document.createElement("div");
     el.id = "myimp"; el.className = "myimp";
-    el.innerHTML = `<div class="pastewrap" id="pastewrap">
+    el.innerHTML = `<div class="impsearch">
+        <div class="isgrp" id="isgrp"></div>
+        <input id="impq" type="search" autocomplete="off" placeholder="🔍 팀 이름을 입력해서 경기 찾기 (예: 토트넘, 레이커스, Arsenal)">
+        <div id="isres"></div></div>
+      <div class="pastewrap" id="pastewrap">
         <div class="slipthumbs" id="slipthumbs"></div>
         <div class="pasterow">
           <div class="pastebox" id="pastebox" contenteditable="true" role="textbox" aria-label="베팅내역 캡처 붙여넣기" data-ph="${TOUCH ? "🖼️ 눌러서 갤러리에서 캡처 고르기 · 길게 누르면 붙여넣기" : "📋 베팅내역 캡처를 여기에 붙여넣기 (Ctrl+V) · 여러 장 가능 · Enter로 찾기"}"></div>
@@ -4923,7 +4977,12 @@ function mountImp(){
     // 휴대폰: 칸을 짧게 누르면 바로 갤러리(사진 선택) 열기, 길게 누르면 붙여넣기 메뉴
     wrap.addEventListener("click", e => { if (e.target.closest("button")) return; if (TOUCH && !SLIPQ.length) document.getElementById("myimgIn").click(); else box.focus(); });
   }
-  slot.replaceWith(el);
+  el.dataset.moving = 1; slot.replaceWith(el); setTimeout(() => delete el.dataset.moving, 0);
+  const iq = el.querySelector("#impq");
+  if (!el.dataset.isOn){ el.dataset.isOn = 1; iq.addEventListener("input", () => impSearch());
+    iq.addEventListener("focus", () => { el.dataset.isf = 1; }); iq.addEventListener("blur", () => setTimeout(() => { if (iq.isConnected && document.activeElement !== iq && !el.dataset.moving) delete el.dataset.isf; }, 0)); }
+  drawIsGrp(); if (iq.value) impSearch();
+  if (el.dataset.isf && !modal.open){ const n = iq.value.length; iq.focus({preventScroll:true}); try { iq.setSelectionRange(n, n); } catch {} }  // 화면이 새로 그려져도 입력 이어서
   drawSlipQ();
   if (IMP_FOCUS && !modal.open) el.querySelector("#pastebox").focus({preventScroll:true});
 }
