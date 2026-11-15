@@ -64,3 +64,5 @@
 참고: 지난 시즌 데이터는 `S.season` + `D()`가 `"리그@연도"` 칸을 따로 씀(`dkeyOf`). ESPN이 지난 시즌 standings에 현재 시즌 이름·시작일을 붙여 보내므로 `applyStandings`에서 덮어씀.
 
 - 리그 ● 빨간 점(2026-11-15 소유자 요청): `lgLiveDots` — IDX(전체 리그 목록)에서 진행 중 경기가 있는 리그 칩 `.lgc.haslive`·종목 버튼(`data-sgk`)에 빨간 점, 1분마다. 경기 카드 경기장 줄: 4칸 카드는 grid-column 2/-1, 3칸(`.nogrp`·`.strip`)은 1/-1.
+
+- 팀 분석 최근 경기·맞대결 줄 누르면 경기 상세(`resList` → `EVX` 보관, `findMatch`가 마지막에 찾음). 리그 탭 순서: 경기 일정이 맨 앞·기본(`LG_TABS`).
