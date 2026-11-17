@@ -481,6 +481,27 @@ td.pts{font-weight:800}
 .strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
 .strip .match{min-width:310px;grid-template-columns:1fr 86px 1fr}
 .strip .match .mvenue,.match.nogrp .mvenue{grid-column:1/-1}
+/* 경기 일정 카드 오른쪽 작은 배당 표 (카드 높이는 그대로) */
+.mlist{grid-template-columns:repeat(auto-fill,minmax(560px,1fr))}
+.match.hasod{grid-template-columns:34px 1fr 92px 1fr 184px}
+.match.nogrp.hasod{grid-template-columns:1fr 92px 1fr 184px}
+.match.hasod .mvenue{grid-column:2/-2}
+.match.nogrp.hasod .mvenue{grid-column:1/-2}
+.match .omw{grid-column:-2/-1;grid-row:1;align-self:center;min-width:0;border-left:1px dashed var(--border);padding-left:6px}
+.match.hasvn .omw{grid-row:1/span 2}
+.omini{border-collapse:separate;border-spacing:2px 0;width:100%;font-size:11px;font-variant-numeric:tabular-nums;line-height:1.25}
+.omini th,.omini td{padding:1px 2px;text-align:center;white-space:nowrap}
+.omini thead th{font-size:9.5px;font-weight:600;color:var(--muted)}
+.omini tbody th{font-size:9.5px;font-weight:600;color:var(--muted);text-align:left}
+.omini td{font-weight:700;color:var(--text)}
+.omini td.ob{color:var(--muted);font-weight:600}
+.omini td small{font-size:9px;font-weight:600;color:var(--muted);margin-right:1px}
+.omini td.yeok{position:relative;outline:1.5px solid #ef4444;outline-offset:-1px;border-radius:3px;color:#ef4444}
+.omini td.yeok::before{content:"역";position:absolute;top:-6px;left:-5px;background:#ef4444;color:#fff;font-size:8.5px;font-weight:800;line-height:1;padding:1px 2px;border-radius:3px}
+.onone{font-size:10.5px;color:var(--muted)}
+.lsr .lod{min-width:0}
+.lsr .lod .omini thead{display:none}
+.lsr .lod .omini td,.lsr .lod .omini th{padding:0 2px;line-height:14px}
 .strip .sc{white-space:nowrap}
 .strip-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
 .strip-h h3{margin:0;font-size:15px}
@@ -729,7 +750,7 @@ tr.dnp td{color:var(--muted)}
 .dayp>header b{font-size:16px}.dayp.d0>header b{color:var(--accent)}
 .dayp>header span{color:var(--muted);font-size:13px;font-weight:600}.dayp>header em{margin-left:auto;font-style:normal;color:var(--muted);font-size:12.5px}
 .lsl{display:flex;flex-direction:column}
-.lsr{display:grid;grid-template-columns:78px 22px 112px minmax(0,1fr) 64px minmax(0,1fr) 40px;align-items:center;gap:8px;padding:7px 10px 7px 14px;border-bottom:1px solid var(--border);cursor:pointer;min-height:44px;position:relative}
+.lsr{display:grid;grid-template-columns:78px 22px 112px minmax(0,1fr) 64px minmax(0,1fr) 170px 40px;align-items:center;gap:8px;padding:7px 10px 7px 14px;border-bottom:1px solid var(--border);cursor:pointer;min-height:44px;position:relative}
 .lsr:last-child{border-bottom:0}.lsr:hover{background:var(--surface-2)}
 .lsr.is-live{background:color-mix(in srgb, #ef4444 6%, var(--surface))}
 .lsr .lt{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;line-height:1.2;white-space:nowrap;overflow:hidden}
@@ -748,7 +769,13 @@ tr.dnp td{color:var(--muted)}
 .lsr .pick{position:static;transform:none;width:36px;height:36px}
 .lsr .lmb{display:none}
 @media (max-width:640px){
-  .lsr{grid-template-columns:50px 18px 20px minmax(0,1fr) 32px;gap:6px;padding:6px 4px 6px 10px}
+  .lsr{grid-template-columns:50px 18px 20px minmax(0,1fr) 32px;gap:0 6px;padding:6px 4px 6px 10px}
+  /* 휴대폰 홈: 팀 이름 바로 아래 작은 글씨로 승무패만 */
+  .lsr .lt{grid-column:1;grid-row:1/span 2}.lsr .lsp{grid-column:2;grid-row:1/span 2}.lsr .ll{grid-column:3;grid-row:1/span 2}
+  .lsr .lmb{grid-column:4;grid-row:1}.lsr>.pick{grid-column:5;grid-row:1/span 2}
+  .lsr .lod{grid-column:4;grid-row:2;padding-left:24px}
+  .lsr .lod.has{margin-top:2px}
+  .lsr .lod:not(.has){height:0;overflow:hidden}
   .lsr .lsp{font-size:14px}
   .lsr .lh,.lsr .la,.lsr .lsc,.lsr .ll small{display:none}
   .lsr .lmb{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -1040,6 +1067,27 @@ ul.news small{font-size:11px}
   .hide-sm{display:none}
   .match{grid-template-columns:30px 1fr 74px 1fr;padding:9px 8px;gap:6px}
   .match.nogrp{grid-template-columns:1fr 74px 1fr}
+  /* 휴대폰: 배당은 경기장 줄 자리에 한 줄로 (카드 높이 그대로) */
+  .match.hasod{grid-template-columns:30px 1fr 74px 1fr}
+  .match.nogrp.hasod{grid-template-columns:1fr 74px 1fr}
+  .match.hasod .mvenue{grid-column:2/-1;grid-row:2}
+  .match.nogrp.hasod .mvenue{grid-column:1/-1}
+  .match .omw,.match.hasvn .omw{grid-column:1/-1;grid-row:2;border-left:0;padding-left:0;margin-top:-2px}
+  .match:not(.hasvn) .omw:not(.has){display:none}
+  .match:has(.omw.has) .mvenue{visibility:hidden}
+  .match .omw .omini thead,.match .omw .omini .o1{display:none}
+  .match .omw .omini,.match .omw .omini tbody{display:flex;justify-content:center;gap:10px}
+  .match .omw .omini tr{display:flex;gap:6px;align-items:center}
+  .match .omw .omini td{padding:0 2px;font-size:10.5px;line-height:12px}
+  .match .omw,.match .omw .omini,.match .omw .omini tbody,.match .omw .omini tr{line-height:12px;max-height:12px}
+  .match .omw .omini td.ob{font-weight:700}
+  .match .omw .omini tr+tr,.lsr .lod .omini tr+tr,.lsr .lod .omini thead,.lsr .lod .omini .o1{display:none}
+  .lsr .lod .omini,.lsr .lod .omini tbody{display:block;width:auto}
+  .lsr .lod .omini tr{display:flex;gap:8px;align-items:center}
+  .lsr .lod .omini td,.lsr .lod .omini th{padding:0;font-size:10.5px;line-height:13px}
+  .match .omw .omini tbody th,.lsr .lod .omini tbody th{font-size:9.5px;color:var(--muted);font-weight:600}
+  .match .omw .onone{display:block;text-align:center;font-size:10px}
+  .match .omw:not(.has){visibility:hidden}
   .lg{width:18px;height:18px}
   ul.res li{grid-template-columns:52px 1fr auto 26px}
   ul.res .c,ul.res .ha{display:none}
@@ -1815,12 +1863,13 @@ function matchCard(m, compact){
   }
   const g = !compact && isNL(S.lg);
   const wb = side => won(side) ? `<em class="wbadge">승</em>` : "";
-  return `<button class="match ${g ? "" : "nogrp"}" data-match="${m.id}">${pickBtn(S.lg, m.id)}
+  const od = compact ? "" : `<span class="omw" data-odds="${S.lg}|${m.id}">${oddsCell(S.lg, m)}</span>`;
+  return `<button class="match ${g ? "" : "nogrp"}${compact ? "" : " hasod"}${m.venue ? " hasvn" : ""}" data-match="${m.id}">${pickBtn(S.lg, m.id)}
     ${g ? `<span class="grp">${esc(groupOf(m))}</span>` : ""}
     <span class="side home ${won("home")}">${wb("home")}${m.neutral ? "" : '<em class="hb">홈</em>'}<span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
     <span class="mid">${mid}</span>
     <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span>${wb("away")}</span>
-    ${m.venue ? `<span class="mvenue" title="${esc(m.venue)}">${m.neutral ? "중립 · " : ""}${esc(m.venue)}</span>` : ""}
+    ${m.venue ? `<span class="mvenue" title="${esc(m.venue)}">${m.neutral ? "중립 · " : ""}${esc(m.venue)}</span>` : ""}${od}
   </button>`;
 }
 function liveText(m, sp = L().sport){
@@ -2658,6 +2707,59 @@ function pickOdds(sum){
   const list = [...((sum && sum.pickcenter) || []), ...((sum && sum.odds) || [])].filter(Boolean);
   return list.find(x => x.overUnder != null || x.spread != null || (x.homeTeamOdds && x.homeTeamOdds.moneyLine != null)) || null;
 }
+// ---------------------------------------------------------------- 경기 일정·홈 줄의 작은 배당 표 (승무패·언오버, 소수점)
+// 화면에 보이는 경기만 경기 상세(summary)에서 배당을 받아 옴. 끝난 경기 배당은 이 기기에 저장(다시 받지 않음)
+// 역배 적중: 끝난 경기에서 배당이 더 높았던 팀이 이기면 그 칸에 빨간 네모 + "역"
+const OD = {m:new Map(), q:[], busy:0, io:null};
+try { const o = JSON.parse(localStorage.getItem("oddsc.v1") || "{}"); for (const k in o) OD.m.set(k, o[k]); } catch {}
+function oddsSave(){
+  try { const keep = [...OD.m.entries()].filter(([, v]) => v && v.fin).slice(-800); localStorage.setItem("oddsc.v1", JSON.stringify(Object.fromEntries(keep))); } catch {}
+}
+function oddsSlim(o){
+  if (!o) return null;
+  const ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {}, l = Number(o.overUnder);
+  const s = {h:decOdds(ho.moneyLine), d:decOdds((o.drawOdds || {}).moneyLine), a:decOdds(ao.moneyLine), l:o.overUnder != null && isFinite(l) ? l : null, ov:decOdds(o.overOdds), un:decOdds(o.underOdds)};
+  return s.h || s.a || s.l != null ? s : null;
+}
+function oddsCell(lg, m){
+  const v = OD.m.get(lg + "|" + m.id);
+  return v === undefined ? "" : oddsMini(lg, m, v);
+}
+function oddsMini(lg, m, s){
+  if (!s || s.none) return '<span class="onone">배당 정보 없음</span>';
+  const soccer = (LEAGUES[lg] || {}).sport === "soccer", f = v => v ? v.toFixed(2) : "-";
+  const hs = Number(m.home && m.home.score), as = Number(m.away && m.away.score);
+  const win = m.state === "post" && isFinite(hs) && isFinite(as) ? (hs > as ? "h" : as > hs ? "a" : "") : "";
+  const yk = side => win === side && s.h && s.a && (side === "h" ? s.h > s.a : s.a > s.h) ? ' class="yeok" title="역배 적중"' : "";
+  const ln = s.l != null;
+  return `<table class="omini"><thead><tr><th></th><th>기준</th><th>홈</th>${soccer ? "<th>무</th>" : ""}<th>원정</th></tr></thead><tbody>
+    <tr><th>${soccer ? "승무패" : "승패"}</th><td class="ob${soccer ? " x" : ""} o1">-</td><td${yk("h")}>${f(s.h)}</td>${soccer ? `<td>${f(s.d)}</td>` : ""}<td${yk("a")}>${f(s.a)}</td></tr>
+    <tr><th>언오버</th><td class="ob">${ln ? s.l : "-"}</td><td>${ln ? `<small>오</small>${f(s.ov)}` : "-"}</td>${soccer ? '<td class="ob x">-</td>' : ""}<td>${ln ? `<small>언</small>${f(s.un)}` : "-"}</td></tr></tbody></table>`;
+}
+function oddsFill(k){
+  const [lg, id] = k.split("|"), v = OD.m.get(k), m = findMatch(lg, id);
+  document.querySelectorAll(`[data-odds="${k}"]`).forEach(el => { el.innerHTML = m ? oddsMini(lg, m, v) : ""; el.classList.toggle("has", !!v && !v.none); });
+}
+function oddsPump(){
+  while (OD.busy < 4 && OD.q.length){
+    const k = OD.q.shift(); if (OD.m.has(k)) { oddsFill(k); continue; }
+    const [lg, id] = k.split("|"), m = findMatch(lg, id), Lg = LEAGUES[lg];
+    if (!m || !Lg) continue;
+    OD.busy++;
+    espn(summaryPath(lg, id), m.state === "post" ? 3600 : 600).then(sum => {
+      const v = oddsSlim(pickOdds(sum)), fin = m.state === "post";
+      OD.m.set(k, v ? {...v, fin} : (fin ? {none:1, fin} : null));
+      if (fin) oddsSave();
+      oddsFill(k);
+    }).catch(() => {}).finally(() => { OD.busy--; oddsPump(); });
+  }
+}
+function oddsObserve(){
+  if (!("IntersectionObserver" in window)) return;
+  if (!OD.io) OD.io = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting){ OD.io.unobserve(e.target); const k = e.target.dataset.odds; if (!OD.m.has(k) && !OD.q.includes(k)) OD.q.push(k); } oddsPump(); }, {rootMargin:"300px 0px"});
+  document.querySelectorAll("#main [data-odds]:not([data-oq])").forEach(el => { el.dataset.oq = 1; if (!OD.m.has(el.dataset.odds)) OD.io.observe(el); });
+}
+new MutationObserver(() => { clearTimeout(OD.t); OD.t = setTimeout(oddsObserve, 120); }).observe(document.getElementById("main"), {childList:true, subtree:true});
 // 진행 중 언더오버: "지금 0골 · 언더 (3골 더 나면 오버)" — 기준점을 넘으려면 몇 골/점이 더 필요한지
 function ouNow(tot, line, soccer){
   const u = soccer ? "골" : "점";
@@ -4741,6 +4843,7 @@ function lsRow({lg, m}){
     <span class="lsc">${sc}</span>
     <span class="la ${aw}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span></span>
     <span class="lmb"><span class="${hw}">${logo(m.home.logo)}<span>${esc(ko(m.home.name))}</span><b>${live || post ? m.home.score ?? 0 : ""}</b></span><span class="${aw}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span><b>${live || post ? m.away.score ?? 0 : ""}</b></span></span>
+    <span class="lod" data-odds="${lg}|${m.id}">${oddsCell(lg, m)}</span>
     ${pickBtn(lg, m.id, true)}</div>`;
 }
 function renderHome(fromTick){

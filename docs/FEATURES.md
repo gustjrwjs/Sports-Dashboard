@@ -68,3 +68,4 @@
 - 팀 분석 최근 경기·맞대결 줄 누르면 경기 상세(`resList` → `EVX` 보관, `findMatch`가 마지막에 찾음). 리그 탭 순서: 경기 일정이 맨 앞·기본(`LG_TABS`).
 - 팝업(#modal) 열려 있을 때 뒤 페이지 스크롤 잠금: CSS `html:has(dialog[open])` overflow hidden + `dialog{overscroll-behavior:contain}`.
 - 따라오는 줄(#sbar) LIVE 옆 리그 선택 상자(`sbarLgSel`, `#sblgSel`, 종목별 묶음, ● 진행 중). 고르는 중엔 줄을 다시 그리지 않음.
+- 경기 일정 카드·홈 줄 작은 배당 표(`oddsMini`/`oddsCell`, 보이는 경기만 summary로 받음 `oddsObserve`·`oddsPump`, 끝난 경기는 localStorage `oddsc.v1`). 역배 적중 = 끝난 경기에서 배당 높은 팀 승리 → 빨간 네모 + "역"(`td.yeok`). PC: 승무패+언오버 표, 휴대폰: 승무패 한 줄(카드는 경기장 줄 자리, 홈은 팀 이름 아래).
