@@ -496,8 +496,11 @@ td.pts{font-weight:800}
 .omini td{font-weight:700;color:var(--text)}
 .omini td.ob{color:var(--muted);font-weight:600}
 .omini td small{font-size:9px;font-weight:600;color:var(--muted);margin-right:1px}
-.omini td.yeok{position:relative;outline:1.5px solid #ef4444;outline-offset:-1px;border-radius:3px;color:#ef4444}
-.omini td.yeok::before{content:"역";position:absolute;top:-6px;left:-5px;background:#ef4444;color:#fff;font-size:8.5px;font-weight:800;line-height:1;padding:1px 2px;border-radius:3px}
+/* 역배 적중 팀 이름: 빨간 네모 + 왼쪽 위 "역" */
+.tn{min-width:0}
+.tn>.tnx{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .tn.yk,.lsr .tn.yk{position:relative;overflow:visible;outline:1.5px solid #ef4444;outline-offset:2px;border-radius:3px;color:#ef4444}
+.tn.yk::before{content:"역";position:absolute;top:-8px;left:-7px;z-index:1;background:#ef4444;color:#fff;font-size:8.5px;font-weight:800;line-height:1;padding:1px 2px;border-radius:3px}
 .onone{font-size:10.5px;color:var(--muted)}
 .lsr .lod{min-width:0}
 .lsr .lod .omini thead{display:none}
@@ -1081,6 +1084,8 @@ ul.news small{font-size:11px}
   .match .omw .omini td{padding:0 2px;font-size:10.5px;line-height:12px}
   .match .omw,.match .omw .omini,.match .omw .omini tbody,.match .omw .omini tr{line-height:12px;max-height:12px}
   .match .omw .omini td.ob{font-weight:700}
+  .tn.yk{outline-offset:1px}
+  .tn.yk::before{top:-7px;left:-5px;font-size:8px}
   .match .omw .omini tr+tr,.lsr .lod .omini tr+tr,.lsr .lod .omini thead,.lsr .lod .omini .o1{display:none}
   .lsr .lod .omini,.lsr .lod .omini tbody{display:block;width:auto}
   .lsr .lod .omini tr{display:flex;gap:8px;align-items:center}
@@ -1866,9 +1871,9 @@ function matchCard(m, compact){
   const od = compact ? "" : `<span class="omw" data-odds="${S.lg}|${m.id}">${oddsCell(S.lg, m)}</span>`;
   return `<button class="match ${g ? "" : "nogrp"}${compact ? "" : " hasod"}${m.venue ? " hasvn" : ""}" data-match="${m.id}">${pickBtn(S.lg, m.id)}
     ${g ? `<span class="grp">${esc(groupOf(m))}</span>` : ""}
-    <span class="side home ${won("home")}">${wb("home")}${m.neutral ? "" : '<em class="hb">홈</em>'}<span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
+    <span class="side home ${won("home")}">${wb("home")}${m.neutral ? "" : '<em class="hb">홈</em>'}<span class="tn${ykc(S.lg, m, "h")}" data-s="h"><span class="tnx">${esc(ko(m.home.name))}</span></span>${logo(m.home.logo)}</span>
     <span class="mid">${mid}</span>
-    <span class="side away ${won("away")}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span>${wb("away")}</span>
+    <span class="side away ${won("away")}">${logo(m.away.logo)}<span class="tn${ykc(S.lg, m, "a")}" data-s="a"><span class="tnx">${esc(ko(m.away.name))}</span></span>${wb("away")}</span>
     ${m.venue ? `<span class="mvenue" title="${esc(m.venue)}">${m.neutral ? "중립 · " : ""}${esc(m.venue)}</span>` : ""}${od}
   </button>`;
 }
@@ -2721,6 +2726,15 @@ function oddsSlim(o){
   const s = {h:decOdds(ho.moneyLine), d:decOdds((o.drawOdds || {}).moneyLine), a:decOdds(ao.moneyLine), l:o.overUnder != null && isFinite(l) ? l : null, ov:decOdds(o.overOdds), un:decOdds(o.underOdds)};
   return s.h || s.a || s.l != null ? s : null;
 }
+// 역배 적중 팀: 끝난 경기에서 배당이 더 높았던 팀이 이김 → "h" / "a" / ""
+function yeokSide(lg, m){
+  const s = OD.m.get(lg + "|" + m.id);
+  if (!s || s.none || !s.h || !s.a || m.state !== "post") return "";
+  const hs = Number(m.home && m.home.score), as = Number(m.away && m.away.score);
+  if (!isFinite(hs) || !isFinite(as)) return "";
+  return hs > as && s.h > s.a ? "h" : as > hs && s.a > s.h ? "a" : "";
+}
+const ykc = (lg, m, side) => yeokSide(lg, m) === side ? " yk" : "";
 function oddsCell(lg, m){
   const v = OD.m.get(lg + "|" + m.id);
   return v === undefined ? "" : oddsMini(lg, m, v);
@@ -2728,17 +2742,16 @@ function oddsCell(lg, m){
 function oddsMini(lg, m, s){
   if (!s || s.none) return '<span class="onone">배당 정보 없음</span>';
   const soccer = (LEAGUES[lg] || {}).sport === "soccer", f = v => v ? v.toFixed(2) : "-";
-  const hs = Number(m.home && m.home.score), as = Number(m.away && m.away.score);
-  const win = m.state === "post" && isFinite(hs) && isFinite(as) ? (hs > as ? "h" : as > hs ? "a" : "") : "";
-  const yk = side => win === side && s.h && s.a && (side === "h" ? s.h > s.a : s.a > s.h) ? ' class="yeok" title="역배 적중"' : "";
   const ln = s.l != null;
   return `<table class="omini"><thead><tr><th></th><th>기준</th><th>홈</th>${soccer ? "<th>무</th>" : ""}<th>원정</th></tr></thead><tbody>
-    <tr><th>${soccer ? "승무패" : "승패"}</th><td class="ob${soccer ? " x" : ""} o1">-</td><td${yk("h")}>${f(s.h)}</td>${soccer ? `<td>${f(s.d)}</td>` : ""}<td${yk("a")}>${f(s.a)}</td></tr>
+    <tr><th>${soccer ? "승무패" : "승패"}</th><td class="ob${soccer ? " x" : ""} o1">-</td><td>${f(s.h)}</td>${soccer ? `<td>${f(s.d)}</td>` : ""}<td>${f(s.a)}</td></tr>
     <tr><th>언오버</th><td class="ob">${ln ? s.l : "-"}</td><td>${ln ? `<small>오</small>${f(s.ov)}` : "-"}</td>${soccer ? '<td class="ob x">-</td>' : ""}<td>${ln ? `<small>언</small>${f(s.un)}` : "-"}</td></tr></tbody></table>`;
 }
 function oddsFill(k){
   const [lg, id] = k.split("|"), v = OD.m.get(k), m = findMatch(lg, id);
-  document.querySelectorAll(`[data-odds="${k}"]`).forEach(el => { el.innerHTML = m ? oddsMini(lg, m, v) : ""; el.classList.toggle("has", !!v && !v.none); });
+  const ys = m ? yeokSide(lg, m) : "";
+  document.querySelectorAll(`[data-odds="${k}"]`).forEach(el => { el.innerHTML = m ? oddsMini(lg, m, v) : ""; el.classList.toggle("has", !!v && !v.none);
+    el.closest(".match,.lsr")?.querySelectorAll(".tn").forEach(x => x.classList.toggle("yk", x.dataset.s === ys)); });
 }
 function oddsPump(){
   while (OD.busy < 4 && OD.q.length){
@@ -4839,10 +4852,10 @@ function lsRow({lg, m}){
     <span class="lt">${t}</span>
     <span class="lsp" title="${{soccer:"축구", basketball:"농구", baseball:"야구"}[sportOf(lg)] || ""}">${{soccer:"⚽", basketball:"🏀", baseball:"⚾"}[sportOf(lg)] || ""}</span>
     <span class="ll" title="${esc(Lg.name)}"><span class="mk xs" style="background:${Lg.color}">${Lg.mark}</span><small>${esc(Lg.short)}</small></span>
-    <span class="lh ${hw}"><span>${esc(ko(m.home.name))}</span>${logo(m.home.logo)}</span>
+    <span class="lh ${hw}"><span class="tn${ykc(lg, m, "h")}" data-s="h"><span class="tnx">${esc(ko(m.home.name))}</span></span>${logo(m.home.logo)}</span>
     <span class="lsc">${sc}</span>
-    <span class="la ${aw}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span></span>
-    <span class="lmb"><span class="${hw}">${logo(m.home.logo)}<span>${esc(ko(m.home.name))}</span><b>${live || post ? m.home.score ?? 0 : ""}</b></span><span class="${aw}">${logo(m.away.logo)}<span>${esc(ko(m.away.name))}</span><b>${live || post ? m.away.score ?? 0 : ""}</b></span></span>
+    <span class="la ${aw}">${logo(m.away.logo)}<span class="tn${ykc(lg, m, "a")}" data-s="a"><span class="tnx">${esc(ko(m.away.name))}</span></span></span>
+    <span class="lmb"><span class="${hw}">${logo(m.home.logo)}<span class="tn${ykc(lg, m, "h")}" data-s="h"><span class="tnx">${esc(ko(m.home.name))}</span></span><b>${live || post ? m.home.score ?? 0 : ""}</b></span><span class="${aw}">${logo(m.away.logo)}<span class="tn${ykc(lg, m, "a")}" data-s="a"><span class="tnx">${esc(ko(m.away.name))}</span></span><b>${live || post ? m.away.score ?? 0 : ""}</b></span></span>
     <span class="lod" data-odds="${lg}|${m.id}">${oddsCell(lg, m)}</span>
     ${pickBtn(lg, m.id, true)}</div>`;
 }
