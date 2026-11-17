@@ -498,6 +498,9 @@ td.pts{font-weight:800}
 /* 모달 */
 dialog{border:0;padding:0;border-radius:16px;background:var(--bg);color:var(--text);width:min(980px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
 dialog::backdrop{background:rgba(5,8,14,.55)}
+/* 팝업이 열려 있는 동안 뒤 페이지는 스크롤되지 않게 (창 끝까지 내려도 뒤로 넘어가지 않음) */
+dialog{overscroll-behavior:contain}
+html:has(dialog[open]){overflow:hidden;scrollbar-gutter:stable}
 .m-in{padding:0 18px 18px}
 .m-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:10px 10px 6px;background:var(--bg)}
 .m-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
