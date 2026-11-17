@@ -67,3 +67,4 @@
 
 - 팀 분석 최근 경기·맞대결 줄 누르면 경기 상세(`resList` → `EVX` 보관, `findMatch`가 마지막에 찾음). 리그 탭 순서: 경기 일정이 맨 앞·기본(`LG_TABS`).
 - 팝업(#modal) 열려 있을 때 뒤 페이지 스크롤 잠금: CSS `html:has(dialog[open])` overflow hidden + `dialog{overscroll-behavior:contain}`.
+- 따라오는 줄(#sbar) LIVE 옆 리그 선택 상자(`sbarLgSel`, `#sblgSel`, 종목별 묶음, ● 진행 중). 고르는 중엔 줄을 다시 그리지 않음.
