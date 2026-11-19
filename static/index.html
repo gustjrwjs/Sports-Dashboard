@@ -955,6 +955,7 @@ select.gmove{font:inherit;font-size:13px}
 .mytab .ob.act{box-shadow:0 0 0 2px var(--win);opacity:1!important}
 .mytab .ob i{position:absolute;top:-8px;right:-6px;font-style:normal;font-size:12px}
 .mytab .na{color:var(--muted)}
+.mytab .mtg{white-space:nowrap}.mytab .grpb+.grpb{margin-left:2px}
 .mytab .grpb{display:inline-block;min-width:20px;font-size:11px;font-weight:800;background:var(--text);color:var(--bg);border-radius:999px;padding:1px 6px}
 .mytab .mtp .pick{position:static;font-size:20px;width:34px;height:34px;opacity:1}
 .mytab th.mtp,.mytab td.mtp{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:6px 0 8px -6px rgba(0,0,0,.25);padding:0 2px 0 4px}
@@ -3520,11 +3521,17 @@ const isPicked = (lg, id) => PICKS.some(p => p.lg === lg && p.id === id);
 const pk = p => p.lg + "|" + p.id + "|" + p.grp;
 // grp를 주면(My 화면) 그 묶음의 항목만 빼는 별, 아니면 지금 담는 묶음 기준으로 담기/빼기
 const pickBtn = (lg, id, inline, grp) => { const on = grp != null || isPicked(lg, id);
-  return `<span class="pick ${inline ? "inl" : ""} ${on ? "on" : ""}" data-pick="${lg}|${id}${grp != null ? "|" + grp : ""}" role="button" title="${grp != null ? grp + "묶음에서 빼기" : on ? `${addGrp()}묶음에 담기/빼기` : "My 경기에 담기"}">${on ? "★" : "☆"}</span>`; };
+  return `<span class="pick ${inline ? "inl" : ""} ${on ? "on" : ""}" data-pick="${lg}|${id}${grp != null ? "|" + grp : ""}" role="button" title="${grp === "all" ? "모든 묶음에서 빼기" : grp != null ? grp + "묶음에서 빼기" : on ? `${addGrp()}묶음에 담기/빼기` : "My 경기에 담기"}">${on ? "★" : "☆"}</span>`; };
 function findMatch(lg, id){
   return D(lg).matches.find(x => x.id === id) || ((LV[lg] || {}).events || []).find(x => x.id === id) || MY.ev[lg + "|" + id] || (IDX.list.find(x => x.lg === lg && x.m.id === id) || {}).m || EVX[lg + "|" + id] || null;
 }
 function togglePick(lg, id, grp){
+  if (grp === "all"){
+    const n = PICKS.filter(p => p.lg === lg && p.id === id).length;
+    PICKS = PICKS.filter(p => !(p.lg === lg && p.id === id));
+    if (n > 1) toast(`${n}개 묶음에서 모두 뺐습니다`);
+    savePicks(); updateMyBadge(); if (S.tab === "my") renderMy(true); return;
+  }
   const g = grp != null && grp !== "" ? Number(grp) : addGrp();
   const i = PICKS.findIndex(p => p.lg === lg && p.id === id && p.grp === g);
   const others = PICKS.filter(p => p.lg === lg && p.id === id && p.grp !== g).length;
@@ -3549,8 +3556,9 @@ function togglePick(lg, id, grp){
 }
 function updateMyBadge(){
   const el = $("#mycnt"); if (!el) return;
-  el.textContent = PICKS.length ? String(PICKS.length) : "";
-  const liveN = PICKS.filter(p => (MY.ev[p.lg + "|" + p.id] || findMatch(p.lg, p.id) || {}).state === "in").length;
+  const uniq = [...new Map(PICKS.map(p => [p.lg + "|" + p.id, p])).values()];
+  el.textContent = uniq.length ? String(uniq.length) : "";
+  const liveN = uniq.filter(p => (MY.ev[p.lg + "|" + p.id] || findMatch(p.lg, p.id) || {}).state === "in").length;
   document.querySelector("#tabs .tab-my")?.classList.toggle("has", liveN > 0);
 }
 // 미국 동부 날짜 + UTC 날짜 (ESPN 일정 날짜 기준이 리그마다 달라 둘 다 조회)
@@ -3613,7 +3621,7 @@ function renderMy(fromRefresh){
     mountImp();
     return;
   }
-  if (!MY.t){ $("#main").innerHTML = bar(PICKS.length) + '<div id="myimpSlot"></div><div class="loading">담은 경기를 불러오는 중…</div>'; mountImp(); refreshMy(); return; }
+  if (!MY.t){ $("#main").innerHTML = bar(new Set(PICKS.map(p => p.lg + "|" + p.id)).size) + '<div id="myimpSlot"></div><div class="loading">담은 경기를 불러오는 중…</div>'; mountImp(); refreshMy(); return; }
   if (!fromRefresh && Date.now() - MY.t > 15000) refreshMy();
   else if (!fromRefresh) scheduleMy();
   const grps = grpList();
@@ -3621,27 +3629,35 @@ function renderMy(fromRefresh){
   const gsel = S.myGrp ?? "all";
   const itemsAll = PICKS.map(p => ({p, k:p.lg + "|" + p.id, sk:pk(p), m:MY.ev[p.lg + "|" + p.id]}))
     .sort((a, b) => new Date(a.p.date) - new Date(b.p.date));
-  const items = gsel === "all" ? itemsAll : itemsAll.filter(x => x.p.grp === gsel);
+  // 전체 보기: 같은 경기는 한 줄로 합치고 묶음 번호만 모아 표시 (예측 칸은 가장 앞 묶음 것)
+  const items = gsel !== "all" ? itemsAll.filter(x => x.p.grp === gsel) : (() => {
+    const by = new Map();
+    for (const x of itemsAll.slice().sort((a, b) => a.p.grp - b.p.grp)){
+      const f = by.get(x.k); if (f){ f.grps.push(x.p.grp); continue; }
+      by.set(x.k, {...x, sk:x.k, all:true, grps:[x.p.grp]});
+    }
+    return itemsAll.filter(x => by.get(x.k) && by.get(x.k).p === x.p).map(x => by.get(x.k));
+  })();
   S.myVisible = items.map(x => x.sk);
   const sel = S.mySel;  // 선택 삭제 모드면 Set
-  const tag = it => gsel === "all" && grps.length > 1 ? `<span class="grptag">${it.p.grp}묶음</span>` : "";
+  const tag = it => gsel === "all" && grps.length > 1 ? `<span class="grptag">${(it.grps || [it.p.grp]).join("·")}묶음</span>` : "";
   const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.sk) ? "on" : ""}" data-mysel="${esc(it.sk)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.sk) ? "✓" : ""}</span>` : ""}${tag(it)}${html}</div>`;
   const card = it => wrap(it, card0(it) + betRow(it));
   gradeBets();
   const card0 = it => {
-    if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true, it.p.grp)}</div>
+    if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true, it.all ? "all" : it.p.grp)}</div>
       <div class="muted" style="text-align:center;padding:6px 0">${esc(ko(it.p.home))} vs ${esc(ko(it.p.away))} · 정보를 불러오지 못했습니다</div></div>`;
     const id = it.m.id;
-    return liveCard(it.m, {lg:it.p.lg, raw:{[id]:MY.raw[it.k]}, odds:{[id]:MY.odds[it.k]}, prev:MY.prev[it.k] ? {[id]:MY.prev[it.k]} : {}, my:true, grp:it.p.grp});
+    return liveCard(it.m, {lg:it.p.lg, raw:{[id]:MY.raw[it.k]}, odds:{[id]:MY.odds[it.k]}, prev:MY.prev[it.k] ? {[id]:MY.prev[it.k]} : {}, my:true, grp:it.all ? "all" : it.p.grp});
   };
   const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
   const listView = S.myView !== "card";
   const sec = (title, list) => !list.length ? "" : `<div class="strip-h"><h3>${title}</h3><span class="muted">${list.length}경기</span></div>` +
     (listView ? myTable(list, sel, gsel === "all" && grps.length > 1) : `<div class="lgrid">${list.map(card).join("")}</div>`);
-  let html = bar(PICKS.length) + '<div id="myimpSlot"></div>';
+  let html = bar(new Set(PICKS.map(p => p.lg + "|" + p.id)).size) + '<div id="myimpSlot"></div>';
   // 묶음 탭 + 삭제 도구
   const cnt = g => PICKS.filter(p => p.grp === g).length;
-  const gbar = `<div class="grpbar"><button class="gchip ${gsel === "all" ? "on" : ""}" data-grp="all">전체 <span>${PICKS.length}</span></button>${grps.map(g => `<button class="gchip ${gsel === g ? "on" : ""}" data-grp="${g}">${g}묶음 <span>${cnt(g)}</span></button>`).join("")}<button class="gchip add" data-grp="new" title="빈 묶음 만들기">＋ 새 묶음</button></div>`;
+  const gbar = `<div class="grpbar"><button class="gchip ${gsel === "all" ? "on" : ""}" data-grp="all">전체 <span>${new Set(PICKS.map(p => p.lg + "|" + p.id)).size}</span></button>${grps.map(g => `<button class="gchip ${gsel === g ? "on" : ""}" data-grp="${g}">${g}묶음 <span>${cnt(g)}</span></button>`).join("")}<button class="gchip add" data-grp="new" title="빈 묶음 만들기">＋ 새 묶음</button></div>`;
   html += sel ? `<div class="mytools sel"><b>${sel.size}경기 선택됨</b><button class="btn" data-myact="all">${items.every(x => sel.has(x.k)) && items.length ? "선택 해제" : "모두 선택"}</button>
       <select class="btn gmove" data-myact-move ${sel.size ? "" : "disabled"}><option value="">📦 묶음 이동…</option>${grps.map(g => `<option value="${g}">${g}묶음으로</option>`).join("")}<option value="new">새 묶음으로</option></select>
       <button class="btn danger" data-myact="delsel" ${sel.size ? "" : "disabled"}>🗑 선택 삭제</button><button class="btn" data-myact="cancel">취소</button></div>`
@@ -3693,7 +3709,7 @@ document.addEventListener("click", e => {
     else if (act === "delsel" && S.mySel && S.mySel.size){
       const n = S.mySel.size;
       if (!confirm(`선택한 ${n}경기를 My 경기에서 뺄까요?`)) return;
-      PICKS = PICKS.filter(p => !S.mySel.has(pk(p))); S.mySel = null; savePicks(); updateMyBadge(); toast(`${n}경기를 뺐습니다`);
+      PICKS = PICKS.filter(p => !S.mySel.has(pk(p)) && !S.mySel.has(p.lg + "|" + p.id)); S.mySel = null; savePicks(); updateMyBadge(); toast(`${n}경기를 뺐습니다`);
     }
     else if (act === "clear"){
       if (!confirm(`담은 ${PICKS.length}경기를 전부 지울까요? 되돌릴 수 없습니다.`)) return;
@@ -3716,8 +3732,9 @@ function myTable(list, sel, showGrp){
   const row = it => {
     const p = it.p, m = it.m, k = it.k, sk = it.sk, Lg = LEAGUES[p.lg], sp = Lg.sport, bet = p.bet || {};
     const chk = sel ? `<td class="mtc"><span class="mychk2 ${sel.has(sk) ? "on" : ""}">${sel.has(sk) ? "✓" : ""}</span></td>` : "";
-    const grp = showGrp ? `<td class="mtg"><span class="grpb">${p.grp}</span></td>` : "";
-    if (!m) return `<tr class="mrw" data-mysel="${esc(sk)}"><td class="mtp">${pickBtn(p.lg, p.id, true, p.grp)}</td>${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="10" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td></tr>`;
+    const grp = showGrp ? `<td class="mtg">${(it.grps || [p.grp]).map(g => `<span class="grpb">${g}</span>`).join("")}</td>` : "";
+    const pg = it.all ? "all" : p.grp;
+    if (!m) return `<tr class="mrw" data-mysel="${esc(sk)}"><td class="mtp">${pickBtn(p.lg, p.id, true, pg)}</td>${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="10" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td></tr>`;
     const o = MY.odds[k] || {}, ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
     const pre = m.state === "pre", live = m.state === "in", post = m.state === "post";
     const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
@@ -3727,11 +3744,11 @@ function myTable(list, sel, showGrp){
     const ouAct = (post || live) && hasLine && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
     // 배당 칸 = 예측 고르기 버튼. 고른 칸 파랑, 실제(진행 중이면 현재) 결과 칸 초록 테두리, 끝나면 ✅/❌
     const cell = (f, v, ml, a) => { const d = ml != null ? fOdds(ml) : "-", on = bet[f] === v, hit = post && a ? a === v : null;  // 채점은 이 묶음의 예측 기준
-      return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(sk)}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
+      return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(pk(p))}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
     const when = live ? `<span class="live">● ${esc(liveText(m, sp))}</span>` : post ? "종료" : `${md(m.date)} <b>${timeOnly(m.date)}</b>`;
     const sc = pre ? '<span class="vs">vs</span>' : `<b class="msc2 ${live ? "lv" : ""}">${hs} : ${as}</b>`;
     const nm = t => { const n = ko(t.name), q = n.split(" "); return sp === "soccer" ? n : q[q.length - 1]; };
-    return `<tr class="mrw ${live ? "is-live" : ""} ${sel && sel.has(sk) ? "selon" : ""}" data-mysel="${esc(sk)}"><td class="mtp">${pickBtn(p.lg, p.id, true, p.grp)}</td>${chk}${grp}
+    return `<tr class="mrw ${live ? "is-live" : ""} ${sel && sel.has(sk) ? "selon" : ""}" data-mysel="${esc(sk)}"><td class="mtp">${pickBtn(p.lg, p.id, true, pg)}</td>${chk}${grp}
       <td class="mtl" title="${esc(Lg.name)}"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td>
       <td class="mtw">${when}</td>
       <td class="mth" data-mymatch="${esc(p.lg)}|${esc(p.id)}"><span>${esc(nm(m.home))}</span>${logo(m.home.logo)}</td>
@@ -4776,7 +4793,7 @@ function betRow(it){
   const ouAct = post && line != null && !isNaN(line) && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
   // 한 칸 = 선택지 이름 + 배당. 고른 칸은 파란색, 끝난 경기는 실제 결과 칸에 테두리 + 내 선택에 ✅/❌
   const cell = (f, v, lab, odd, act) => { const on = bet[f] === v, hit = post && act ? act === v : null;
-    return `<button class="bcell ${on ? "on" : ""} ${act === v ? "act" : ""}" ${pre ? `data-bet="${esc(sk)}|${f}|${v}"` : "disabled"}>
+    return `<button class="bcell ${on ? "on" : ""} ${act === v ? "act" : ""}" ${pre ? `data-bet="${esc(pk(p))}|${f}|${v}"` : "disabled"}>
       <span class="bn">${esc(lab)}</span>${odd && odd !== "-" ? `<small>${odd}</small>` : ""}${on && post ? `<em>${hit === true ? "✅" : hit === false ? "❌" : ""}</em>` : ""}</button>`; };
   const res = [["home", `${nm(m.home)} 승`, fOdds(ho.moneyLine)], ...(sp === "soccer" ? [["draw", "무승부", fOdds((o.drawOdds || {}).moneyLine)]] : []), ["away", `${nm(m.away)} 승`, fOdds(ao.moneyLine)]];
   const hasOU = line != null && !isNaN(line) && (pre || bet.ou);
@@ -5436,8 +5453,9 @@ document.addEventListener("change", e => {
   g = g === "new" ? newGrp() : Number(g);
   const n = S.mySel.size;
   // 옮길 묶음에 같은 경기가 이미 있으면 하나로 합침
-  const moved = PICKS.filter(p => S.mySel.has(pk(p)));
-  PICKS = PICKS.filter(p => !S.mySel.has(pk(p)));
+  const hit = p => S.mySel.has(pk(p)) || S.mySel.has(p.lg + "|" + p.id);
+  const moved = PICKS.filter(hit);
+  PICKS = PICKS.filter(p => !hit(p));
   for (const p of moved){ if (!PICKS.some(x => x.lg === p.lg && x.id === p.id && x.grp === g)) PICKS.push({...p, grp:g}); }
   S.mySel = null; renumberGrps(); savePicks(); toast(`${n}경기를 ${g}묶음으로 옮겼습니다`); renderMy(true);
 });
