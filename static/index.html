@@ -1688,6 +1688,15 @@ async function teamData(lg, id){
     const [p, f] = await Promise.all([espn(base + sq, sy ? 3600 : 600), sy ? {} : espn(base + "?fixture=true", 300).catch(() => ({}))]);
     info = p.team || {};
     past = (p.events || []).map(nEvent);
+    // 봄~가을 리그(MLS 등)는 시즌이 끝나면 ESPN 기본값이 다음 시즌으로 넘어가 지난 경기가 0개로 옴 → 올해·작년 시즌으로 다시 받기
+    if (!sy && past.filter(e => e.completed).length < 5){
+      const y = new Date().getFullYear();
+      for (const yy of [y, y - 1]){
+        const q = await espn(base + "?season=" + yy, 600).catch(() => ({}));
+        const more = (q.events || []).map(nEvent);
+        if (more.some(e => e.completed)){ const seen = new Set(past.map(e => e.id)); past = past.concat(more.filter(e => !seen.has(e.id))); break; }
+      }
+    }
     upcoming = (f.events || []).map(nEvent);
     if (!Lg.national) past = past.filter(e => !/Friendly|Emirates Cup|Trofeo|Gamper/i.test(e.competition));  // 클럽 친선·프리시즌 경기 제외
   } else {

@@ -69,3 +69,4 @@
 - 팝업(#modal) 열려 있을 때 뒤 페이지 스크롤 잠금: CSS `html:has(dialog[open])` overflow hidden + `dialog{overscroll-behavior:contain}`.
 - 따라오는 줄(#sbar) LIVE 옆 리그 선택 상자(`sbarLgSel`, `#sblgSel`, 종목별 묶음, ● 진행 중). 고르는 중엔 줄을 다시 그리지 않음.
 - 경기 일정 카드·홈 줄 작은 배당 표(`oddsMini`/`oddsCell`, 보이는 경기만 summary로 받음 `oddsObserve`·`oddsPump`, 끝난 경기는 localStorage `oddsc.v1`). 역배 적중 = 끝난 경기에서 배당 높은 팀 승리 → 팀 이름에 빨간 네모 + "역"(`yeokSide`, `.tn.yk`, 이름은 `.tn>.tnx`). PC: 승무패+언오버 표, 휴대폰: 승무패 한 줄(카드는 경기장 줄 자리, 홈은 팀 이름 아래).
+- 팀 일정(`teamData`, scope all): 시즌 끝난 봄~가을 리그(MLS)는 ESPN 기본이 다음 시즌이라 지난 경기 0개 → `?season=올해/작년`으로 다시 받음.
