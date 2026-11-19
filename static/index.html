@@ -1042,6 +1042,11 @@ ul.inj .stt small.pl{color:var(--win);font-weight:600}
 ul.inj .inn{display:flex;flex-direction:column;min-width:0;line-height:1.3}
 ul.inj .inn small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kp{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+/* ⭐ 핵심 선수: 노란 박스 */
+.kpc.star{border:2px solid #facc15;background:color-mix(in srgb, #facc15 12%, var(--surface));box-shadow:0 0 0 3px color-mix(in srgb, #facc15 22%, transparent)}
+.kpc.star{position:relative;padding-top:12px}
+.kpc .kstar{position:absolute;top:-9px;left:8px;right:8px;width:max-content;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;font-weight:800;color:#854d0e;background:#fde047;border-radius:999px;padding:2px 8px;line-height:1.3}
+.kp:has(.kpc.star){padding-top:10px;row-gap:16px}
 .kpc{display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;gap:2px 10px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
 .kpc .hs{width:44px;height:44px;grid-row:1/3;border-radius:50%;object-fit:cover;background:var(--surface-2)}
 .kpc .ph{display:grid;place-items:center;font-weight:800;color:var(--muted)}
@@ -2572,13 +2577,23 @@ async function keyPlayers(lg, id, roster){
   const sp = LEAGUES[lg].sport, list = flatRoster(roster);
   if (!list.length) return [];
   if (sp === "soccer"){
-    return list.map(a => {
+    const all = list.map(a => {
       const cats = ((a.statistics || {}).splits || {}).categories || [];
       const s = {}; for (const c of cats) for (const x of c.stats || []) s[x.name] = x.value;
       const g = s.totalGoals || 0, as = s.goalAssists || 0, ap = s.appearances || 0;
-      return {a, score:g * 3 + as * 2 + ap * .1 + (s.shotsOnTarget || 0) * .2,
+      return {a, g, as, score:g * 3 + as * 2 + ap * .1 + (s.shotsOnTarget || 0) * .2,
         stats:[["출전", ap], ["골", g], ["도움", as], ["유효슈팅", s.shotsOnTarget ?? "-"]]};
-    }).filter(x => x.score > 0).sort((x, y) => y.score - x.score).slice(0, 4);
+    }).filter(x => x.score > 0).sort((x, y) => y.score - x.score);
+    // ⭐ 핵심 선수: 팀 전체 골에서 혼자 차지하는 비중이 큰 선수
+    const tg = all.reduce((t, x) => t + x.g, 0);
+    const gsort = all.map(x => x.g).sort((a, b) => b - a), psort = all.map(x => x.g + x.as).sort((a, b) => b - a);
+    for (const x of all){
+      if (x.g < gsort[1] * 1.5 && x.g + x.as < psort[1] * 1.5) continue;  // 비슷한 선수가 또 있으면 '혼자 캐리'가 아님
+      const gs = tg ? x.g / tg : 0, ps = tg ? (x.g + x.as) / tg : 0;
+      if (x.g >= 4 && gs >= .3) x.star = `팀 골의 ${Math.round(gs * 100)}% 혼자 넣음`;
+      else if (x.g + x.as >= 6 && ps >= .45) x.star = `팀 골의 ${Math.round(ps * 100)}%에 관여 (골+도움)`;
+    }
+    return all.slice(0, 4);
   }
   // 농구·야구: 선수별 시즌 기록 (1시간 캐시)
   const path = a => `common/v3/sports/${sp}/${LEAGUES[lg].slug}/athletes/${a.id}/overview`;
@@ -2591,22 +2606,54 @@ async function keyPlayers(lg, id, roster){
     const m = statMap(st.names, split.stats);
     if (sp === "basketball"){
       if (!num(m.gamesPlayed)) return null;
-      return {a, score:num(m.avgPoints) + num(m.avgRebounds) * .5 + num(m.avgAssists) * .7,
+      return {a, ppg:num(m.avgPoints), gp:num(m.gamesPlayed), score:num(m.avgPoints) + num(m.avgRebounds) * .5 + num(m.avgAssists) * .7,
         stats:[["득점", m.avgPoints], ["리바", m.avgRebounds], ["어시", m.avgAssists], ["야투%", m.fieldGoalPct], ["경기", m.gamesPlayed]]};
     }
     const pitch = /Pitch/i.test(st.displayName || "") || m.ERA != null || m.earnedRunAverage != null;
     if (pitch){
-      const ip = num(m.innings || m.inningsPitched), so = num(m.strikeouts), era = m.ERA ?? m.earnedRunAverage;
+      const ipS = String(m.innings ?? m.inningsPitched ?? ""), so = num(m.strikeouts);
+      const ip = Math.floor(num(ipS)) + (/\.([12])$/.test(ipS) ? Number(ipS.slice(-1)) / 3 : 0);  // 174.2 = 174⅔이닝
       if (!ip) return null;
-      return {a, pitch:true, score:ip * .3 + so * .2 - num(era) * 2, stats:[["평균자책", era], ["승", m.wins ?? "-"], ["탈삼진", so], ["이닝", m.innings ?? m.inningsPitched ?? "-"]]};
+      // ESPN 선수 기록엔 평균자책이 없을 때가 많아 자책점·이닝으로 계산
+      const eraN = m.ERA != null || m.earnedRunAverage != null ? num(m.ERA ?? m.earnedRunAverage) : m.earnedRuns != null ? num(m.earnedRuns) * 9 / ip : null;
+      const era = eraN == null ? "-" : eraN.toFixed(2);
+      return {a, pitch:true, ip, so, era:eraN ?? 99, score:ip * .3 + so * .2 - (eraN ?? 5) * 2, stats:[["평균자책", era], [m.wins != null ? "승" : "선발", m.wins ?? m.gamesStarted ?? "-"], ["탈삼진", so], ["이닝", ipS || "-"]]};
     }
     const ab = num(m.atBats), h = num(m.hits);
     if (ab < 20) return null;
-    return {a, score:num(m.homeRuns) * 3 + num(m.RBIs) + h * .3,
+    return {a, hr:num(m.homeRuns), rbi:num(m.RBIs), score:num(m.homeRuns) * 3 + num(m.RBIs) + h * .3,
       stats:[["타율", (h / ab).toFixed(3).replace(/^0/, "")], ["홈런", m.homeRuns], ["타점", m.RBIs], ["안타", m.hits]]};
   }).filter(Boolean).sort((x, y) => y.score - x.score);
+  starMark(sp, rows);
   if (sp === "baseball") return [...rows.filter(r => !r.pitch).slice(0, 2), ...rows.filter(r => r.pitch).slice(0, 2)];
   return rows.slice(0, 4);
+}
+
+// ⭐ 핵심 선수 (농구·야구): 팀 안에서 혼자 차지하는 비중이 큰 선수
+function starMark(sp, rows){
+  if (sp === "basketball"){
+    const maxGp = Math.max(1, ...rows.map(r => r.gp || 0));
+    const sc = rows.filter(r => r.gp >= maxGp * .4).sort((a, b) => b.ppg - a.ppg);  // 경기를 충분히 뛴 선수만
+    sc.forEach((r, i) => {
+      const next = sc[i + 1];
+      if (r.ppg >= 25) r.star = `경기당 ${r.ppg.toFixed(1)}점 · 팀 득점 ${i + 1}위`;
+      else if (i === 0 && r.ppg >= 18 && next && r.ppg >= next.ppg * 1.35) r.star = `팀 득점 1위 (${r.ppg.toFixed(1)}점) · 2위보다 ${(r.ppg / next.ppg).toFixed(1)}배`;
+    });
+    return;
+  }
+  const bat = rows.filter(r => !r.pitch), pit = rows.filter(r => r.pitch);
+  const thr = bat.reduce((t, r) => t + r.hr, 0);
+  const hrs = bat.map(r => r.hr).sort((a, b) => b - a);
+  for (const r of bat){
+    const hs = thr ? r.hr / thr : 0;
+    if (r.hr >= 20 && hs >= .2 && r.hr >= hrs[1] * 1.3) r.star = `팀 홈런의 ${Math.round(hs * 100)}% (${r.hr}개)`;
+  }
+  const tip = pit.reduce((t, r) => t + r.ip, 0);
+  const ace = pit.filter(r => r.ip >= 120 && r.era > 0 && r.era <= 3).sort((a, b) => a.era - b.era)[0];  // 팀에 에이스는 한 명
+  for (const r of pit){
+    const is = tip ? r.ip / tip : 0;
+    if (r === ace) r.star = `에이스 · 평균자책 ${r.era.toFixed(2)} · 팀 이닝의 ${Math.round(is * 100)}%`;
+  }
 }
 
 // 최근 경기에 뛴 선수 (부상 복귀 확인용): {이름: "선발"|"교체"}
@@ -2667,7 +2714,7 @@ async function fillIntel(lg, id, t){
   const [keys, inj] = await Promise.all([keyPlayers(lg, id, roster).catch(() => []), teamInjuries(lg, id, roster, t).catch(() => [])]);
   await withTimeout(lookupPlayers([...keys.map(k => k.a.displayName), ...inj.map(i => i.name)], OCC[sp]), 5000);
   const el = box(); if (!el) return;
-  const kp = keys.length ? `<div class="kp">${keys.map(k => `<div class="kpc">
+  const kp = keys.length ? `<div class="kp">${keys.map(k => `<div class="kpc${k.star ? " star" : ""}">${k.star ? `<span class="kstar" title="팀 안 비중이 큰 핵심 선수">⭐ 핵심 · ${esc(k.star)}</span>` : ""}
       ${headImg(k.a.headshot?.href || imgOf(k.a.displayName, 120), "hs") || `<span class="hs ph">${esc(k.a.jersey || "")}</span>`}
       <div class="kpn"><b title="${nameTitle(k.a.displayName)}">${esc(koFull(k.a.displayName))}</b>
         <small>${esc([k.a.position?.abbreviation, k.a.jersey ? "#" + k.a.jersey : "", k.pitch ? "투수" : ""].filter(Boolean).join(" · "))}</small></div>
