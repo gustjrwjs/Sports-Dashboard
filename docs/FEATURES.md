@@ -70,3 +70,4 @@
 - 따라오는 줄(#sbar) LIVE 옆 리그 선택 상자(`sbarLgSel`, `#sblgSel`, 종목별 묶음, ● 진행 중). 고르는 중엔 줄을 다시 그리지 않음.
 - 경기 일정 카드·홈 줄 작은 배당 표(`oddsMini`/`oddsCell`, 보이는 경기만 summary로 받음 `oddsObserve`·`oddsPump`, 끝난 경기는 localStorage `oddsc.v1`). 역배 적중 = 끝난 경기에서 배당 높은 팀 승리 → 팀 이름에 빨간 네모 + "역"(`yeokSide`, `.tn.yk`, 이름은 `.tn>.tnx`). PC: 승무패+언오버 표, 휴대폰: 승무패 한 줄(카드는 경기장 줄 자리, 홈은 팀 이름 아래).
 - 팀 일정(`teamData`, scope all): 시즌 끝난 봄~가을 리그(MLS)는 ESPN 기본이 다음 시즌이라 지난 경기 0개 → `?season=올해/작년`으로 다시 받음.
+- My 경기 묶음별 중복 담기: 담은 항목 키 = 리그|경기|묶음(`pk`). ☆는 지금 담는 묶음 기준 담기/빼기(`togglePick(lg,id,grp)`), My 화면 별·선택·예측(`data-bet`, `setBet(sk)`)은 항목별. 예측 적중 표시는 그 묶음의 예측으로 계산. 캡처 담기는 다른 묶음에 있어도 담김.

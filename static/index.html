@@ -3439,7 +3439,7 @@ function liveCard(m, ctx){
     ? `<div class="lsc"><b style="font-size:.8em">${timeOnly(m.date)}</b></div><div class="lclk muted">${esc(new Date(m.date).toLocaleDateString("ko-KR", {month:"numeric", day:"numeric", weekday:"short"}))} 예정</div>`
     : `<div class="lsc"><b class="${up[0] ? "up" : ""}">${hs}</b><span>:</span><b class="${up[1] ? "up" : ""}">${as}</b>${sum}</div>
         <div class="lclk ${fin ? "muted" : "live"}">${fin ? "경기 종료" : "● " + esc(liveText(m, sp))}</div>`;
-  const head = ctx.my ? `<div class="myhd">${pickBtn(ctx.lg, m.id, true)}<span class="mk" style="background:${Lg.color}">${Lg.mark}</span>${Lg.short !== Lg.mark ? esc(Lg.short) : ""}</div>` : pickBtn(ctx.lg, m.id);
+  const head = ctx.my ? `<div class="myhd">${pickBtn(ctx.lg, m.id, true, ctx.grp)}<span class="mk" style="background:${Lg.color}">${Lg.mark}</span>${Lg.short !== Lg.mark ? esc(Lg.short) : ""}</div>` : pickBtn(ctx.lg, m.id);
   const open = ctx.my ? `data-mymatch="${ctx.lg}|${m.id}"` : `data-match="${m.id}"`;
   return `<div class="lcard ${fin ? "fin" : pre ? "pre" : ""} ${up[0] || up[1] ? "flash" : ""}" ${open} role="button" tabindex="0">
     ${head}
@@ -3516,21 +3516,28 @@ function renumberGrps(){
 }
 const savePicks = () => { try { localStorage.setItem(MY_KEY, JSON.stringify(PICKS)); } catch {} try { syncDirty(); } catch {} };
 const isPicked = (lg, id) => PICKS.some(p => p.lg === lg && p.id === id);
-const pickBtn = (lg, id, inline) => { const on = isPicked(lg, id);
-  return `<span class="pick ${inline ? "inl" : ""} ${on ? "on" : ""}" data-pick="${lg}|${id}" role="button" title="${on ? "My 경기에서 빼기" : "My 경기에 담기"}">${on ? "★" : "☆"}</span>`; };
+// 같은 경기를 묶음마다 따로 담을 수 있음 → 담은 항목 하나 = 리그|경기|묶음
+const pk = p => p.lg + "|" + p.id + "|" + p.grp;
+// grp를 주면(My 화면) 그 묶음의 항목만 빼는 별, 아니면 지금 담는 묶음 기준으로 담기/빼기
+const pickBtn = (lg, id, inline, grp) => { const on = grp != null || isPicked(lg, id);
+  return `<span class="pick ${inline ? "inl" : ""} ${on ? "on" : ""}" data-pick="${lg}|${id}${grp != null ? "|" + grp : ""}" role="button" title="${grp != null ? grp + "묶음에서 빼기" : on ? `${addGrp()}묶음에 담기/빼기` : "My 경기에 담기"}">${on ? "★" : "☆"}</span>`; };
 function findMatch(lg, id){
   return D(lg).matches.find(x => x.id === id) || ((LV[lg] || {}).events || []).find(x => x.id === id) || MY.ev[lg + "|" + id] || (IDX.list.find(x => x.lg === lg && x.m.id === id) || {}).m || EVX[lg + "|" + id] || null;
 }
-function togglePick(lg, id){
-  const i = PICKS.findIndex(p => p.lg === lg && p.id === id);
-  if (i >= 0) PICKS.splice(i, 1);
+function togglePick(lg, id, grp){
+  const g = grp != null && grp !== "" ? Number(grp) : addGrp();
+  const i = PICKS.findIndex(p => p.lg === lg && p.id === id && p.grp === g);
+  const others = PICKS.filter(p => p.lg === lg && p.id === id && p.grp !== g).length;
+  if (i >= 0){ PICKS.splice(i, 1); if (others || grp != null) toast(`${g}묶음에서 뺐습니다`); }
   else {
     const m = findMatch(lg, id);
     if (!m) return;
-    PICKS.push({lg, id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now(), grp:addGrp()});
+    PICKS.push({lg, id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now(), grp:g});
     MY.t = 0;  // 다음에 My 탭을 열 때 새로 받기
+    if (others) toast(`${g}묶음에도 담았습니다 (다른 묶음 ${others}곳에도 있음)`);
   }
   savePicks();
+  if (S.tab === "my" && grp != null) renderMy(true);
   const on = isPicked(lg, id);
   document.querySelectorAll(`[data-pick="${lg}|${id}"]`).forEach(el => {
     el.classList.toggle("on", on);
@@ -3612,20 +3619,20 @@ function renderMy(fromRefresh){
   const grps = grpList();
   if (S.myGrp !== "all" && !grps.includes(S.myGrp)) S.myGrp = "all";
   const gsel = S.myGrp ?? "all";
-  const itemsAll = PICKS.map(p => ({p, k:p.lg + "|" + p.id, m:MY.ev[p.lg + "|" + p.id]}))
+  const itemsAll = PICKS.map(p => ({p, k:p.lg + "|" + p.id, sk:pk(p), m:MY.ev[p.lg + "|" + p.id]}))
     .sort((a, b) => new Date(a.p.date) - new Date(b.p.date));
   const items = gsel === "all" ? itemsAll : itemsAll.filter(x => x.p.grp === gsel);
-  S.myVisible = items.map(x => x.k);
+  S.myVisible = items.map(x => x.sk);
   const sel = S.mySel;  // 선택 삭제 모드면 Set
   const tag = it => gsel === "all" && grps.length > 1 ? `<span class="grptag">${it.p.grp}묶음</span>` : "";
-  const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.k) ? "on" : ""}" data-mysel="${esc(it.k)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.k) ? "✓" : ""}</span>` : ""}${tag(it)}${html}</div>`;
+  const wrap = (it, html) => `<div class="mywrap ${sel ? "selm" : ""} ${sel && sel.has(it.sk) ? "on" : ""}" data-mysel="${esc(it.sk)}">${sel ? `<span class="mychk" aria-hidden="true">${sel.has(it.sk) ? "✓" : ""}</span>` : ""}${tag(it)}${html}</div>`;
   const card = it => wrap(it, card0(it) + betRow(it));
   gradeBets();
   const card0 = it => {
-    if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true)}</div>
+    if (!it.m) return `<div class="lcard"><div class="myhd"><span class="mk" style="background:${LEAGUES[it.p.lg].color}">${LEAGUES[it.p.lg].mark}</span>${esc(LEAGUES[it.p.lg].short)}${pickBtn(it.p.lg, it.p.id, true, it.p.grp)}</div>
       <div class="muted" style="text-align:center;padding:6px 0">${esc(ko(it.p.home))} vs ${esc(ko(it.p.away))} · 정보를 불러오지 못했습니다</div></div>`;
     const id = it.m.id;
-    return liveCard(it.m, {lg:it.p.lg, raw:{[id]:MY.raw[it.k]}, odds:{[id]:MY.odds[it.k]}, prev:MY.prev[it.k] ? {[id]:MY.prev[it.k]} : {}, my:true});
+    return liveCard(it.m, {lg:it.p.lg, raw:{[id]:MY.raw[it.k]}, odds:{[id]:MY.odds[it.k]}, prev:MY.prev[it.k] ? {[id]:MY.prev[it.k]} : {}, my:true, grp:it.p.grp});
   };
   const live = items.filter(x => x.m && x.m.state === "in"), soon = items.filter(x => !x.m || x.m.state === "pre"), done = items.filter(x => x.m && x.m.state === "post").reverse();
   const listView = S.myView !== "card";
@@ -3686,7 +3693,7 @@ document.addEventListener("click", e => {
     else if (act === "delsel" && S.mySel && S.mySel.size){
       const n = S.mySel.size;
       if (!confirm(`선택한 ${n}경기를 My 경기에서 뺄까요?`)) return;
-      PICKS = PICKS.filter(p => !S.mySel.has(p.lg + "|" + p.id)); S.mySel = null; savePicks(); updateMyBadge(); toast(`${n}경기를 뺐습니다`);
+      PICKS = PICKS.filter(p => !S.mySel.has(pk(p))); S.mySel = null; savePicks(); updateMyBadge(); toast(`${n}경기를 뺐습니다`);
     }
     else if (act === "clear"){
       if (!confirm(`담은 ${PICKS.length}경기를 전부 지울까요? 되돌릴 수 없습니다.`)) return;
@@ -3707,10 +3714,10 @@ S.myView = (() => { try { return localStorage.getItem("my.view") || "list"; } ca
 document.addEventListener("click", e => { const v = e.target.closest("[data-myview]"); if (!v || S.tab !== "my") return; S.myView = v.dataset.myview; try { localStorage.setItem("my.view", S.myView); } catch {} renderMy(true); });
 function myTable(list, sel, showGrp){
   const row = it => {
-    const p = it.p, m = it.m, k = it.k, Lg = LEAGUES[p.lg], sp = Lg.sport, bet = p.bet || {}, log = BETLOG.find(b => b.k === k) || {};
-    const chk = sel ? `<td class="mtc"><span class="mychk2 ${sel.has(k) ? "on" : ""}">${sel.has(k) ? "✓" : ""}</span></td>` : "";
+    const p = it.p, m = it.m, k = it.k, sk = it.sk, Lg = LEAGUES[p.lg], sp = Lg.sport, bet = p.bet || {};
+    const chk = sel ? `<td class="mtc"><span class="mychk2 ${sel.has(sk) ? "on" : ""}">${sel.has(sk) ? "✓" : ""}</span></td>` : "";
     const grp = showGrp ? `<td class="mtg"><span class="grpb">${p.grp}</span></td>` : "";
-    if (!m) return `<tr class="mrw" data-mysel="${esc(k)}"><td class="mtp">${pickBtn(p.lg, p.id, true)}</td>${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="10" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td></tr>`;
+    if (!m) return `<tr class="mrw" data-mysel="${esc(sk)}"><td class="mtp">${pickBtn(p.lg, p.id, true, p.grp)}</td>${chk}${grp}<td class="mtl"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td><td colspan="10" class="muted">${esc(ko(p.home))} vs ${esc(ko(p.away))} · 정보를 불러오지 못했습니다</td></tr>`;
     const o = MY.odds[k] || {}, ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
     const pre = m.state === "pre", live = m.state === "in", post = m.state === "post";
     const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
@@ -3719,12 +3726,12 @@ function myTable(list, sel, showGrp){
     const hasLine = line != null && !isNaN(line);
     const ouAct = (post || live) && hasLine && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
     // 배당 칸 = 예측 고르기 버튼. 고른 칸 파랑, 실제(진행 중이면 현재) 결과 칸 초록 테두리, 끝나면 ✅/❌
-    const cell = (f, v, ml, a) => { const d = ml != null ? fOdds(ml) : "-", on = bet[f] === v, hit = f === "res" ? log.rHit : log.oHit;
-      return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
+    const cell = (f, v, ml, a) => { const d = ml != null ? fOdds(ml) : "-", on = bet[f] === v, hit = post && a ? a === v : null;  // 채점은 이 묶음의 예측 기준
+      return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(sk)}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
     const when = live ? `<span class="live">● ${esc(liveText(m, sp))}</span>` : post ? "종료" : `${md(m.date)} <b>${timeOnly(m.date)}</b>`;
     const sc = pre ? '<span class="vs">vs</span>' : `<b class="msc2 ${live ? "lv" : ""}">${hs} : ${as}</b>`;
     const nm = t => { const n = ko(t.name), q = n.split(" "); return sp === "soccer" ? n : q[q.length - 1]; };
-    return `<tr class="mrw ${live ? "is-live" : ""} ${sel && sel.has(k) ? "selon" : ""}" data-mysel="${esc(k)}"><td class="mtp">${pickBtn(p.lg, p.id, true)}</td>${chk}${grp}
+    return `<tr class="mrw ${live ? "is-live" : ""} ${sel && sel.has(sk) ? "selon" : ""}" data-mysel="${esc(sk)}"><td class="mtp">${pickBtn(p.lg, p.id, true, p.grp)}</td>${chk}${grp}
       <td class="mtl" title="${esc(Lg.name)}"><span class="mk" style="background:${Lg.color}">${Lg.mark}</span></td>
       <td class="mtw">${when}</td>
       <td class="mth" data-mymatch="${esc(p.lg)}|${esc(p.id)}"><span>${esc(nm(m.home))}</span>${logo(m.home.logo)}</td>
@@ -4545,8 +4552,9 @@ function loadIndex(force){
 }
 const normS = s => String(s || "").toLowerCase().replace(/[\s.\-·'’()]/g, "");
 function addPickFrom(lg, m, grp){
-  if (isPicked(lg, m.id)) return false;
-  PICKS.push({lg, id:m.id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now(), grp:grp || addGrp()});
+  const g = grp || addGrp();
+  if (PICKS.some(p => p.lg === lg && p.id === m.id && p.grp === g)) return false;
+  PICKS.push({lg, id:m.id, date:m.date, home:m.home.name, away:m.away.name, at:Date.now(), grp:g});
   MY.t = 0; savePicks(); updateMyBadge();
   return true;
 }
@@ -4725,8 +4733,9 @@ async function loadBig(){
 const BETLOG_KEY = "betLog.v1";
 let BETLOG = lsJson(BETLOG_KEY, []);  // [{k, lg, date, home, away, res, ou, line, rHit, oHit}]
 const saveBet = () => { lsSet(BETLOG_KEY, JSON.stringify(BETLOG.slice(-500))); try { syncDirty(); } catch {} };
-function setBet(k, field, val){
-  const p = PICKS.find(x => x.lg + "|" + x.id === k); if (!p) return;
+function setBet(sk, field, val){
+  const p = PICKS.find(x => pk(x) === sk); if (!p) return;
+  const k = p.lg + "|" + p.id;  // 경기 정보·배당·적중 기록은 경기 단위
   const m = MY.ev[k]; if (m && m.state !== "pre"){ toast("경기가 시작돼 예측을 바꿀 수 없습니다"); return; }
   p.bet = p.bet || {};
   p.bet[field] = p.bet[field] === val ? null : val;
@@ -4756,8 +4765,8 @@ function gradeBets(){
   if (ch) saveBet();
 }
 function betRow(it){
-  const p = it.p, m = it.m, k = it.k; if (!m) return "";
-  const sp = sportOf(p.lg), bet = p.bet || {}, pre = m.state === "pre", post = m.state === "post", log = BETLOG.find(b => b.k === k) || {};
+  const p = it.p, m = it.m, k = it.k, sk = it.sk; if (!m) return "";
+  const sp = sportOf(p.lg), bet = p.bet || {}, pre = m.state === "pre", post = m.state === "post";
   if (!pre && !bet.res && !bet.ou) return "";
   const o = MY.odds[k] || {}, ho = o.homeTeamOdds || {}, ao = o.awayTeamOdds || {};
   const nm = t => { const s = ko(t.name).split(" "); return sp === "soccer" ? ko(t.name) : s[s.length - 1]; };
@@ -4766,8 +4775,8 @@ function betRow(it){
   const line = pre ? Number(o.overUnder) : bet.line;
   const ouAct = post && line != null && !isNaN(line) && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
   // 한 칸 = 선택지 이름 + 배당. 고른 칸은 파란색, 끝난 경기는 실제 결과 칸에 테두리 + 내 선택에 ✅/❌
-  const cell = (f, v, lab, odd, act) => { const on = bet[f] === v, hit = f === "res" ? log.rHit : log.oHit;
-    return `<button class="bcell ${on ? "on" : ""} ${act === v ? "act" : ""}" ${pre ? `data-bet="${esc(k)}|${f}|${v}"` : "disabled"}>
+  const cell = (f, v, lab, odd, act) => { const on = bet[f] === v, hit = post && act ? act === v : null;
+    return `<button class="bcell ${on ? "on" : ""} ${act === v ? "act" : ""}" ${pre ? `data-bet="${esc(sk)}|${f}|${v}"` : "disabled"}>
       <span class="bn">${esc(lab)}</span>${odd && odd !== "-" ? `<small>${odd}</small>` : ""}${on && post ? `<em>${hit === true ? "✅" : hit === false ? "❌" : ""}</em>` : ""}</button>`; };
   const res = [["home", `${nm(m.home)} 승`, fOdds(ho.moneyLine)], ...(sp === "soccer" ? [["draw", "무승부", fOdds((o.drawOdds || {}).moneyLine)]] : []), ["away", `${nm(m.away)} 승`, fOdds(ao.moneyLine)]];
   const hasOU = line != null && !isNaN(line) && (pre || bet.ou);
@@ -4778,7 +4787,7 @@ function betRow(it){
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-bet]"); if (!b || S.mySel) return;
   e.preventDefault(); e.stopPropagation();
-  const [lg, id, f, v] = b.dataset.bet.split("|"); setBet(lg + "|" + id, f, v); renderMy(true);
+  const [lg, id, g, f, v] = b.dataset.bet.split("|"); setBet(lg + "|" + id + "|" + g, f, v); renderMy(true);
 }, true);
 // ---------------------------------------------------------------- 🏆 모두 함께 예측 랭킹 (주간 적중왕, supabase_rank.sql)
 // 승패 예측만 참가. 서버가 ESPN 결과로 직접 채점하고, 경기 시작 뒤 바꾼 예측은 무효
@@ -5083,7 +5092,7 @@ async function importSlips(files){
     }
     S.ocrFound = []; S.ocrUrls = per.map(x => x.url);
     const row = (x, on) => { const idx = S.ocrFound.push(x) - 1, had = isPicked(x.lg, x.m.id);
-      return `<label class="ocr-it"><input type="checkbox" data-oi="${idx}" data-of="${x.fi}" ${on && !had ? "checked" : ""} ${had ? "disabled" : ""}>${miniRow(x, {noPick:true})}${had ? '<small class="muted">이미 담김</small>' : ""}</label>`; };
+      return `<label class="ocr-it"><input type="checkbox" data-oi="${idx}" data-of="${x.fi}" ${on ? "checked" : ""}>${miniRow(x, {noPick:true})}${had ? '<small class="muted">다른 묶음에도 있음</small>' : ""}</label>`; };
     const total = per.reduce((a, x) => a + x.strong.length, 0), multi = per.length > 1;
     st(total ? `<b>${total}경기</b>를 찾았습니다.${multi ? ` 캡처 ${per.length}장 → 캡처마다 새 묶음으로 담깁니다.` : ""} 확인하고 담기를 누르세요.` : "두 팀이 모두 맞는 경기를 찾지 못했습니다. 아래 후보에서 골라 주세요.");
     const nextG = freeGrps(per.length);
@@ -5139,7 +5148,7 @@ function impSearch(){
       words.every(w => normS([ko(m.home.name), m.home.name, m.home.abbr, ko(m.away.name), m.away.name, m.away.abbr, LEAGUES[lg].name, LEAGUES[lg].short].join("|")).includes(w)))
     .sort((a, b) => (b.m.state === "in") - (a.m.state === "in") || a.m.date.localeCompare(b.m.date)).slice(0, 8);
   const SPI = {soccer:"⚽", basketball:"🏀", baseball:"⚾"};
-  box.innerHTML = res.length ? `<ul class="isl">${res.map(({lg, m}) => { const p = PICKS.find(x => x.lg === lg && x.id === m.id);
+  box.innerHTML = res.length ? `<ul class="isl">${res.map(({lg, m}) => { const p = PICKS.find(x => x.lg === lg && x.id === m.id && x.grp === addGrp());
       return `<li><span class="isw">${m.state === "in" ? '<b class="live">● 진행 중</b>' : `${md(m.date)} ${timeOnly(m.date)}`}</span><span class="ist">${SPI[sportOf(lg)] || ""} <small>${esc(LEAGUES[lg].short)}</small> ${esc(ko(m.home.name))} <i>vs</i> ${esc(ko(m.away.name))}</span>
         ${p ? `<span class="isdone">✓ ${p.grp}묶음</span>` : `<button class="btn primary isadd" data-isadd="${lg}|${esc(m.id)}">＋ ${addGrp()}묶음에 담기</button>`}</li>`; }).join("")}</ul>`
     : '<div class="muted isnote">찾는 경기가 없습니다 (예정 2주 안·진행 중 경기만). 다른 이름·영어로도 해 보세요.</div>';
@@ -5426,7 +5435,10 @@ document.addEventListener("change", e => {
   let g = e.target.value; if (!g) return;
   g = g === "new" ? newGrp() : Number(g);
   const n = S.mySel.size;
-  PICKS.forEach(p => { if (S.mySel.has(p.lg + "|" + p.id)) p.grp = g; });
+  // 옮길 묶음에 같은 경기가 이미 있으면 하나로 합침
+  const moved = PICKS.filter(p => S.mySel.has(pk(p)));
+  PICKS = PICKS.filter(p => !S.mySel.has(pk(p)));
+  for (const p of moved){ if (!PICKS.some(x => x.lg === p.lg && x.id === p.id && x.grp === g)) PICKS.push({...p, grp:g}); }
   S.mySel = null; renumberGrps(); savePicks(); toast(`${n}경기를 ${g}묶음으로 옮겼습니다`); renderMy(true);
 });
 
@@ -5446,7 +5458,7 @@ function setLeague(lg){
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-pick],[data-mymatch],[data-season],[data-stview],[data-lg],[data-tab],[data-gnav],[data-chip],[data-mstatus],[data-week],[data-match],[data-team],[data-retry]");
   if (!t) return;
-  if (t.dataset.pick){ e.preventDefault(); const [lg, id] = t.dataset.pick.split("|"); togglePick(lg, id); return; }
+  if (t.dataset.pick){ e.preventDefault(); const [lg, id, g] = t.dataset.pick.split("|"); togglePick(lg, id, g); return; }
   if (t.dataset.mymatch){ const [lg, id] = t.dataset.mymatch.split("|"); openMyMatch(lg, id); return; }
   if (t.dataset.season !== undefined){ setSeason(t.dataset.season); return; }
   if (t.dataset.stview){ S.stView = t.dataset.stview; try { localStorage.setItem("stView", S.stView); } catch {} render(); return; }
