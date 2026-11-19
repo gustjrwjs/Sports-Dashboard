@@ -4364,7 +4364,7 @@ function pbpBasketball(sum, m){
       else if (/free throw/i.test(ty)) low = !clutch, txt = clutch ? pickT(id, [`🎯 ${name} 강심장! 자유투 성공`, `😤 ${name} 침착하게 자유투`]) : `${name} 자유투 성공`;
       else if (/alley oop/i.test(ty)) { txt = pickT(id, [`🚀 앨리웁!!! ${ast1 ? kp(ast1) + " → " : ""}${name} 꽂아버립니다!!`, `🚀 공중에서 받아 그대로!!! ${name} 앨리웁 덩크!!`, `🚀 하이라이트 각!!! ${ast1 ? kp(ast1) + "의 패스, " : ""}${name} 앨리웁!!`]); big = true; }
       else if (/dunk/i.test(ty)) { txt = pickT(id, [`💥 ${name} 덩크!!! 림이 흔들립니다!!`, `💥 ${name} 쾅!!! 찍어버립니다!!`, `💥 ${name} 슬램덩크!!! 체육관 들썩!!`, `💥 투핸드 덩크!!! ${name} 파워가 남다릅니다`, `💥 ${name} 포스터 각!!! 덩크!!`]); big = true; }
-      else if (v === 3) { txt = pickT(id, [`🎯 ${name} 쓰리이이이!!! 3점 꽂습니다!`, `🎯 ${name} 3점슛!! 손끝이 뜨겁습니다🔥`, `🎯 ${name} 깊은 곳에서~ 들어갑니다!!! 3점!`, `🎯 스텝백 쓰리!? ${name} 그대로 꽂습니다!!`, `🎯 노룩 수준!! ${name} 3점 성공`, `🎯 ${name} 외곽포 가동!! 3점!`]); big = true; }
+      else if (v === 3) { txt = pickT(id, [`🎯 ${name} 쓰리이이이!!! 3점 꽂습니다!`, `🎯 ${name} 3점슛!! 슛감 미쳤습니다🔥`, `🎯 ${name} 깊은 곳에서~ 들어갑니다!!! 3점!`, `🎯 스텝백 쓰리!? ${name} 그대로 꽂습니다!!`, `🎯 던지면 들어갑니다!! ${name} 3점 성공`, `🎯 ${name} 외곽포 가동!! 3점!`]); big = true; }
       else txt = pickT(id, [`🏀 ${name} ${/layup/i.test(ty) ? "레이업" : /hook/i.test(ty) ? "훅슛" : /tip/i.test(ty) ? "팁인" : /float/i.test(ty) ? "플로터" : /fade/i.test(ty) ? "페이드어웨이" : "점퍼"} 득점!`,
         `🏀 ${name} ${/layup/i.test(ty) ? "돌파 후 레이업" : /float/i.test(ty) ? "부드러운 플로터" : /fade/i.test(ty) ? "페이드어웨이" : "미드레인지"} 성공`, `🏀 ${name} 2점 추가!`]);
       if (ast1 && !/alley oop/i.test(ty) && !/free throw/i.test(ty)) txt += ` (어시 ${kp(ast1)})`;
@@ -4424,7 +4424,7 @@ function pbpBaseball(sum){
     else if (/double play/.test(tx)) txt = pickT(id, [`🙅 ${name} 병살타! 찬스 무산`, `🙅 병살! ${name} 고개 숙입니다`, `🙅 더블플레이! 한 번에 투아웃`]);
     else if (/ stole (second|third|home)/.test(tx)) { const st = tx.match(/^(.+?) stole (second|third|home)/); txt = st ? (st[2] === "home" ? `😲 홈스틸!!! ${kp(st[1])}` : `🏃 ${kp(st[1])} ${st[2] === "second" ? "2루" : "3루"} 도루 성공!`) : ""; big = !!st && st[2] === "home"; }
     else if (/reached on .*error|fielding error|throwing error/i.test(tx)) { txt = pickT(id, [`🥚 알까기!!! 수비 실책`, `🤦 실책 참사… 수비 개리그`, `🥚 공이 가랑이 사이로~ 알까기`, `🤡 이걸 놓치네? 실책!`]); big = !!p.scoringPlay; }
-    else if (/ walked/.test(tx) && !p.scoringPlay) low = true, txt = pickT(id, [`${name} 볼넷(포볼) 출루`, `${name} 걸어 나갑니다, 포볼`, `😩 볼질… ${name} 포볼`, `😩 괴볼 남발, ${name} 걸어 나갑니다`]);
+    else if (/ walked/.test(tx) && !p.scoringPlay) low = true, txt = pickT(id, [`${name} 볼넷(포볼) 출루`, `${name} 걸어 나갑니다, 포볼`, `😩 볼질… ${name} 포볼`, `😩 제구 난조, ${name} 걸어 나갑니다`]);
     else if (/ (singled|doubled|tripled)/.test(tx) && !p.scoringPlay) { const kd = /tripled/.test(tx) ? "3루타" : /doubled/.test(tx) ? "2루타" : "안타"; txt = pickT(id, [`타ㅌㅌㅌ! ${name} ${kd}`, `⚾ ${name} ${kd} 출루`, `⚾ 타ㅌㅌ ${name} ${kd}!`]); if (kd !== "안타") txt = (/deep|wall/.test(tx) ? "큰거 ㄷㄷㄷㄷ " : "") + txt; }
     else if (/flied out to (left|right)/.test(tx)) low = true, txt = `${name} ${/to left/.test(tx) ? "좌플웃" : "우플웃"}`;
     else if (/(grounded|lined|popped|flied) out/.test(tx)) low = true, txt = pickT(id, [`웃ㅅㅅ ${name} 아웃`, `${name} 범타, 웃ㅅㅅ`]);
