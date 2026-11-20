@@ -246,6 +246,8 @@ nav.tabs button.tab-live.on{color:var(--live);border-bottom-color:var(--live)}
 .pbpl li .pt{flex:none;min-width:52px;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;padding-top:1px}
 .pbpl li.big{color:#15803d;font-weight:700;background:color-mix(in srgb, #22c55e 8%, transparent)}
 .pbpmore{margin-top:6px;font-size:12px}
+#pbpsec.fold .pbpl,#pbpsec.fold .pbpmore{display:none}
+.pbptg{margin-left:auto;white-space:nowrap}
 .ptwrap{overflow-x:auto;margin:8px 0 2px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
 .ptab{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:12.5px;text-align:center}
 .ptab th{font-size:10.5px;font-weight:700;color:var(--muted);padding:5px 3px;background:var(--surface-2);border-bottom:1px solid var(--border)}
@@ -1025,6 +1027,18 @@ body:has(#pipbox:not([hidden])) #fab{bottom:calc(min(420px, 55vh) + 30px)}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 .box .bst.alt{color:var(--accent)}
 table.bbpre .bst{white-space:normal;display:inline-block;line-height:1.25}
+.bbvs{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.bbvs>.sec{min-width:0;margin:0}
+@media (max-width:640px){
+  .bbvs{gap:6px}
+  .bbvs table.bbpre th,.bbvs table.bbpre td{padding-left:4px;padding-right:4px;font-size:11.5px}
+  .bbvs table.bbpre td.pn .pn-in{gap:4px}
+  .bbvs table.bbpre td.pn small,.bbvs table.bbpre td.pn img.hs{display:none}
+  .bbvs table.bbpre td.pn .pn-in>span[title]{word-break:keep-all}
+  .bbvs .bst.alt .lg{display:none}
+  .bbvs table.bbpre .bst{font-size:10px}
+  .bbvs .lu-note{font-size:10.5px}
+}
 table.bbpre td.pn .pn-in>span[title]{white-space:normal}
 tr.sub td.pn .pn-in{padding-left:24px}
 tr.grp-row td{background:var(--surface-2);font-size:11px;color:var(--muted);text-align:left;font-weight:700}
@@ -2638,8 +2652,9 @@ async function keyPlayers(lg, id, roster){
 // ⭐ 핵심 선수 (농구·야구): 팀 안에서 혼자 차지하는 비중이 큰 선수
 function starMark(sp, rows){
   if (sp === "basketball"){
-    const maxGp = Math.max(1, ...rows.map(r => r.gp || 0));
-    const sc = rows.filter(r => r.gp >= maxGp * .4).sort((a, b) => b.ppg - a.ppg);  // 경기를 충분히 뛴 선수만
+    // 기준 경기 수 = 선수들 경기 수의 중간값 (부상 선수는 지난 시즌 기록이 섞여 와서 최댓값은 부풀려짐)
+    const gps = rows.map(r => r.gp || 0).sort((a, b) => a - b), midGp = gps[Math.floor(gps.length / 2)] || 1;
+    const sc = rows.filter(r => r.gp >= Math.max(3, midGp * .5)).sort((a, b) => b.ppg - a.ppg);  // 너무 적게 뛴 선수만 뺌 (부상으로 덜 뛴 에이스는 포함)
     sc.forEach((r, i) => {
       const next = sc[i + 1];
       if (r.ppg >= 25) r.star = `경기당 ${r.ppg.toFixed(1)}점 · 팀 득점 ${i + 1}위`;
@@ -3286,7 +3301,7 @@ async function fillBbPre(m, h, a){
     // 직전 선발 중 결장자가 있으면 직전 경기 출전 시간이 가장 긴 벤치 선수로 채움
     if (starters.length) while (starters.length < 5 && rest.length && !out(rest[0]) && min(rest[0]) != null){ const x = rest.shift(); x.alt = true; starters.push(x); }
     const row = p => `<tr class="${out(p) ? "dnp" : ""}"><td class="pn"><span class="pn-in">${headImg(p.img || imgOf(p.name, 80))}<span title="${nameTitle(p.name)}">${esc(koFull(p.name))}</span><small>${esc(p.pos)}</small></span></td>
-      <td class="hide-sm">${esc(p.no)}</td><td>${min(p) ?? "-"}</td><td class="tl">${p.inj ? `<span class="bst ${out(p) ? "out" : ""}">${esc(INJ[p.inj] || p.inj)}</span>` : p.alt ? '<span class="bst alt">대체 선발 예상</span>' : ""}</td></tr>`;
+      <td class="hide-sm">${esc(p.no)}</td><td>${min(p) ?? "-"}</td><td class="tl">${p.inj ? `<span class="bst ${out(p) ? "out" : ""}">${esc(INJ[p.inj] || p.inj)}</span>` : p.alt ? '<span class="bst alt">대체<span class="lg"> 선발 예상</span></span>' : ""}</td></tr>`;
     const r5 = pev && resultFor(pev, tid);
     const note = r5 ? `<div class="note lu-note">직전 경기: ${dShort(pev.date)} vs ${esc(ko(r5.op.name))} ${r5.gf}-${r5.ga} · '직전 출전'은 그 경기 출전 시간(분)</div>` : "";
     return `<div class="sec">${teamHead(m, tid)}<div class="box-wrap"><table class="box bbpre">
@@ -3294,7 +3309,7 @@ async function fillBbPre(m, h, a){
       <tbody><tr class="grp-row"><td colspan="4">예상 선발</td></tr>${starters.length ? starters.map(row).join("") : '<tr><td colspan="4" class="tl muted">직전 경기 정보가 없습니다</td></tr>'}
       <tr class="grp-row"><td colspan="4">벤치·명단</td></tr>${rest.map(row).join("")}</tbody></table></div>${note}</div>`;
   };
-  const html = team(m.home.id, rh, sh, ph) + team(m.away.id, ra, sa, pa);
+  const th = team(m.home.id, rh, sh, ph), ta = team(m.away.id, ra, sa, pa), html = th && ta ? `<div class="bbvs">${th}${ta}</div>` : th + ta;  // 왼쪽 홈 · 오른쪽 원정
   box.innerHTML = html || '<div class="card empty">선수 명단 정보가 없습니다.</div>';
 }
 
@@ -4627,7 +4642,8 @@ function pbpSection(lg, m, sum){
   const L1 = pbpBuild(lg, m, sum); if (!L1.length) return "";
   PBP[lg + "|" + m.id] = L1;
   const rows = L1.slice().reverse();
-  return `<div class="sec" id="pbpsec"><div class="sec-h"><h3>📝 문자중계</h3><span class="muted sp">${m.state === "in" ? "20초마다 업데이트 · " : ""}최신이 위</span></div>
+  let fold = false; try { fold = localStorage.getItem("pbp.fold") === "1"; } catch {}
+  return `<div class="sec ${fold ? "fold" : ""}" id="pbpsec"><div class="sec-h"><h3>📝 문자중계</h3><span class="muted sp">${m.state === "in" ? "20초마다 업데이트 · " : ""}최신이 위</span><button class="linkbtn pbptg" data-pbptg aria-expanded="${!fold}">${fold ? "펼치기 ▼" : "접기 ▲"}</button></div>
     <ul class="pbpl">${rows.slice(0, 80).map(x => `<li class="${x.big ? "big" : ""}"><span class="pt">${esc(x.t)}</span><span>${x.txt}</span></li>`).join("")}</ul>
     ${rows.length > 80 ? `<details class="pbpmore"><summary>이전 장면 ${rows.length - 80}개 더 보기</summary><ul class="pbpl">${rows.slice(80).map(x => `<li class="${x.big ? "big" : ""}"><span class="pt">${esc(x.t)}</span><span>${x.txt}</span></li>`).join("")}</ul></details>` : ""}</div>`;
 }
@@ -5529,6 +5545,12 @@ function setSeason(y){
   render();
   if (!D().loaded) loadLeague(S.lg);
 }
+document.addEventListener("click", e => {  // 문자중계 접기·펼치기 (기기에 기억)
+  const b = e.target.closest("[data-pbptg]"); if (!b) return;
+  const sec = b.closest("#pbpsec"), fold = !sec.classList.toggle("fold") ? false : true;
+  b.textContent = fold ? "펼치기 ▼" : "접기 ▲"; b.setAttribute("aria-expanded", String(!fold));
+  try { localStorage.setItem("pbp.fold", fold ? "1" : "0"); } catch {}
+});
 document.addEventListener("change", e => { if (e.target.id === "seasonSel") setSeason(e.target.value); });
 // 선택한 경기를 다른 묶음으로 옮기기
 document.addEventListener("change", e => {
