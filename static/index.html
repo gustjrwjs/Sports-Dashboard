@@ -1864,7 +1864,24 @@ function renderHeader(){
   updateMyBadge();
   syncSbar();
 }
+// 새로고침(F5)해도 보던 화면 그대로: 주소 끝에 #리그/탭[/m경기번호-날짜 | /t팀번호] 기억
+const TABS_ALL = ["home", "my", "talk", ...LG_TABS];
+function saveHash(){
+  if (/^#sync=/.test(location.hash)) return;
+  const h = `#${S.lg}/${S.tab}` + (S.hm ? (S.hm.m ? `/m${S.hm.m}-${S.hm.d}` : `/t${S.hm.t}`) : "");
+  if (location.hash !== h) history.replaceState(null, "", location.pathname + location.search + h);
+}
+function parseHash(){
+  const [lg, tab, md] = location.hash.slice(1).split("/");
+  if (!LEAGUES[lg]) return null;
+  const x = {lg, tab:TABS_ALL.includes(tab) ? tab : "matches"};
+  let g;
+  if (md && (g = md.match(/^m([\w.]+)-(\d{8})$/))) x.m = {m:g[1], d:g[2]};
+  else if (md && (g = md.match(/^t(\w+)$/))) x.t = g[1];
+  return x;
+}
 function render(){
+  queueMicrotask(saveHash);
   if (L().nostand && !L().cup && S.tab === "standings") S.tab = "matches";  // 순위표가 없는 대회(친선경기)
   renderHeader();
   updateFab();
@@ -2555,7 +2572,7 @@ function resList(rs){
 const rankText = info => info && info.groupLabel ? `${info.groupLabel} ${info.rank}위` : "";
 
 async function openTeam(id, n = 5){
-  S.modalMatch = null;
+  S.modalMatch = null; S.hm = {t:String(id)}; saveHash();
   if (L().national && !FIFA.map) await withTimeout(loadFifa(), 2500);
   const lg = S.lg, info = infoOf(id) || {};
   openModal(`<div class="loading">${esc(ko(info.name))} 데이터를 불러오는 중…</div>`);
@@ -2938,7 +2955,7 @@ async function openMatch(id){
   const lg = S.lg, m = findMatch(lg, id);
   if (!m) return;
   if (L().national && !FIFA.map) await withTimeout(loadFifa(), 2500);
-  S.modalMatch = m.id;
+  S.modalMatch = m.id; S.hm = {m:m.id, d:ymd(new Date(m.date))}; saveHash();
   const hi = infoOf(m.home.id) || {}, ai = infoOf(m.away.id) || {};
   let center;
   if (m.state === "pre") center = `<div class="vs" style="font-size:22px">VS</div><div class="when">${dFull(m.date)}</div>`;
@@ -5589,7 +5606,6 @@ function setLeague(lg){
   if (S.lg !== lg) S.season = null;  // 리그를 바꾸면 현재 시즌으로
   S.lg = lg; S.chip = "ALL"; S.mStatus = "ALL";
   try { localStorage.setItem("league", lg); } catch {}
-  if (location.hash.slice(1) !== lg) history.replaceState(null, "", "#" + lg);
   window.scrollTo(0, 0);
   render();
   if (!LEAGUES[lg].disabled && !D(lg).loaded) loadLeague(lg);
@@ -5615,6 +5631,7 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("tr[data-team]")) openTeam(e.target.dataset.team); });
 $("#mclose").onclick = () => modal.close();
+modal.addEventListener("close", () => { S.hm = null; saveHash(); });
 modal.addEventListener("click", e => { if (e.target === modal) modal.close(); });
 // 왼쪽 위 앱 이름 → 홈 (새로고침 없이)
 $("#homeLink").onclick = e => { if (e.ctrlKey || e.metaKey || e.shiftKey) return; e.preventDefault(); if (modal.open) modal.close(); S.tab = "home"; history.replaceState(null, "", location.pathname); window.scrollTo(0, 0); render(); };
@@ -5631,13 +5648,37 @@ $("#refresh").onclick = () => {
   const d = D(); d.teamCache = {}; d.sumCache = {}; d.forms = null;
   loadLeague(S.lg, true);
 };
-window.addEventListener("hashchange", () => { if (syncFromHash()){ S.tab = "my"; render(); return; } const k = location.hash.slice(1); if (LEAGUES[k] && k !== S.lg) setLeague(k); });
+window.addEventListener("hashchange", () => { if (syncFromHash()){ S.tab = "my"; render(); return; }
+  const x = parseHash(); if (!x) return;
+  if (x.tab !== S.tab) S.tab = x.tab;
+  if (x.lg !== S.lg) setLeague(x.lg); else render(); });
 
 const fromSyncLink = syncFromHash();  // QR로 연 경우(#sync=코드)
-let start = location.hash.slice(1);
-if (!LEAGUES[start]) S.tab = fromSyncLink ? "my" : "home";  // 주소에 리그가 없으면 홈부터
+const startH = fromSyncLink ? null : parseHash();
+let start = startH ? startH.lg : "";
+if (startH) S.tab = startH.tab;
+else S.tab = fromSyncLink ? "my" : "home";  // 주소에 리그가 없으면 홈부터
 if (!LEAGUES[start]) { try { start = localStorage.getItem("league") || DEFAULT_LG; } catch { start = DEFAULT_LG; } }
 setLeague(start);
+// 새로고침 전에 열려 있던 경기·팀 창 다시 열기 + 스크롤 위치 되돌리기
+(async () => {
+  const key = "scroll." + location.hash.split("/").slice(0, 2).join("/");
+  let y = 0; try { y = Number(sessionStorage.getItem(key)) || 0; } catch {}
+  const lg = S.lg, need = startH && (startH.m || startH.t);
+  if (LG_TABS.includes(S.tab) || need){ try { if (!LEAGUES[lg].disabled) await (D(lg).loading || loadLeague(lg)); } catch {} }
+  if (y > 0) for (let i = 0; i < 12 && Math.abs(window.scrollY - y) > 4; i++){  // 화면이 다 그려질 때까지 몇 번 시도
+    if (document.documentElement.scrollHeight - innerHeight >= y){ window.scrollTo(0, y); break; }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  if (!need || S.lg !== lg) return;
+  if (startH.t) return openTeam(startH.t);
+  if (!findMatch(lg, startH.m.m)){  // 이번 주 목록에 없는 경기면 그날 일정에서 찾음
+    try { const j = await espn(`site/v2/sports/${LEAGUES[lg].sport}/${LEAGUES[lg].slug}/scoreboard?dates=${startH.m.d}`, 60);
+      for (const e of dedupe(j.events || [])) EVX[lg + "|" + e.id] = EVX[lg + "|" + e.id] || e; } catch {}
+  }
+  openMatch(startH.m.m);
+})();
+addEventListener("pagehide", () => { try { sessionStorage.setItem("scroll." + location.hash.split("/").slice(0, 2).join("/"), String(Math.round(window.scrollY))); } catch {} });
 
 // ================================================================ 앱 안 브라우저(카톡·네이버·인스타 등) 안내 띠
 // 자동으로 안 넘어간 경우를 위해: 안드로이드는 크롬으로 바로 열기(intent), 아이폰은 Safari로 여는 방법 + 주소 복사

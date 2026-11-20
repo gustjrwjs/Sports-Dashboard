@@ -80,3 +80,4 @@
 - 📝 문자중계 접기(2026-11-20): `#pbpsec` 머리의 `[data-pbptg]` 버튼, `.fold` 클래스, 상태는 localStorage `pbp.fold`(모든 경기 공통 기억).
 - ⭐ 팀마다 주목 선수 최소 1명(2026-11-20): 경기 상세 `fillSoccerIntel`의 `pickStar`(득점·도움·슈팅 1위에 가장 많이 오른 선수, `.slead li.star`·`.sstar`), 팀 분석은 기준 넘는 선수가 없으면 축구 공격 포인트·농구 득점·야구 홈런 1위에 ⭐.
 - ⚽ PK 골(2026-11-20): ESPN keyEvents 종류 `penalty---scored`도 골로 셈(`goalsLine` '(PK)' 표시, `parseLineups`).
+- 🔄 새로고침 유지(2026-11-20): 주소 `#리그/탭[/m경기번호-YYYYMMDD | /t팀번호]`(`saveHash`·`parseHash`, render·openMatch·openTeam·창 닫기 때 갱신, replaceState라 뒤로가기 기록은 안 쌓임). 시작 시 탭 복원 → 리그 로드 뒤 경기/팀 창 다시 열기(이번 주에 없는 경기는 그날 scoreboard에서 찾아 `EVX`). 스크롤은 sessionStorage `scroll.#리그/탭`. 예전 링크 `#epl`도 그대로 됨.
