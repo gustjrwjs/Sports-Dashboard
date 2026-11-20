@@ -717,7 +717,7 @@ tr.dnp td{color:var(--muted)}
 .dpick{position:relative;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:13px;cursor:pointer;white-space:nowrap}
 .dpick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .dpick input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
-.dnav .chips{flex-basis:100%}
+.dnav2{margin:4px 0 10px}
 #lgbar .haslive::after{content:"";display:inline-block;flex:none;width:7px;height:7px;margin-left:5px;border-radius:50%;background:#ef4444;vertical-align:1px;animation:lgpulse 1.6s ease-in-out infinite}
 @keyframes lgpulse{0%,100%{opacity:1}50%{opacity:.35}}
 #inappbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between;padding:10px 14px;background:#fef3c7;color:#78350f;border-bottom:1px solid #f59e0b;font-size:13px;position:relative;z-index:50}
@@ -5088,9 +5088,7 @@ function renderHome(fromTick){
   const d = new Date(), selD = new Date(d0); if (dy !== "all") selD.setDate(selD.getDate() + Number(dy));
   let html = `<div class="hhead"><h2>📅 ${far ? `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) 통합 일정` : `${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]}) 오늘의 경기`}</h2>
     <span class="auto"><i></i>30초마다 자동 업데이트</span></div>
-    <div class="bar hbar dnav"><button class="btn dnb" data-hday="${dy === "all" ? -1 : Number(dy) - 1}" aria-label="이전 날">◀</button>
-      <label class="dpick">📅 <b>${dy === "all" ? "날짜 고르기" : `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) · ${dayName(dy)}`}</b><input type="date" id="hdate" value="${dy === "all" ? "" : `${selD.getFullYear()}-${pad(selD.getMonth() + 1)}-${pad(selD.getDate())}`}" aria-label="날짜 고르기"></label>
-      <button class="btn dnb" data-hday="${dy === "all" ? 1 : Number(dy) + 1}" aria-label="다음 날">▶</button>
+    <div class="bar hbar dnav">
       <div class="chips">${[["all", "3일 전체"], ["-1", "어제"], ["0", "오늘"], ["1", "내일"]].map(([k, l]) => `<button class="chip ${dy === k ? "on" : ""}" data-hday="${k}">${l}${far ? "" : `<span class="n">${dcnt[k] || 0}</span>`}</button>`).join("")}</div></div>
     <div class="bar hbar"><div class="chips">${SPORTS.map(([k, l]) => `<button class="chip ${sp === k ? "on" : ""}" data-hsp="${k}">${l}</button>`).join("")}</div>
       <span class="sep"></span>
@@ -5103,6 +5101,9 @@ function renderHome(fromTick){
   if (big.length) html += `<div class="strip-h"><h3>🔥 오늘의 빅매치</h3><span class="muted">상위권·강팀 맞대결</span></div><div class="hgrid">${big.map(x => `<div class="bigw"><span class="bigwhy">${esc(x.why)}</span>${miniRow(x, {today:true})}</div>`).join("")}</div>`;
   if (live.length) html += `<div class="strip-h"><h3 class="live">● 지금 진행 중</h3><span class="muted">${live.length}경기 · 누르면 상세·문자중계</span></div>${grid(live)}`;
   if (soon.length) html += `<div class="strip-h"><h3>⏰ 곧 시작 (1시간 안)</h3><span class="muted">${soon.length}경기</span></div>${grid(soon)}`;
+  html += `<div class="bar hbar dnav dnav2"><button class="btn dnb" data-hday="${dy === "all" ? -1 : Number(dy) - 1}" aria-label="이전 날">◀</button>
+      <label class="dpick">📅 <b>${dy === "all" ? "날짜 고르기" : `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) · ${dayName(dy)}`}</b><input type="date" id="hdate" value="${dy === "all" ? "" : `${selD.getFullYear()}-${pad(selD.getMonth() + 1)}-${pad(selD.getDate())}`}" aria-label="날짜 고르기"></label>
+      <button class="btn dnb" data-hday="${dy === "all" ? 1 : Number(dy) + 1}" aria-label="다음 날">▶</button></div>`;  // 날짜 넘기기: 날짜 상자 바로 위
   if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? (dy === "all" ? "어제·오늘·내일" : dayName(dy)) + " 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
   else {
     // 날짜 상자: 오늘 → 내일 → 어제(결과). 상자 안은 리그 섞어서 시간순 한 줄씩 (왼쪽 끝 리그 표시)
