@@ -712,6 +712,12 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.dnav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dnav .dnb{padding:6px 12px;font-size:13px;line-height:1}
+.dpick{position:relative;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:13px;cursor:pointer;white-space:nowrap}
+.dpick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dpick input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
+.dnav .chips{flex-basis:100%}
 #lgbar .haslive::after{content:"";display:inline-block;flex:none;width:7px;height:7px;margin-left:5px;border-radius:50%;background:#ef4444;vertical-align:1px;animation:lgpulse 1.6s ease-in-out infinite}
 @keyframes lgpulse{0%,100%{opacity:1}50%{opacity:.35}}
 #inappbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between;padding:10px 14px;background:#fef3c7;color:#78350f;border-bottom:1px solid #f59e0b;font-size:13px;position:relative;z-index:50}
@@ -5010,6 +5016,19 @@ const LG_ORDER = SPORT_GROUPS.flatMap(g => g.keys);
 S.homeSport = lsGet("home.sport", "all"); S.homeState = "all";
 const countdown = iso => { const mi = Math.round((new Date(iso) - Date.now()) / 6e4); return mi <= 0 ? "곧 시작" : mi < 60 ? `${mi}분 후` : mi < 180 ? `${Math.floor(mi / 60)}시간 ${mi % 60 ? (mi % 60) + "분 " : ""}후` : ""; };
 const DAYW = {"-1":"어제", "0":"오늘", "1":"내일"};
+const dayName = off => DAYW[off] || (Number(off) > 0 ? `${off}일 후` : `${-off}일 전`);
+// 어제~내일 밖의 날짜: 모든 리그에서 그날 일정을 따로 모음 (기기 날짜 기준이라 ESPN 날짜 앞뒤 하루씩 같이 받음)
+const DAYX = {};
+function loadDay(off){
+  if (DAYX[off]) return DAYX[off];
+  const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + off);
+  const ds = [-1, 0, 1].map(k => { const x = new Date(d); x.setDate(x.getDate() + k); return ymd(x); });
+  DAYX[off] = Promise.all(Object.entries(LEAGUES).filter(([, x]) => !x.disabled).map(async ([lg, Lg]) => {
+    const lists = await Promise.all(ds.map(dd => espn(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${dd}`, off < 0 ? 3600 : 600).then(j => j.events || []).catch(() => [])));
+    return dedupe(lists.flat()).map(m => { EVX[lg + "|" + m.id] = EVX[lg + "|" + m.id] || m; return {lg, m}; });
+  })).then(a => a.flat()).catch(() => { delete DAYX[off]; return []; });
+  return DAYX[off];
+}
 const STO = {in:0, pre:1, post:2};  // 홈 상자 안 순서: 진행 중 → 예정 → 종료(맨 아래)
 // 홈 일정 한 줄: 시간·상태 | 리그 | 홈팀 | 점수 | 원정팀 | ☆
 function lsRow({lg, m}){
@@ -5041,9 +5060,16 @@ function renderHome(fromTick){
   const d0 = new Date(); d0.setHours(0, 0, 0, 0);
   const offOf = x => { const t = new Date(x.m.date); t.setHours(0, 0, 0, 0); return Math.round((t - d0) / 864e5); };
   const inRange = x => { const o = offOf(x); return o >= -1 && o <= 1; };
-  const span = IDX.list.filter(x => okSp(x) && (inRange(x) || x.m.state === "in"));
+  const dy = S.homeDay || "all", far = dy !== "all" && Math.abs(Number(dy)) > 1;
+  let src = IDX.list;
+  if (far){  // 날짜를 넘겨 본 경우: 그날 일정을 따로 받아 옴
+    if (!S.dayData || S.dayData.off !== dy){ $("#main").innerHTML = `<div class="loading">${dayName(dy)} 경기를 모든 리그에서 모으는 중…</div>`;
+      loadDay(Number(dy)).then(list => { S.dayData = {off:dy, list}; if (S.tab === "home" && S.homeDay === dy) renderHome(); }); return; }
+    src = S.dayData.list;
+  }
+  const span = src.filter(x => okSp(x) && (far ? offOf(x) === Number(dy) : inRange(x) || x.m.state === "in"));
   const dcnt = {all:span.length, "-1":0, "0":0, "1":0}; span.forEach(x => { const o = x.m.state === "in" ? 0 : offOf(x); if (o in dcnt) dcnt[o]++; });
-  const dy = S.homeDay || "all", dayOk = x => dy === "all" || String(x.m.state === "in" ? 0 : offOf(x)) === dy;
+  const dayOk = x => dy === "all" || String(x.m.state === "in" && !far ? 0 : offOf(x)) === dy;
   const all = span.filter(dayOk);
   const cnt = {all:all.length, in:0, pre:0, post:0}; all.forEach(x => cnt[x.m.state] = (cnt[x.m.state] || 0) + 1);
   const st = S.homeState, list = st === "all" ? all : all.filter(x => x.m.state === st);
@@ -5059,31 +5085,34 @@ function renderHome(fromTick){
   }
   const row = x => miniRow(x, {today:true});
   const grid = arr => `<div class="hgrid">${arr.map(row).join("")}</div>`;
-  const d = new Date();
-  let html = `<div class="hhead"><h2>📅 ${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]}) 오늘의 경기</h2>
+  const d = new Date(), selD = new Date(d0); if (dy !== "all") selD.setDate(selD.getDate() + Number(dy));
+  let html = `<div class="hhead"><h2>📅 ${far ? `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) 통합 일정` : `${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]}) 오늘의 경기`}</h2>
     <span class="auto"><i></i>30초마다 자동 업데이트</span></div>
-    <div class="bar hbar"><div class="chips">${[["all", "3일 전체"], ["-1", "어제"], ["0", "오늘"], ["1", "내일"]].map(([k, l]) => `<button class="chip ${dy === k ? "on" : ""}" data-hday="${k}">${l}<span class="n">${dcnt[k] || 0}</span></button>`).join("")}</div></div>
+    <div class="bar hbar dnav"><button class="btn dnb" data-hday="${dy === "all" ? -1 : Number(dy) - 1}" aria-label="이전 날">◀</button>
+      <label class="dpick">📅 <b>${dy === "all" ? "날짜 고르기" : `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) · ${dayName(dy)}`}</b><input type="date" id="hdate" value="${dy === "all" ? "" : `${selD.getFullYear()}-${pad(selD.getMonth() + 1)}-${pad(selD.getDate())}`}" aria-label="날짜 고르기"></label>
+      <button class="btn dnb" data-hday="${dy === "all" ? 1 : Number(dy) + 1}" aria-label="다음 날">▶</button>
+      <div class="chips">${[["all", "3일 전체"], ["-1", "어제"], ["0", "오늘"], ["1", "내일"]].map(([k, l]) => `<button class="chip ${dy === k ? "on" : ""}" data-hday="${k}">${l}${far ? "" : `<span class="n">${dcnt[k] || 0}</span>`}</button>`).join("")}</div></div>
     <div class="bar hbar"><div class="chips">${SPORTS.map(([k, l]) => `<button class="chip ${sp === k ? "on" : ""}" data-hsp="${k}">${l}</button>`).join("")}</div>
       <span class="sep"></span>
       <div class="chips">${[["all", "전체"], ["in", "● 진행 중"], ["pre", "예정"], ["post", "종료"]].map(([k, l]) => `<button class="chip ${st === k ? "on" : ""}" data-hst="${k}">${l}<span class="n">${cnt[k] || 0}</span></button>`).join("")}</div></div>`;
   if (FAVS.length) html += `<div class="strip-h"><h3>⭐ 내 응원팀</h3><span class="muted">팀 분석에서 ☆ 응원팀 등록</span></div><div class="favgrid">${FAVS.filter(f => sp === "all" || (LEAGUES[f.lg] && LEAGUES[f.lg].sport === sp)).map(favCard).join("")}</div>`;
   html += betStats() + rankCard();
-  if (mine.length) html += `<div class="strip-h"><h3><span class="mystar">★</span> ${dy === "all" ? "어제·오늘·내일" : DAYW[dy]} 내가 담은 경기</h3><span class="muted">${mine.length}경기</span></div>${grid(mine)}`;
+  if (mine.length) html += `<div class="strip-h"><h3><span class="mystar">★</span> ${dy === "all" ? "어제·오늘·내일" : dayName(dy)} 내가 담은 경기</h3><span class="muted">${mine.length}경기</span></div>${grid(mine)}`;
   loadBig();
   const big = (BIG.list || []).filter(x => okSp(x) && (st === "all" || x.m.state === st));
   if (big.length) html += `<div class="strip-h"><h3>🔥 오늘의 빅매치</h3><span class="muted">상위권·강팀 맞대결</span></div><div class="hgrid">${big.map(x => `<div class="bigw"><span class="bigwhy">${esc(x.why)}</span>${miniRow(x, {today:true})}</div>`).join("")}</div>`;
   if (live.length) html += `<div class="strip-h"><h3 class="live">● 지금 진행 중</h3><span class="muted">${live.length}경기 · 누르면 상세·문자중계</span></div>${grid(live)}`;
   if (soon.length) html += `<div class="strip-h"><h3>⏰ 곧 시작 (1시간 안)</h3><span class="muted">${soon.length}경기</span></div>${grid(soon)}`;
-  if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? (dy === "all" ? "어제·오늘·내일" : DAYW[dy]) + " 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
+  if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? (dy === "all" ? "어제·오늘·내일" : dayName(dy)) + " 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
   else {
     // 날짜 상자: 오늘 → 내일 → 어제(결과). 상자 안은 리그 섞어서 시간순 한 줄씩 (왼쪽 끝 리그 표시)
     let di = 0;
-    for (const off of ["0", "1", "-1"].filter(o => dy === "all" || dy === o)){
+    for (const off of (far ? [dy] : ["0", "1", "-1"]).filter(o => dy === "all" || dy === o)){
       const dd = new Date(d0); dd.setDate(dd.getDate() + Number(off));
-      const rows = list.filter(x => String(x.m.state === "in" ? 0 : offOf(x)) === off)
+      const rows = list.filter(x => String(x.m.state === "in" && !far ? 0 : offOf(x)) === off)
         .sort((a, b) => STO[a.m.state] - STO[b.m.state] || a.m.date.localeCompare(b.m.date) || LG_ORDER.indexOf(a.lg) - LG_ORDER.indexOf(b.lg));
       if (!rows.length) continue;
-      html += `<section class="dayp d${off.replace("-", "m")}"><header><b>${DAYW[off]}</b><span>${dd.getMonth() + 1}월 ${dd.getDate()}일 (${"일월화수목금토"[dd.getDay()]})</span><em>${rows.length}경기</em></header>
+      html += `<section class="dayp d${off.replace("-", "m")}"><header><b>${dayName(off)}</b><span>${dd.getMonth() + 1}월 ${dd.getDate()}일 (${"일월화수목금토"[dd.getDay()]})</span><em>${rows.length}경기</em></header>
         <div class="lsl">${rows.map(lsRow).join("")}</div></section>`;
       if (di++ === 0) html += adSlot("home");
     }
@@ -5100,8 +5129,14 @@ document.addEventListener("click", e => {
   if (!a || S.tab !== "home") return;
   if (a.dataset.hsp){ S.homeSport = a.dataset.hsp; lsSet("home.sport", S.homeSport); renderHome(); }
   else if (a.dataset.hst){ S.homeState = a.dataset.hst; renderHome(); }
-  else if (a.dataset.hday){ S.homeDay = a.dataset.hday; renderHome(); }
+  else if (a.dataset.hday){ S.homeDay = a.dataset.hday === "all" ? "all" : String(Math.max(-60, Math.min(60, Number(a.dataset.hday)))); renderHome(); }
   else if (a.dataset.golg){ S.tab = LEAGUES[a.dataset.golg].nostand ? "matches" : "matches"; setLeague(a.dataset.golg); }
+});
+document.addEventListener("click", e => { const l = e.target.closest(".dpick"); if (l && e.target.id !== "hdate"){ try { l.querySelector("input").showPicker(); e.preventDefault(); } catch {} } });
+document.addEventListener("change", e => {  // 홈 달력에서 날짜 고르기
+  if (e.target.id !== "hdate" || !e.target.value) return;
+  const [y, mo, da] = e.target.value.split("-").map(Number), t = new Date(y, mo - 1, da), d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  S.homeDay = String(Math.max(-60, Math.min(60, Math.round((t - d0) / 864e5)))); renderHome();
 });
 // ---------------------------------------------------------------- 🔍 경기 검색 (예정 · 진행 중)
 function openSearch(){
