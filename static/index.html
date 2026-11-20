@@ -718,6 +718,9 @@ tr.dnp td{color:var(--muted)}
 .dpick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .dpick input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
 .dnav2{margin:4px 0 10px}
+.hlgs{display:flex;flex-wrap:wrap;gap:6px;margin-left:6px}
+.hlgs .chip.lgf{display:inline-flex;align-items:center;gap:4px}
+@media (max-width:640px){.hlgs{margin-left:0;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.hlgs .chip{flex:none}}
 #lgbar .haslive::after{content:"";display:inline-block;flex:none;width:7px;height:7px;margin-left:5px;border-radius:50%;background:#ef4444;vertical-align:1px;animation:lgpulse 1.6s ease-in-out infinite}
 @keyframes lgpulse{0%,100%{opacity:1}50%{opacity:.35}}
 #inappbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;justify-content:space-between;padding:10px 14px;background:#fef3c7;color:#78350f;border-bottom:1px solid #f59e0b;font-size:13px;position:relative;z-index:50}
@@ -5072,7 +5075,12 @@ function renderHome(fromTick){
   const dayOk = x => dy === "all" || String(x.m.state === "in" && !far ? 0 : offOf(x)) === dy;
   const all = span.filter(dayOk);
   const cnt = {all:all.length, in:0, pre:0, post:0}; all.forEach(x => cnt[x.m.state] = (cnt[x.m.state] || 0) + 1);
-  const st = S.homeState, list = st === "all" ? all : all.filter(x => x.m.state === st);
+  const st = S.homeState, list0 = st === "all" ? all : all.filter(x => x.m.state === st);
+  // 리그 선택(여러 개): 고른 날짜·종목·상태에 경기가 있는 리그만 보여 줌
+  const lgCnt = new Map(); list0.forEach(x => lgCnt.set(x.lg, (lgCnt.get(x.lg) || 0) + 1));
+  const lgs = [...lgCnt.keys()].sort((a, b) => LG_ORDER.indexOf(a) - LG_ORDER.indexOf(b));
+  const selLg = new Set([...(S.homeLgs || [])].filter(k => lgCnt.has(k)));
+  const list = selLg.size ? list0.filter(x => selLg.has(x.lg)) : list0;
   const live = list.filter(x => x.m.state === "in").sort((a, b) => a.m.date.localeCompare(b.m.date));
   const soon = list.filter(x => x.m.state === "pre" && new Date(x.m.date) - now < 36e5 && new Date(x.m.date) - now > -9e5);
   const picked = new Set(PICKS.map(p => p.lg + "|" + p.id));
@@ -5103,7 +5111,8 @@ function renderHome(fromTick){
   if (soon.length) html += `<div class="strip-h"><h3>⏰ 곧 시작 (1시간 안)</h3><span class="muted">${soon.length}경기</span></div>${grid(soon)}`;
   html += `<div class="bar hbar dnav dnav2"><button class="btn dnb" data-hday="${dy === "all" ? -1 : Number(dy) - 1}" aria-label="이전 날">◀</button>
       <label class="dpick">📅 <b>${dy === "all" ? "날짜 고르기" : `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) · ${dayName(dy)}`}</b><input type="date" id="hdate" value="${dy === "all" ? "" : `${selD.getFullYear()}-${pad(selD.getMonth() + 1)}-${pad(selD.getDate())}`}" aria-label="날짜 고르기"></label>
-      <button class="btn dnb" data-hday="${dy === "all" ? 1 : Number(dy) + 1}" aria-label="다음 날">▶</button></div>`;  // 날짜 넘기기: 날짜 상자 바로 위
+      <button class="btn dnb" data-hday="${dy === "all" ? 1 : Number(dy) + 1}" aria-label="다음 날">▶</button>
+      ${lgs.length > 1 ? `<div class="chips hlgs"><button class="chip ${selLg.size ? "" : "on"}" data-hlg="all">모든 리그<span class="n">${list0.length}</span></button>${lgs.map(k => `<button class="chip lgf ${selLg.has(k) ? "on" : ""}" data-hlg="${k}" aria-pressed="${selLg.has(k)}" title="${esc(LEAGUES[k].name)}">${lgChip(k)}${esc(LEAGUES[k].short)}<span class="n">${lgCnt.get(k)}</span></button>`).join("")}</div>` : ""}</div>`;  // 날짜 넘기기 + 리그 선택: 날짜 상자 바로 위
   if (!list.length) html += `<div class="card live-empty"><b>${st === "all" ? (dy === "all" ? "어제·오늘·내일" : dayName(dy)) + " 경기가 없습니다" : "해당하는 경기가 없습니다"}</b><span class="muted">위에서 다른 종목이나 상태를 골라 보세요. 리그별 일정은 위 리그 메뉴에서 볼 수 있습니다.</span></div>`;
   else {
     // 날짜 상자: 오늘 → 내일 → 어제(결과). 상자 안은 리그 섞어서 시간순 한 줄씩 (왼쪽 끝 리그 표시)
@@ -5126,10 +5135,13 @@ function renderHome(fromTick){
     try { await loadIndex(true); } catch {} if (S.tab === "home" && !modal.open) renderHome(true); else if (S.tab === "home") S.homePoll = setTimeout(() => renderHome(true), 30000); }, 30000);
 }
 document.addEventListener("click", e => {
-  const a = e.target.closest("[data-hsp],[data-hst],[data-golg],[data-hday]");
+  const a = e.target.closest("[data-hsp],[data-hst],[data-golg],[data-hday],[data-hlg]");
   if (!a || S.tab !== "home") return;
   if (a.dataset.hsp){ S.homeSport = a.dataset.hsp; lsSet("home.sport", S.homeSport); renderHome(); }
   else if (a.dataset.hst){ S.homeState = a.dataset.hst; renderHome(); }
+  else if (a.dataset.hlg){ const k = a.dataset.hlg, set = new Set(S.homeLgs || []);
+    if (k === "all") set.clear(); else if (set.has(k)) set.delete(k); else set.add(k);
+    S.homeLgs = set; renderHome(); }
   else if (a.dataset.hday){ S.homeDay = a.dataset.hday === "all" ? "all" : String(Math.max(-60, Math.min(60, Number(a.dataset.hday)))); renderHome(); }
   else if (a.dataset.golg){ S.tab = LEAGUES[a.dataset.golg].nostand ? "matches" : "matches"; setLeague(a.dataset.golg); }
 });

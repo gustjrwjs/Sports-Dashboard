@@ -82,3 +82,4 @@
 - ⚽ PK 골(2026-11-20): ESPN keyEvents 종류 `penalty---scored`도 골로 셈(`goalsLine` '(PK)' 표시, `parseLineups`).
 - 🔄 새로고침 유지(2026-11-20): 주소 `#리그/탭[/m경기번호-YYYYMMDD | /t팀번호]`(`saveHash`·`parseHash`, render·openMatch·openTeam·창 닫기 때 갱신, replaceState라 뒤로가기 기록은 안 쌓임). 시작 시 탭 복원 → 리그 로드 뒤 경기/팀 창 다시 열기(이번 주에 없는 경기는 그날 scoreboard에서 찾아 `EVX`). 스크롤은 sessionStorage `scroll.#리그/탭`. 예전 링크 `#epl`도 그대로 됨.
 - 📅 홈 날짜별 통합 일정(2026-11-20): 날짜 상자 바로 위(응원팀·적중률 카드 아래) ◀ 날짜 ▶ + 달력(`#hdate`), `S.homeDay`(오늘 기준 일수, ±60일). 어제~내일은 `IDX.list`, 그 밖은 `loadDay(off)`가 모든 리그 scoreboard(그날 앞뒤 하루 포함)를 받아 `DAYX`에 캐시·`EVX`에 넣음. 종목·상태 칩은 그대로 적용.
+- 🏷 홈 리그 선택(2026-11-20): 날짜 줄 옆 `.hlgs` 칩(`data-hlg`, 여러 개 선택, `S.homeLgs` Set·메모리만). 고른 날짜·종목·상태에 경기가 있는 리그만 칩으로 나오고, 지금 없는 리그 선택은 무시(다시 생기면 살아남). '모든 리그'로 해제.
