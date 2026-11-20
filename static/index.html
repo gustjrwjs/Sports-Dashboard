@@ -1180,6 +1180,8 @@ ul.news small{font-size:11px}
 // logo: 헤더 배경에 옅게 깔리는 리그 로고 (ESPN 이미지)
 const ESPN_LG = id => ({logo:`https://a.espncdn.com/i/leaguelogos/soccer/500/${id}.png`, logoDark:`https://a.espncdn.com/i/leaguelogos/soccer/500-dark/${id}.png`});
 // 컵대회: 8월 ~ 다음 해 5월 (+ = 다음 해)
+// ESPN에 순위·일정 기록이 없는 지난 시즌 (2026-11-20 리그별 2015~2026 순위표 확인 결과)
+const NO_SEASON = {unl: y => y < 2018, cnl: y => y < 2022 || y === 2025, bel: y => y === 2019};
 const CUP_MONTHS = ["08", "09", "10", "11", "12", "+01", "+02", "+03", "+04", "+05"];
 const LEAGUES = {
   unl: {name:"UEFA 네이션스리그", short:"네이션스리그", mark:"UNL", color:"#1d4ed8", sport:"soccer", slug:"uefa.nations", sched:"months", scope:"all", national:true, comp:"UEFA Nations League", ...ESPN_LG(2395)},
@@ -1815,7 +1817,7 @@ function renderHeader(){
   else if (!cur) $("#season").textContent = d.season || "불러오는 중…";
   else {
     const step = S.lg === "unl" ? 2 : 1, yrs = [];
-    for (let y = cur, i = 0; i < 12; y -= step, i++) yrs.push(y);
+    for (let y = cur, i = 0; i < 12; y -= step, i++) if (y === cur || !NO_SEASON[S.lg]?.(y)) yrs.push(y);  // ESPN에 기록 없는 시즌은 메뉴에서 뺌
     const sel = S.season || cur;
     $("#season").innerHTML = `<select id="seasonSel" class="seasonsel" aria-label="시즌 선택">${yrs.map(y => `<option value="${y}" ${y === Number(sel) ? "selected" : ""}>${esc(seasonLabel(S.lg, y))}${y === cur ? " (현재)" : ""}</option>`).join("")}</select>${S.season ? '<button class="linkbtn" data-season="">현재 시즌으로</button>' : ""}`;
   }
