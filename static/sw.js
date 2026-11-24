@@ -1,7 +1,7 @@
 // SPORTS LIVE! - 서비스 워커
 // 화면 파일(앱 껍데기)만 저장해 두고, 항상 인터넷에서 최신 버전을 먼저 받습니다.
 // 인터넷이 안 될 때만 저장해 둔 화면을 보여줍니다. 경기 데이터는 저장하지 않습니다.
-const CACHE = "shell-v2";  // 아이콘·이름 변경 (2026-11-12)
+const CACHE = "shell-v3";  // 페이지 받기 8초 넘으면 저장해 둔 화면 (2026-11-24)
 const SHELL = ["./", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-64.png"];
 
 self.addEventListener("install", e => {
@@ -23,12 +23,19 @@ self.addEventListener("fetch", e => {
   const isPage = req.mode === "navigate";
   e.respondWith((async () => {
     try {
-      const res = await fetch(req, { cache: "no-cache" }); // 브라우저 캐시를 건너뛰고 최신 확인
-      if (res.ok) {
-        const c = await caches.open(CACHE);
-        c.put(isPage ? "./" : req, res.clone());
+      const net = fetch(req, { cache: "no-cache" }).then(async res => {  // 브라우저 캐시를 건너뛰고 최신 확인
+        if (res.ok) { const c = await caches.open(CACHE); c.put(isPage ? "./" : req, res.clone()); }
+        return res;
+      });
+      // 화면(페이지) 받기가 8초 넘게 막히면 저장해 둔 화면을 먼저 보여줌 (끝없이 '새 탭'으로 도는 것 방지)
+      if (isPage){
+        const slow = new Promise(r => setTimeout(r, 8000, null));
+        const first = await Promise.race([net, slow]);
+        if (first) return first;
+        const hit = await caches.match("./");
+        if (hit) return hit;
       }
-      return res;
+      return await net;
     } catch (err) {
       const hit = await caches.match(isPage ? "./" : req);
       if (hit) return hit;

@@ -1530,7 +1530,8 @@ const errBox = e => `<div class="err">${esc(e.message || e)}</div>`;
 
 // ================================================================ 데이터 (로컬 서버 → 실패 시 ESPN 직접)
 const ESPN = "https://site.api.espn.com/apis/";
-let MODE = location.protocol.startsWith("http") ? "server" : "direct";
+// /espn 중계는 로컬 테스트 서버(app.py)에만 있음 → 공개 사이트(GitHub Pages 등)에선 처음부터 ESPN 직접 호출 (쓸데없는 404 요청 100여 개 방지)
+let MODE = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || /^192\.168\./.test(location.hostname) ? "server" : "direct";
 const memo = new Map();
 function espn(path, ttl = 60){
   const hit = memo.get(path);
