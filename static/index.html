@@ -3966,20 +3966,55 @@ function applySync(d){
 // 두 기기 내용을 합치기 (처음 연결할 때): 같은 경기는 예측이 있는 쪽, 나머지는 모두 모음
 function mergeSync(a, b){
   const by = new Map();
-  for (const p of [...(a.picks || []), ...(b.picks || [])]){ const k = p.lg + "|" + p.id, o = by.get(k); if (!o || (!o.bet && p.bet)) by.set(k, p); }
+  for (const p of [...(a.picks || []), ...(b.picks || [])]){ const k = p.lg + "|" + p.id + "|" + (p.grp || 1), o = by.get(k); if (!o || (!o.bet && p.bet)) by.set(k, p); }
   const bl = new Map(); for (const x of [...(a.betlog || []), ...(b.betlog || [])]) if (!bl.has(x.k) || x.done) bl.set(x.k, x);
   const fv = new Map(); for (const f of [...(a.favs || []), ...(b.favs || [])]) fv.set(f.lg + "|" + f.id, f);
   return {v:1, t:Date.now(), picks:[...by.values()], groups:[...new Set([...(a.groups || []), ...(b.groups || [])])], addGrp:a.addGrp || b.addGrp || "1", betlog:[...bl.values()], favs:[...fv.values()], rank:a.rank || b.rank || null};
 }
-// 내 기기에서 바뀌면 2초 뒤 올림
-function syncDirty(){
-  SYNC.t = Date.now(); lsSet("sync.t", String(SYNC.t));
-  if ((!SYNC.code && !ACC.tok) || !sbOn()) return;
-  clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncPush, 2000);
+// ---- 3방향 합치기: 마지막으로 맞춘 내용(base) 기준으로 서버·이 기기 양쪽 변경을 모두 살림 (2026-11-24)
+// 예전엔 '나중 시각이 전체 덮어쓰기'라, 앱을 열 때 자동 저장(오래된 경기 정리·채점)만 해도 다른 기기에서 담은 경기가 지워졌음
+const SYNC_BASE_KEY = "sync.base";
+const syncBase = () => lsJson(SYNC_BASE_KEY, null);
+const setSyncBase = d => { try { localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(d)); } catch {} };
+function merge3list(base, srv, loc, key){
+  const B = new Map((base || []).map(x => [key(x), x])), S = new Map((srv || []).map(x => [key(x), x])), L = new Map((loc || []).map(x => [key(x), x]));
+  const out = [];
+  for (const k of new Set([...S.keys(), ...L.keys()])){
+    const s = S.get(k), l = L.get(k), b = B.get(k);
+    if (s !== undefined && l !== undefined) out.push(JSON.stringify(l) !== JSON.stringify(b) ? l : s);  // 둘 다 있음: 이 기기에서 바뀐 쪽 우선
+    else if (s !== undefined){ if (b === undefined) out.push(s); }   // 서버에만: 새로 담긴 것이면 살림, base에 있던 것이면 이 기기에서 지운 것
+    else if (b === undefined) out.push(l);                            // 이 기기에만: 새로 담긴 것이면 살림, base에 있던 것이면 다른 기기에서 지운 것
+  }
+  return out;
 }
+function merge3(base, srv, loc){
+  base = base || {};
+  return {v:1, t:Date.now(),
+    picks:merge3list(base.picks, srv.picks, loc.picks, p => p.lg + "|" + p.id + "|" + (p.grp || 1)),
+    groups:merge3list(base.groups, srv.groups, loc.groups, g => String(g)),
+    betlog:merge3list(base.betlog, srv.betlog, loc.betlog, x => x.k),
+    favs:merge3list(base.favs, srv.favs, loc.favs, f => f.lg + "|" + f.id),
+    addGrp:loc.addGrp || srv.addGrp || "1", rank:loc.rank || srv.rank || null};
+}
+// 내 기기에서 바뀌면 2초 뒤 서버와 맞춤(먼저 서버를 읽고 합쳐서 올림)
+function syncDirty(){
+  SYNC.t = Date.now(); lsSet("sync.t", String(SYNC.t)); lsSet("sync.dirty", "1");
+  if ((!SYNC.code && !ACC.tok) || !sbOn()) return;
+  clearTimeout(SYNC.timer); SYNC.timer = setTimeout(syncPull, 2000);
+}
+const syncGet = async () => { const r = ACC.tok ? await rpc("acc_get", {p_token:ACC.tok}) : await rpc("sync_get", {p_code:SYNC.code}); return {r, d:r && r.data && r.data.v ? r.data : null}; };
+const syncPut = st => ACC.tok ? rpc("acc_put", {p_token:ACC.tok, p_data:st}) : rpc("sync_put", {p_code:SYNC.code, p_data:st});
 async function syncPush(){
   if (!SYNC.code && !ACC.tok) return;
-  try { if (ACC.tok) await rpc("acc_put", {p_token:ACC.tok, p_data:syncState()}); else await rpc("sync_put", {p_code:SYNC.code, p_data:syncState()}); SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = ""; }
+  const prev = syncBase();
+  try { const st = syncState(); st.t = Date.now(); SYNC.t = st.t; lsSet("sync.t", String(st.t));
+    await syncPut(st);
+    setSyncBase(st); lsSet("sync.dirty", ""); SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = "";
+    // 거의 같은 순간에 다른 기기도 올렸으면(서로 덮어씀) 한 번 더 확인해서 합침
+    await new Promise(z => setTimeout(z, 600 + Math.random() * 600));
+    const {d} = await syncGet();
+    if (d && Number(d.t) !== st.t && Number(d.t) > st.t - 5000){ const m = merge3(prev, d, st); m.t = Date.now(); applySync(m); await syncPut(m); setSyncBase(m); SYNC.t = m.t; lsSet("sync.t", String(m.t)); }
+  }
   catch (e) { SYNC.err = e.message; accExpired(e); }
 }
 // 다른 기기 변경 받기: 앱을 열 때·다시 볼 때·1분마다
@@ -3987,12 +4022,16 @@ async function syncPull(){
   if ((!SYNC.code && !ACC.tok) || SYNC.busy || !sbOn()) return;
   SYNC.busy = true;
   try {
-    const r = ACC.tok ? await rpc("acc_get", {p_token:ACC.tok}) : await rpc("sync_get", {p_code:SYNC.code});
+    const {r} = await syncGet();
     if (ACC.tok && r && r.nick && r.nick !== ACC.nick){ ACC.nick = r.nick; lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick); }
     if (ACC.tok && r && "admin" in r && !!r.admin !== ACC.admin) accAdmin(r.admin);
-    const d = r && r.data;
-    if (d && Number(d.t) > SYNC.t) applySync(d);
-    else if (!d || Number(d.t) < SYNC.t) await syncPush();  // 서버가 비었거나 내가 더 최신
+    const d = r && r.data && r.data.v ? r.data : null, base = syncBase(), dirty = lsGet("sync.dirty", "") === "1" || !base;
+    if (!d) await syncPush();                                              // 서버가 비었음 → 이 기기 내용 올림
+    else if (!base || Number(d.t) !== Number(base.t)){                     // 다른 기기가 서버를 바꿨음
+      if (dirty){ const m = merge3(base, d, syncState()); applySync(m); await syncPush(); }   // 이 기기도 바뀜 → 합쳐서 올림
+      else { applySync(d); setSyncBase(d); lsSet("sync.dirty", ""); }                        // 이 기기는 그대로 → 서버 내용 받기
+    }
+    else if (dirty) await syncPush();                                       // 서버는 그대로, 이 기기만 바뀜
     SYNC.last = Date.now(); lsSet("sync.last", String(SYNC.last)); SYNC.err = "";
   } catch (e) { SYNC.err = e.message; accExpired(e); }
   finally { SYNC.busy = false; }
@@ -4060,9 +4099,10 @@ function accSet(r){
   ACC.tok = r.token; ACC.uid = r.uid; ACC.nick = r.nick;
   lsSet("acc.tok", r.token); lsSet("acc.uid", r.uid); lsSet("acc.nick", r.nick); lsSet("tk.nick", r.nick); accAdmin(r.admin);
   SYNC.code = ""; lsSet("sync.code", "");  // 계정으로 연동하니 코드 연동은 끔
+  lsSet(SYNC_BASE_KEY, "");  // 다른 계정의 '마지막 맞춘 내용'이 섞이지 않게
   accBadge();
 }
-function accClear(){ ACC.tok = ""; ACC.uid = ""; ACC.nick = ""; ACC.admin = false; ["acc.tok", "acc.uid", "acc.nick", "acc.admin"].forEach(k => lsSet(k, "")); accBadge(); }
+function accClear(){ lsSet(SYNC_BASE_KEY, ""); ACC.tok = ""; ACC.uid = ""; ACC.nick = ""; ACC.admin = false; ["acc.tok", "acc.uid", "acc.nick", "acc.admin"].forEach(k => lsSet(k, "")); accBadge(); }
 function accExpired(e){ if (ACC.tok && /로그인이 만료/.test(e?.message || "")){ accClear(); toast("로그인이 만료됐습니다. 다시 로그인해 주세요"); } }
 // 로그인·가입 직후: 서버 내용 + 이 기기 내용을 합쳐서 올림
 async function accAfterLogin(){
