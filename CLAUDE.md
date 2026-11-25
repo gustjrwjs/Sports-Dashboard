@@ -13,7 +13,8 @@
 2. **(소유자가 할 일)** 바뀐 `supabase_account.sql` 다시 실행 → 앱 👤 내 계정 → '운영자 계정으로 등록' → 운영자 비밀번호 입력. (비번 모르면 SQL Editor에서 `update public.accounts set is_admin = true where uid = '아이디';`)
 3. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
 4. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
-5. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+5. (보류 · 소유자 "나중에하자" 2026-11-25) 축구 부상 정보: ESPN은 축구 부상 거의 없음(케인 부상인데 roster=Active, injuries 0, 뉴스도 없음 확인). 후보 ① 운영자 부상 메모(Supabase 표, 🛡 계정이 등록 → 경기 상세·팀 분석 🚑) ② EPL만 FPL 공개 API(bootstrap-static의 status·chance_of_playing·news, CORS 없어 GitHub Actions로 하루 1~2회 받아 static/data에 저장) ③ API-Sports 유료. 봇 차단 사이트 긁기(트랜스퍼마크트 등)는 하지 않음(소유자에게 설명함).
+6. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 ## 📚 상세 메모·인수인계 (필요할 때만 읽기 — 토큰 절약)
 
