@@ -712,6 +712,7 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.inj .stt.newsinj{color:#b91c1c;font-weight:800}
 .dnav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dnav .dnb{padding:6px 12px;font-size:13px;line-height:1}
 .dpick{position:relative;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:13px;cursor:pointer;white-space:nowrap}
@@ -3127,6 +3128,50 @@ const parseLineups = sum => {
 // ---------------------------------------------------------------- 축구 경기 상세: 주목할 선수 + 결장 의심 선수
 // 주목할 선수 = ESPN 경기 데이터의 팀별 득점·도움·슈팅·선방 1위 / 결장 의심 = 최근 주전인데 직전 경기에 안 뛴 선수
 // (ESPN은 축구 부상 정보를 거의 주지 않아서 라인업 기록으로 추정)
+// ---------------------------------------------------------------- 📰 ESPN 기사로 부상 찾기 (축구)
+// 두 팀 선수 명단 × 최근 60일 기사(이 대회 + 5대 리그) 제목·요약에 이름 + 부상 낱말이 있으면 결장 목록에 올림
+const INJ_RE = /injur|surgery|ruled out|sidelined|setback|hamstring|ankle|knee|\bACL\b|groin|calf|thigh|fracture|broken|torn|muscle (problem|injury|strain)|concussion|knock|fitness (doubt|concern)|doubt(ful)? for|out (for|until|a few|of|with)/i;
+const RET_RE = /back in (full )?training|returns? (to|from) (training|injury)|fit (again|to play)|available again|has recovered/i;
+function injSummary(t){
+  const part = [["ankle", "발목"], ["knee|ACL", "무릎"], ["hamstring", "햄스트링"], ["groin", "사타구니"], ["calf", "종아리"], ["thigh", "허벅지"], ["foot|toe", "발"], ["shoulder", "어깨"], ["back injury", "허리"], ["concussion|head", "머리"], ["muscle", "근육"]].find(([re]) => new RegExp(re, "i").test(t));
+  const bits = [part ? part[1] : "부상"];
+  if (/surgery/i.test(t)) bits.push("수술");
+  if (/months|season|long-term/i.test(t)) bits.push("수개월 결장");
+  else if (/weeks/i.test(t)) bits.push("몇 주 결장");
+  else if (/ruled out|will miss|out (for|of)/i.test(t)) bits.push("결장");
+  else if (/doubt|knock|fitness/i.test(t)) bits.push("출전 불투명");
+  return "부상 기사: " + bits.join(" · ");
+}
+async function soccerInjNews(m){
+  const slugs = [...new Set([L().slug, "eng.1", "esp.1", "ger.1", "ita.1", "fra.1"])];
+  const [ros, ...feeds] = await Promise.all([
+    Promise.all([m.home.id, m.away.id].map(id => espn(`site/v2/sports/soccer/${L().slug}/teams/${id}/roster`, 3600).catch(() => null))),
+    ...slugs.map(sl => espn(`site/v2/sports/soccer/${sl}/news?limit=50`, 1800).catch(() => null))]);
+  const since = Date.now() - 60 * 864e5, arts = [];
+  const seen = new Set();
+  for (const f of feeds) for (const a of f?.articles || []){
+    const id = a.id || a.headline; if (seen.has(id)) continue; seen.add(id);
+    if (new Date(a.published) < since) continue;
+    const text = (a.headline || "") + " · " + (a.description || "");
+    if (INJ_RE.test(text)) arts.push({a, text, ret:RET_RE.test(text)});
+  }
+  arts.sort((x, y) => String(y.a.published).localeCompare(String(x.a.published)));
+  const out = {};
+  [m.home.id, m.away.id].forEach((tid, i) => {
+    const players = (ros[i]?.athletes || []).map(p => ({id:String(p.id), name:p.displayName, pos:p.position?.abbreviation || "", last:p.lastName || String(p.displayName || "").split(" ").slice(-1)[0]}));
+    const lastCnt = {}; players.forEach(p => lastCnt[p.last] = (lastCnt[p.last] || 0) + 1);
+    const list = [];
+    for (const p of players){
+      if (!p.name) continue;
+      const hit = arts.find(x => x.text.includes(p.name) || (p.last.length >= 4 && lastCnt[p.last] === 1 && new RegExp(`\\b${p.last.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(x.text) && /[A-Z][a-z]+ /.test(x.text) && x.text.includes(p.name.split(" ")[0])));
+      if (!hit || hit.ret) continue;  // 가장 최근 기사가 '복귀' 소식이면 뺌
+      const d = new Date(hit.a.published);
+      list.push({p:{id:p.id, name:p.name, pos:p.pos}, why:injSummary(hit.text), url:hit.a.links?.web?.href || "", head:hit.a.headline, nd:`${d.getMonth() + 1}/${d.getDate()}`, newsInj:true});
+    }
+    out[tid] = list;
+  });
+  return out;
+}
 async function fillSoccerIntel(lg, m, h, a, sum){
   const box = () => { const el = document.getElementById("sintel"); return el && el.dataset.mid === m.id && modal.open && S.modalMatch === m.id ? el : null; };
   const LEAD = [["goals", "⚽ 득점", /^goals$/i], ["goalAssists", "🅰️ 도움", /assist/i], ["totalShots", "🎯 슈팅", /shot/i], ["saves", "🧤 선방", /save/i]];
@@ -3159,6 +3204,10 @@ async function fillSoccerIntel(lg, m, h, a, sum){
     return list.filter(x => !st.has(x.p.id) && !(sb.get(x.p.id) && (sb.get(x.p.id).subIn || sb.get(x.p.id).ev?.in)))
       .map(x => ({...x, why:sb.has(x.p.id) ? "이 경기 벤치 (교체 명단)" : x.red ? "출장정지 · 이 경기 명단 제외(확정)" : "이 경기 명단 제외(확정)", conf:!sb.has(x.p.id)}));
   };
+  // ESPN 기사에서 부상 소식 찾기 (ESPN은 축구 부상 목록이 거의 비어 있음 · 예: 케인 발목 수술은 기사에만 있음)
+  const news = await withTimeout(soccerInjNews(m), 5000).catch(() => null) || {};
+  const addNews = (list, tid) => { const have = new Set(list.map(x => x.p.id)); return [...(news[tid] || []).filter(x => !have.has(x.p.id)), ...list.map(x => { const n = (news[tid] || []).find(y => y.p.id === x.p.id); return n ? {...x, why:n.why, url:n.url, nd:n.nd} : x; })]; };
+  ah = addNews(ah, m.home.id); aa = addNews(aa, m.away.id);
   ah = applyLu(ah, m.home.id); aa = applyLu(aa, m.away.id);
   const lh = leaders(m.home.id), la = leaders(m.away.id);
   await withTimeout(lookupPlayers([...lh, ...la].map(x => x.name).concat([...ah, ...aa].map(x => x.p.name)), OCC.soccer), 4000);
@@ -3170,7 +3219,7 @@ async function fillSoccerIntel(lg, m, h, a, sum){
   const col = (t, L1, A1, last) => { const st = pickStar(L1); let first = true; return `<div>${teamHead(m, t.id)}
     ${L1.length ? `<ul class="slead">${L1.map(x => { const on = st && x.name === st.name, tag = on && first ? (first = false, `<span class="sstar"><i>⭐ ${esc(st.why)}</i></span>`) : ""; return `<li class="${on ? "star" : ""}">${tag}${headImg(x.img || imgOf(x.name, 80))}<span class="sl">${x.lab}</span><b title="${nameTitle(x.name)}">${esc(koFull(x.name))}</b><span class="sv">${esc(x.v)}</span></li>`; }).join("")}</ul>` : '<div class="card empty">이번 시즌 선수 기록이 없습니다.</div>'}
     <div class="sabs-h">🚑 ${luOK ? "결장 (이 경기 라인업 반영)" : "결장 의심"} <small class="muted">${luOK ? "라인업 발표됨 · 선발로 나온 선수는 뺐습니다" : last ? `직전 경기(${md(last.date)}) 기준` : ""}</small></div>
-    ${A1.length ? `<ul class="inj">${A1.map(x => `<li>${headImg(imgOf(x.p.name, 80))}<span class="inn"><span title="${nameTitle(x.p.name)}">${esc(koFull(x.p.name))}</span><small class="muted">${esc(x.p.pos || "")}${x.n ? ` · 이전 ${x.of}경기 중 ${x.n}경기 선발` : ""}</small></span><span class="stt">${esc(x.why)}</span></li>`).join("")}</ul>`
+    ${A1.length ? `<ul class="inj">${A1.map(x => `<li>${headImg(imgOf(x.p.name, 80))}<span class="inn"><span title="${nameTitle(x.p.name)}">${esc(koFull(x.p.name))}</span><small class="muted">${esc(x.p.pos || "")}${x.n ? ` · 이전 ${x.of}경기 중 ${x.n}경기 선발` : ""}${x.url ? ` · <a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.head || "")}">📰 ESPN ${esc(x.nd || "")}</a>` : ""}</small></span><span class="stt ${x.url ? "newsinj" : ""}">${esc(x.why)}</span></li>`).join("")}</ul>`
       : `<div class="card empty" style="font-size:12px">${luOK ? "최근 주전이 모두 이 경기 명단에 있습니다." : "최근 주전 중 빠진 선수가 없습니다."}</div>`}</div>`; };
   const lastOf = t => t.past.find(e => e.id !== m.id && e.date < m.date);
   el.innerHTML = `<div class="sec-h"><h3>주목할 선수 · 결장 의심</h3><span class="muted sp">${m.state === "pre" ? "이번 시즌" : "이 경기"} 팀 내 1위 · 결장은 라인업 기록으로 추정(부상·징계·로테이션 구분 불가)</span></div>
