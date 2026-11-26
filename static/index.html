@@ -1857,14 +1857,15 @@ function roundOf(m, lg = S.lg){
 }
 
 // ---------------------------------------------------------------- 결과·통계
-function resultFor(ev, tid){
+// sp: 종목(기본 = 지금 리그). 홈 응원팀 카드처럼 다른 리그 화면에서 부를 땐 꼭 넘길 것 — 안 넘기면 축구 무승부가 '패'로 바뀌던 문제
+function resultFor(ev, tid, sp = L().sport){
   const isHome = ev.home.id === tid;
   const me = isHome ? ev.home : ev.away, op = isHome ? ev.away : ev.home;
   if (me.score == null || op.score == null) return null;
   let r = me.score > op.score ? "W" : me.score < op.score ? "L" : "D";
   let pk = null;
   if (r === "D" && /PEN/.test(ev.status || "")) pk = me.winner ? "승부차기 승" : "승부차기 패";
-  if (r === "D" && L().sport !== "soccer" && me.winner != null) r = me.winner ? "W" : "L";
+  if (r === "D" && sp !== "soccer" && me.winner != null) r = me.winner ? "W" : "L";
   return {ev, me, op, r, gf:me.score, ga:op.score, home:isHome, pk};
 }
 function stats(rs){
@@ -4986,7 +4987,7 @@ function favCard(f){
   let body = "";
   if (live) body = miniRow(live, {today:true});
   else if (t){
-    const nx = t.upcoming[0], last = t.past[0] && resultFor(t.past[0], f.id);
+    const nx = t.upcoming[0], last = t.past[0] && resultFor(t.past[0], f.id, LEAGUES[f.lg]?.sport);
     body = `<div class="favln">${nx ? `<span class="muted">다음</span> ${dFull(nx.date)} · ${nx.home.id === f.id ? "홈" : "원정"} vs ${logo((nx.home.id === f.id ? nx.away : nx.home).logo)}<b>${esc(ko((nx.home.id === f.id ? nx.away : nx.home).name))}</b>` : '<span class="muted">예정된 경기 없음</span>'}</div>
       ${last ? `<div class="favln"><span class="muted">최근</span> ${badge(last.r)} ${last.gf} : ${last.ga} vs ${esc(ko(last.op.name))} <span class="muted">${md(last.ev.date)}</span></div>` : ""}`;
   } else body = `<div class="favln muted">${c && c.err ? "불러오지 못했습니다" : "불러오는 중…"}</div>`;
