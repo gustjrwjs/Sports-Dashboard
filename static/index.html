@@ -1568,17 +1568,21 @@ function espn(path, ttl = 60){
   const p = (async () => {
     if (MODE === "server"){
       try {
-        const r = await fetch("/espn/" + path, {cache:"no-store"});
+        const r = await fetch("/espn/" + path, {cache:"no-store", signal:typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined});
         if (r.ok) return await r.json();
         if (r.status !== 404) throw new Error("서버 " + r.status);
       } catch (e) { /* 서버가 없거나 오래된 버전이면 직접 호출 */ }
       MODE = "direct";
     }
-    let r;
-    try { r = await fetch(ESPN + path, {cache:"no-store"}); }
-    catch { throw new Error("데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); }
-    if (!r.ok) throw new Error("ESPN 응답 오류 (" + r.status + ")");
-    return r.json();
+    // 응답이 15초 넘게 없으면 끊음 (회사망 등에서 요청 하나가 멈추면 화면 전체가 끝없이 기다리던 문제)
+    const ac = typeof AbortController !== "undefined" ? new AbortController() : null, tm = ac && setTimeout(() => ac.abort(), 15000);
+    try {
+      let r;
+      try { r = await fetch(ESPN + path, {cache:"no-store", signal:ac?.signal}); }
+      catch (e) { throw new Error(e?.name === "AbortError" ? "ESPN 응답이 너무 늦습니다. 잠시 후 다시 시도해 주세요." : "데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); }
+      if (!r.ok) throw new Error("ESPN 응답 오류 (" + r.status + ")");
+      return await r.json();
+    } finally { if (tm) clearTimeout(tm); }
   })();
   memo.set(path, {t:Date.now(), p});
   p.catch(() => memo.delete(path));
@@ -2505,6 +2509,7 @@ function lgLiveDots(){
   if (Date.now() - IDX.t > 60000) loadIndex().then(paint).catch(() => {});
 }
 setInterval(() => { if (!document.hidden && LG_TABS.includes(S.tab)) lgLiveDots(); }, 60000);
+document.addEventListener("click", e => { if (e.target.closest("[data-homeretry]")){ IDX.fail = false; IDX.p = null; renderHome(); } });
 // ---------------------------------------------------------------- 떠 있는 버튼: ▲ 맨 위로(모든 화면, 300px 넘게 내리면) · 📅 오늘(경기 일정만)
 function updateFab(){
   let f = document.getElementById("fab");
@@ -4856,14 +4861,19 @@ function loadIndex(force){
   const now = new Date(), months = [ym(now)];
   if (now.getDate() > 18){ const n = new Date(now.getFullYear(), now.getMonth() + 1, 1); months.push(ym(n)); }
   if (now.getDate() <= 2){ const pv = new Date(now.getFullYear(), now.getMonth() - 1, 1); months.unshift(ym(pv)); }  // 홈의 '어제'가 지난달일 때
-  IDX.p = Promise.all(Object.entries(LEAGUES).filter(([, x]) => !x.disabled).map(async ([lg, Lg]) => {
+  const one = async ([lg, Lg]) => {
     const base = `site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard`;
     const paths = [base, `${base}?dates=${ymd(now)}`, ...months.map(m => `${base}?dates=${m}&limit=500`)];
     const lists = await Promise.all(paths.map((p, i) => espn(p, i < 2 ? 15 : 600).then(j => j.events || []).catch(() => [])));
     const by = new Map();
     for (const e of lists.flat()) if (!by.has(String(e.id))) by.set(String(e.id), e);  // 앞쪽(오늘·실시간)이 우선
     return [...by.values()].map(nEvent).filter(m => m.home && m.away).map(m => ({lg, m}));
-  })).then(a => (IDX.list = a.flat()));
+  };
+  // 한꺼번에 100개 넘게 보내지 않도록 6개 리그씩 · 리그마다 20초 넘으면 그 리그만 빼고 진행
+  const jobs = Object.entries(LEAGUES).filter(([, x]) => !x.disabled), res = new Array(jobs.length).fill([]);
+  let next = 0;
+  const worker = async () => { while (next < jobs.length){ const i = next++; res[i] = await Promise.race([one(jobs[i]).catch(() => []), new Promise(r => setTimeout(() => r([]), 20000))]); } };
+  IDX.p = Promise.all(Array.from({length:6}, worker)).then(() => { IDX.list = res.flat(); IDX.done = true; IDX.fail = !IDX.list.length; return IDX.list; });
   return IDX.p;
 }
 const normS = s => String(s || "").toLowerCase().replace(/[\s.\-·'’()]/g, "");
@@ -5211,8 +5221,12 @@ function lsRow({lg, m}){
 function renderHome(fromTick){
   clearTimeout(S.homePoll);
   if (!IDX.list.length){
+    if (IDX.fail){
+      $("#main").innerHTML = `<div class="card live-empty"><b>경기 정보를 불러오지 못했습니다</b><span class="muted">ESPN 서버 응답이 없거나 인터넷(회사망 등)이 막고 있을 수 있습니다.</span><button class="btn primary" style="margin-top:10px" data-homeretry>다시 시도</button></div>`;
+      return;
+    }
     $("#main").innerHTML = '<div class="loading">오늘 경기를 모든 리그에서 모으는 중…</div>';
-    loadIndex().then(() => { if (S.tab === "home") renderHome(); });
+    loadIndex().then(() => { if (S.tab === "home" && (IDX.list.length || IDX.fail)) renderHome(); });
     return;
   }
   const now = Date.now();
