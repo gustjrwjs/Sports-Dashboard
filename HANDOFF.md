@@ -37,6 +37,7 @@
 - 경기별 응원 채팅방: 소유자 "일단 좀 보자" → 결정 전 만들지 않기
 - K리그·KBO·NPB: API-Sports 유료 결제 전까지 보류
 - 코드 보호(비공개 + Cloudflare + 난독화 `build.mjs`): 보류
+- FIBA 농구 월드컵: ESPN엔 본선만(예선 없음) → 내년 여름 남자 본선 전에 원하면 추가
 
 ## 6. 최근 변경 (최근 3일, 새 것이 위)
 _(아래는 `git log` 요약 — 갱신할 때 다시 뽑기: `git log --since="2 days ago" --format="- %ad %s" --date=format:%m-%d`)_
