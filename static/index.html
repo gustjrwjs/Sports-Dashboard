@@ -712,6 +712,7 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.kbadge{display:inline-block;font-size:11px;background:#fde68a;border:1px solid #f59e0b;border-radius:6px;padding:0 3px;line-height:1.4;vertical-align:1px}
 .h2hl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
 .h2hl li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border)}.h2hl li:last-child{border-bottom:0}
 .h2hl li.go{cursor:pointer}.h2hl li.go:hover{background:var(--surface-2)}
@@ -2708,6 +2709,36 @@ async function keyPlayers(lg, id, roster){
   return rows.slice(0, 4);
 }
 
+// 주목할 선수 카드 (팀 창·경기 상세 공용)
+function kpCards(keys){
+  return keys.length ? `<div class="kp">${keys.map(k => `<div class="kpc${k.star ? " star" : ""}">${k.star ? `<span class="kstar" title="팀 안 비중이 큰 핵심 선수">⭐ 핵심 · ${esc(k.star)}</span>` : ""}
+      ${headImg(k.a.headshot?.href || imgOf(k.a.displayName, 120), "hs") || `<span class="hs ph">${esc(k.a.jersey || "")}</span>`}
+      <div class="kpn"><b title="${nameTitle(k.a.displayName)}">${esc(koFull(k.a.displayName))}</b>
+        <small>${esc([k.a.position?.abbreviation, k.a.jersey ? "#" + k.a.jersey : "", k.pitch ? "투수" : ""].filter(Boolean).join(" · "))}</small></div>
+      <div class="kps">${k.stats.map(([l, v]) => `<span><small>${l}</small><b>${esc(v ?? "-")}</b></span>`).join("")}</div></div>`).join("")}</div>`
+    : '<div class="card empty">이번 시즌 선수 기록이 아직 없습니다.</div>';
+}
+// 경기 상세(농구·야구): 두 팀 주목할 선수 + 라인업·선수 기록 표에서 핵심 선수 이름 옆 ⭐
+const MKEYS = {};  // 경기 id → {이름: 핵심 이유}
+async function fillMatchKeys(lg, m){
+  const sp = LEAGUES[lg].sport, box = () => { const el = document.getElementById("mkey"); return el && el.dataset.mid === m.id && modal.open && S.modalMatch === m.id ? el : null; };
+  const roster = id => espn(`site/v2/sports/${sp}/${LEAGUES[lg].slug}/teams/${id}/roster`, 1800).catch(() => null);
+  const [rh, ra] = await Promise.all([roster(m.home.id), roster(m.away.id)]);
+  const [kh, ka] = await Promise.all([keyPlayers(lg, m.home.id, rh).catch(() => []), keyPlayers(lg, m.away.id, ra).catch(() => [])]);
+  await withTimeout(lookupPlayers([...kh, ...ka].map(k => k.a.displayName), OCC[sp]), 5000);
+  const el = box(); if (!el) return;
+  const star = {}; [...kh, ...ka].forEach(k => { if (k.star) star[k.a.displayName] = k.star; });
+  MKEYS[m.id] = star;
+  el.innerHTML = `<div class="sec-h"><h3>⭐ 주목할 선수</h3><span class="muted sp">이번 시즌 기록 · 노란 박스 = 팀 안 비중이 큰 핵심 선수</span></div>
+    <div class="cols"><div>${teamHead(m, m.home.id)}${kpCards(kh)}</div><div>${teamHead(m, m.away.id)}${kpCards(ka)}</div></div>`;
+  markKeyStars(m.id);
+}
+// 라인업·선수 기록 표: data-pn(영어 이름)이 핵심 선수면 ⭐ 붙이기 (표가 나중에 그려져도 다시 부름)
+function markKeyStars(mid){
+  const star = MKEYS[mid]; if (!star) return;
+  document.querySelectorAll("#mbody [data-pn]").forEach(sp => { const r = star[sp.dataset.pn];
+    if (r && !sp.querySelector(".kbadge")) sp.insertAdjacentHTML("beforeend", ` <span class="kbadge" title="⭐ 핵심 · ${esc(r)}">⭐</span>`); });
+}
 // ⭐ 핵심 선수 (농구·야구): 팀 안에서 혼자 차지하는 비중이 큰 선수
 function starMark(sp, rows){
   if (sp === "basketball"){
@@ -2797,12 +2828,7 @@ async function fillIntel(lg, id, t){
   let late = false; await Promise.race([lp, new Promise(r => setTimeout(() => { late = true; r(); }, 5000))]);
   if (late) lp.then(() => { if (box()) fillIntel(lg, id, t); }).catch(() => {});
   const el = box(); if (!el) return;
-  const kp = keys.length ? `<div class="kp">${keys.map(k => `<div class="kpc${k.star ? " star" : ""}">${k.star ? `<span class="kstar" title="팀 안 비중이 큰 핵심 선수">⭐ 핵심 · ${esc(k.star)}</span>` : ""}
-      ${headImg(k.a.headshot?.href || imgOf(k.a.displayName, 120), "hs") || `<span class="hs ph">${esc(k.a.jersey || "")}</span>`}
-      <div class="kpn"><b title="${nameTitle(k.a.displayName)}">${esc(koFull(k.a.displayName))}</b>
-        <small>${esc([k.a.position?.abbreviation, k.a.jersey ? "#" + k.a.jersey : "", k.pitch ? "투수" : ""].filter(Boolean).join(" · "))}</small></div>
-      <div class="kps">${k.stats.map(([l, v]) => `<span><small>${l}</small><b>${esc(v ?? "-")}</b></span>`).join("")}</div></div>`).join("")}</div>`
-    : '<div class="card empty">이번 시즌 선수 기록이 아직 없습니다.</div>';
+  const kp = kpCards(keys);
   const injHtml = inj.length ? `<ul class="inj">${inj.map(i => `<li class="${i.back ? "back" : ""}">${headImg(i.img || imgOf(i.name, 80))}
       <span class="inn"><span title="${nameTitle(i.name)}">${esc(koFull(i.name))}</span>${i.note ? `<small class="muted">${esc(i.note)}</small>` : ""}</span>
       <span class="stt">${i.back ? `복귀 · ${md(i.backDate)} ${i.back} 출전` : esc(INJ[i.status] || i.status || "")}${i.date && !i.back ? `<small>${esc(timeAgo(i.date))} 보고</small>` : ""}${i.played ? `<small class="pl">${md(i.backDate)} ${i.played} 출전</small>` : ""}</span></li>`).join("")}</ul>`
@@ -3028,7 +3054,7 @@ async function openMatch(id){
     const stx = statsSection(m, sum, sp);
     const hl = hlLinks(m);
     const detail = sp === "soccer" ? goalsLine(m, sum) + ob + `<div class="sec" id="sintel" data-mid="${esc(m.id)}"><div class="loading">주목할 선수·결장 선수를 불러오는 중…</div></div>` + pbp + stx + lineupSection(m, sum ? parseLineups(sum) : null)
-                 : ob + lineScore(m, sum) + pbp + stx + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
+                 : ob + lineScore(m, sum) + pbp + stx + `<div class="sec" id="mkey" data-mid="${esc(m.id)}"><div class="sec-h"><h3>⭐ 주목할 선수</h3><span class="muted sp">이번 시즌 기록 · 노란 박스 = 팀 안 비중이 큰 핵심 선수</span></div><div class="loading">선수 기록을 불러오는 중…</div></div>` + (sp === "basketball" ? basketballSection(m, sum) : baseballSection(m, sum));
     openModal(head + hl + detail + adSlot("detail") + `
       <div class="sec"><div class="sec-h"><h3>두 팀 비교</h3><span class="muted sp">최근 5경기는 이 경기 이전${L().scope === "all" ? ", 모든 대회" : ""} 기준</span></div>
         <div class="cmp">
@@ -3045,6 +3071,7 @@ async function openMatch(id){
     if (sp === "soccer" && m.state === "pre" && !hasLineup(sum ? parseLineups(sum) : null)) fillPrevLineups(m, h, a);
     if (sp === "soccer") fillSoccerIntel(lg, m, h, a, sum);
     if (sp === "basketball" && document.getElementById("bb-pre")) fillBbPre(m, h, a);
+    if (sp !== "soccer") fillMatchKeys(lg, m);
     if (m.state === "in") pbpLoop(lg, m);
   } catch (e) { openModal(head + errBox(e)); }
 }
@@ -3352,7 +3379,7 @@ function orderTeams(m, list, idOf){
 const teamHead = (m, tid) => { const t = tid === m.home.id ? m.home : m.away; return `<div class="lu-h">${logo(t.logo)}<span>${esc(ko(t.name))}</span><span class="fm">${tid === m.home.id ? "홈" : "원정"}</span></div>`; };
 function playerCell(a, extra = ""){
   const nm = a.athlete?.displayName || "", hs = a.athlete?.headshot?.href || imgOf(nm, 80);
-  return `<td class="pn"><span class="pn-in">${extra}${headImg(hs)}<span title="${nameTitle(nm)}">${esc(koFull(nm))}</span><small>${esc(a.position?.abbreviation || a.athlete?.position?.abbreviation || "")}</small></span></td>`;
+  return `<td class="pn"><span class="pn-in">${extra}${headImg(hs)}<span title="${nameTitle(nm)}" data-pn="${esc(nm)}">${esc(koFull(nm))}</span><small>${esc(a.position?.abbreviation || a.athlete?.position?.abbreviation || "")}</small></span></td>`;
 }
 function injuriesBlock(m, sum){
   const teams = orderTeams(m, sum?.injuries || [], x => x.team?.id).filter(t => (t.injuries || []).length);
@@ -3412,7 +3439,7 @@ async function fillBbPre(m, h, a){
     const rest = list.filter(p => !starters.includes(p)).sort((x, y) => out(x) - out(y) || (min(y) ?? -1) - (min(x) ?? -1));
     // 직전 선발 중 결장자가 있으면 직전 경기 출전 시간이 가장 긴 벤치 선수로 채움
     if (starters.length) while (starters.length < 5 && rest.length && !out(rest[0]) && min(rest[0]) != null){ const x = rest.shift(); x.alt = true; starters.push(x); }
-    const row = p => `<tr class="${out(p) ? "dnp" : ""}"><td class="pn"><span class="pn-in">${headImg(p.img || imgOf(p.name, 80))}<span title="${nameTitle(p.name)}">${esc(koFull(p.name))}</span><small>${esc(p.pos)}</small></span></td>
+    const row = p => `<tr class="${out(p) ? "dnp" : ""}"><td class="pn"><span class="pn-in">${headImg(p.img || imgOf(p.name, 80))}<span title="${nameTitle(p.name)}" data-pn="${esc(p.name)}">${esc(koFull(p.name))}</span><small>${esc(p.pos)}</small></span></td>
       <td class="hide-sm">${esc(p.no)}</td><td>${min(p) ?? "-"}</td><td class="tl">${p.inj ? `<span class="bst ${out(p) ? "out" : ""}">${esc(INJ[p.inj] || p.inj)}</span>` : p.alt ? '<span class="bst alt">대체<span class="lg"> 선발 예상</span></span>' : ""}</td></tr>`;
     const r5 = pev && resultFor(pev, tid);
     const note = r5 ? `<div class="note lu-note">직전 경기: ${dShort(pev.date)} vs ${esc(ko(r5.op.name))} ${r5.gf}-${r5.ga} · '직전 출전'은 그 경기 출전 시간(분)</div>` : "";
@@ -3423,6 +3450,7 @@ async function fillBbPre(m, h, a){
   };
   const th = team(m.home.id, rh, sh, ph), ta = team(m.away.id, ra, sa, pa), html = th && ta ? `<div class="bbvs">${th}${ta}</div>` : th + ta;  // 왼쪽 홈 · 오른쪽 원정
   box.innerHTML = html || '<div class="card empty">선수 명단 정보가 없습니다.</div>';
+  markKeyStars(m.id);
 }
 
 // ---------------------------------------------------------------- 야구
