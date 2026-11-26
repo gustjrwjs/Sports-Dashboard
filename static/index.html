@@ -5619,6 +5619,10 @@ const PIP_CSS = `
 .pipb h4{margin:8px 2px 4px;font-size:11px;color:var(--muted);font-weight:700}
 .pipe{color:var(--muted);text-align:center;padding:18px 8px;font-size:12px}
 .pipf{font-size:10px;color:var(--muted);text-align:right;padding:3px 8px;border-top:1px solid var(--border)}
+.pipk{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:10.5px;font-weight:700;color:var(--muted);margin:3px 4px 0}
+.pipk small{font-size:10px}
+.pipk .pkc{border:1px solid var(--border);border-radius:6px;padding:1px 6px;background:var(--surface-2);color:var(--text);white-space:nowrap}
+.pipk .pkc.pk-y{background:#dcfce7;color:#15803d;border-color:#86efac}.pipk .pkc.pk-n{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
 `;
 const MINI_CSS = `
 .mlist{display:flex;flex-direction:column;gap:6px}
@@ -5655,10 +5659,37 @@ function pipCollect(){
   const srt = a => a.sort((p, q) => (q.m.state === "in") - (p.m.state === "in") || p.m.date.localeCompare(q.m.date));
   return {live:srt(live), mine:srt(mine), soon:srt(soon), picked};
 }
+// 🎯 내 픽 (승무패·언더오버): 경기 중이면 지금 점수 기준 맞는 중 ✅ / 틀리는 중 ❌, 끝나면 결과
+function pipPicks(x){
+  const ps = PICKS.filter(p => p.lg === x.lg && p.id === x.m.id && p.bet && (p.bet.res || p.bet.ou)); if (!ps.length) return "";
+  const m = x.m, started = m.state !== "pre", fin = m.state === "post", sp = sportOf(x.lg), u = sp === "soccer" ? "골" : "점";
+  const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0, tot = hs + as;
+  const cur = hs > as ? "home" : hs < as ? "away" : (fin && sp !== "soccer" ? (m.home.winner ? "home" : "away") : "draw");
+  const many = new Set(ps.map(p => p.grp || 1)).size > 1;
+  return ps.map(p => {
+    const b = p.bet, chips = [];
+    if (b.res){
+      const lab = b.res === "draw" ? "무승부" : `${ko(b.res === "home" ? m.home.name : m.away.name)} 승`;
+      const ok = started ? cur === b.res : null;
+      chips.push(`<span class="pkc ${ok === true ? "pk-y" : ok === false ? "pk-n" : ""}">${esc(lab)}${ok === true ? " ✅" : ok === false ? " ❌" : ""}</span>`);
+    }
+    if (b.ou && b.line != null && !isNaN(b.line)){
+      const over = b.ou === "over", line = Number(b.line);
+      let ok = null, note = "";
+      if (started){
+        if (tot > line){ ok = over; note = fin ? "" : " 확정"; }
+        else if (fin){ ok = tot === line ? null : !over; note = tot === line ? " 적특" : ""; }
+        else { ok = !over; note = ` · ${Math.floor(line - tot) + 1}${u} 더 나면 오버`; }
+      }
+      chips.push(`<span class="pkc ${ok === true ? "pk-y" : ok === false ? "pk-n" : ""}">${over ? "오버" : "언더"} ${line}${ok === true ? " ✅" : ok === false ? " ❌" : ""}${esc(note)}</span>`);
+    }
+    return `<div class="pipk">🎯 ${many ? `<small>${p.grp || 1}묶음</small>` : "내 픽"} ${chips.join("")}</div>`;
+  }).join("");
+}
 function pipHtml(){
   const {live, mine, soon, picked} = pipCollect();
   const flash = x => { const k = x.lg + "|" + x.m.id, s = `${x.m.home.score}:${x.m.away.score}`, f = PIP.prev[k] && PIP.prev[k] !== s && x.m.state === "in"; PIP.prev[k] = s; return f; };
-  const rows = list => `<div class="mlist">${list.map(x => miniRow(x, {flash:flash(x)})).join("")}</div>`;
+  const rows = list => `<div class="mlist">${list.map(x => `<div class="pipit">${miniRow(x, {flash:flash(x)})}${pipPicks(x)}</div>`).join("")}</div>`;
   let body = "";
   if (PIP.view === "my") body = mine.length ? rows(mine) : `<div class="pipe">My 경기에 담은 경기가 없습니다.<br>☆를 눌러 담으면 여기 나옵니다.</div>`;
   else {
