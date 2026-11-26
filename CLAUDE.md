@@ -14,7 +14,8 @@
 3. (검토 중 · 소유자가 "일단 좀 보자") 경기별 응원 채팅방(Supabase). 결정 전엔 만들지 말 것.
 4. (보류 · 소유자 결정 2026-11-13) K리그·KBO·NPB 정식 추가: API-Sports 키 발급 완료(GitHub Secret `API_FOOTBALL_KEY`, 축구·야구 같은 키). 확인 결과 Free 플랜은 2022~2024 시즌만 접근 가능(2026 요청 시 "Free plans do not have access to this season"), 축구·야구 한도 각각 하루 100회. 리그 번호: K리그1=292, K리그2=293(부상 데이터 없음), KBO=5, NPB=2. 유료(Football Pro 약 $19, Baseball Pro 약 $15) 결제하면 GitHub Actions로 하루 1~2회 받아 `static/data/*.json`에 저장하는 방식으로 연결 예정.
 5. (일부 완료 2026-11-25) 축구 부상: ESPN 기사에서 자동으로 찾기(`soccerInjNews`, docs/FEATURES.md) 적용 — 케인 발목 수술·노이어 발 부상 확인. 기사에 없는 부상까지 원하면 남은 후보: ① 운영자 부상 메모 ② EPL FPL 공개 API ③ API-Sports 유료. 봇 차단 사이트 긁기는 하지 않음.
-6. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
+6. (보류 · 소유자 "괜찮아" 2026-11-26) FIBA 농구 월드컵: ESPN `basketball/fiba`(FIBA World Cup)는 본선만(2026 여자 WC 기록, 2027 남자 본선 8~9월) · **예선(한국 포함)은 ESPN에 없음**(11/26~12/2 0경기 확인). 내년 여름 남자 본선 전에 소유자가 원하면 추가.
+7. (참고, 소유자가 원하면) ESPN에 있는 아시아 리그: AFC 챔피언스리그(`afc.champions`, K리그 팀 출전), J리그(`jpn.1`), 사우디(`ksa.1`), A리그(`aus.1`), 중국(`chn.1`).
 
 ## 📚 상세 메모·인수인계 (필요할 때만 읽기 — 토큰 절약)
 
