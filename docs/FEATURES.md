@@ -102,3 +102,5 @@
 - 홈 '모으는 중…'에서 멈춤 대응(2026-11-26): `espn()` 요청 15초 제한(AbortController), `loadIndex`는 리그 6개씩 나눠 받고 리그마다 20초 넘으면 빼고 진행(`IDX.done/fail`), 다 실패하면 홈에 '다시 시도'(`data-homeretry`) — 예전엔 무한 반복.
 
 - ESPN 차단(Akamai Access Denied) 대응(2026-11-26): 요청 줄이기 — `loadIndex`는 경기 중·2시간 안 리그만 30초, 나머지 15분, 한 달 일정 1시간 캐시. 홈 갱신 60초, PiP 30초, 알림 30초(오늘 주소 하나). `ESPN_PAUSE`: 접속 실패·403·429면 2분 동안 새 요청 안 보냄.
+
+- 내 기준점·핸디(2026-11-26 소유자 요청: 사이트마다 기준 다름): My 표 '언오버 기준✎'·'핸디 기준✎'(홈팀 기준) 누르면 직접 입력(`data-myline`, 비우면 ESPN). `bet.ouLine/hcLine`(내 값) → 고를 때 `bet.line/hcl`, 핸디 픽 `bet.hc`(home/away). `betLogSync`가 BETLOG(hc·hcl·hHit) 갱신, 기준 바꾸면 다시 채점, 적중률에 핸디 포함. 배당 숫자는 ESPN 기준 그대로. PiP에도 '핸디 홈 -1.5 픽'.

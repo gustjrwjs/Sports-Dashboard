@@ -715,7 +715,7 @@ tr.dnp td{color:var(--muted)}
 .lnb{border:1px dashed var(--border);background:transparent;border-radius:6px;padding:3px 6px;font:inherit;font-weight:700;cursor:pointer;color:var(--text);white-space:nowrap}
 .lnb i{font-style:normal;font-size:10px;color:var(--muted);margin-left:2px}.lnb.mine{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent)}
 #pipbox .pkb,.mrow .pkb{font-style:normal;flex:none;display:inline-block;font-size:9.5px;font-weight:800;line-height:1;color:#fff;background:#16a34a;border-radius:4px;padding:2px 4px;white-space:nowrap}
-#pipbox .pkm{display:flex;gap:3px;justify-content:center;margin-bottom:2px}#pipbox .mteams{font-size:11.5px}
+#pipbox .pkm{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-bottom:2px}#pipbox .mteams{font-size:11.5px}
 .kbadge{display:inline-block;font-size:11px;background:#fde68a;border:1px solid #f59e0b;border-radius:6px;padding:0 3px;line-height:1.4;vertical-align:1px}
 .h2hl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
 .h2hl li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border)}.h2hl li:last-child{border-bottom:0}
@@ -4908,7 +4908,7 @@ function miniRow({lg, m}, opt = {}){
   const cd = m.state === "pre" ? countdown(m.date) : "";
   const top = live || post ? `<b class="msc">${m.home.score ?? 0} : ${m.away.score ?? 0}</b>` : `<b class="mtime">${opt.today ? "" : md(m.date) + " "}${timeOnly(m.date)}</b>`;
   const st = live ? `<small class="mst live">● ${esc(liveText(m, sportOf(lg)))}${tot}</small>` : post ? `<small class="mst">종료${tot}</small>` : `<small class="mst ${cd ? "cd" : ""}">${cd || "예정"}</small>`;
-  const pk = opt.pk, pkMid = pk ? [pk.draw ? "무 픽" : "", pk.over ? "오버 픽" : "", pk.under ? "언더 픽" : ""].filter(Boolean) : [];
+  const pk = opt.pk, pkMid = pk ? [pk.draw ? "무 픽" : "", pk.over ? "오버 픽" : "", pk.under ? "언더 픽" : "", pk.hcl || ""].filter(Boolean) : [];
   const mid = `<span class="mmid">${pkMid.length ? `<span class="pkm">${pkMid.map(t => `<em class="pkb">${t}</em>`).join("")}</span>` : ""}${top}${st}</span>`;
   const hb = pk && pk.home ? '<em class="pkb">픽</em>' : "", ab = pk && pk.away ? '<em class="pkb">픽</em>' : "";
   if (opt.compact) return `<div class="mrow cp ${live ? "is-live" : ""} ${opt.flash ? "flash" : ""}" data-open="${lg}|${m.id}">
@@ -5712,7 +5712,7 @@ const MINI_CSS = `
 .mvs{color:var(--muted);font-size:11px}
 .mteams{font-size:11.5px}
 .pkb{font-style:normal;flex:none;display:inline-block;font-size:9.5px;font-weight:800;line-height:1;color:#fff;background:#16a34a;border-radius:4px;padding:2px 4px;white-space:nowrap}
-.pkm{display:flex;gap:3px;justify-content:center;margin-bottom:2px}
+.pkm{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-bottom:2px}
 `;
 function pipCollect(){
   const picked = new Set(PICKS.map(p => p.lg + "|" + p.id));
@@ -5753,7 +5753,8 @@ function pipPicks(x){
 // PiP: 내 픽을 팀 이름 옆 '픽' · 점수 위 '무 픽'/'오버 픽'/'언더 픽' 네모로 (묶음 여러 개면 모두 합쳐 표시)
 function pipPk(x){
   const ps = PICKS.filter(p => p.lg === x.lg && p.id === x.m.id && p.bet); if (!ps.length) return null;
-  const o = {}; ps.forEach(p => { if (p.bet.res) o[p.bet.res] = true; if (p.bet.ou) o[p.bet.ou] = true; });
+  const o = {}; ps.forEach(p => { if (p.bet.res) o[p.bet.res] = true; if (p.bet.ou) o[p.bet.ou] = true;
+    if (p.bet.hc){ const l = p.bet.hcl ?? p.bet.hcLine; o.hcl = `핸디 ${p.bet.hc === "home" ? "홈" : "원정"} ${l == null || isNaN(l) ? "" : sgn(p.bet.hc === "home" ? l : -l)} 픽`; } });
   return Object.keys(o).length ? o : null;
 }
 function pipHtml(){
