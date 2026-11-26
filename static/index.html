@@ -712,6 +712,26 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+/* My 한 줄 표 정리 (2026-11-27 소유자: 지저분·조잡) — 테두리 상자 없애고 숫자 위주, 고른 칸만 파랑, 지금 이기는 쪽은 초록 글씨+점 */
+table.mytab thead th.gh{border-bottom:0;padding-bottom:0;color:var(--text);font-size:11.5px;letter-spacing:.2px}
+table.mytab thead th.gh small{font-weight:600;color:var(--muted);font-size:10px}
+table.mytab thead tr.sub th{padding-top:2px;font-size:10.5px;font-weight:600}
+table.mytab .gsep{border-left:1px solid var(--border)}
+table.mytab td.mtx,table.mytab th.mtxh{border-right:1px solid var(--border)}
+table.mytab td.mtx{max-width:240px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+table.mytab td.ln{border-left:1px solid var(--border)}
+table.mytab .ob{border:0;background:transparent;min-width:40px;padding:6px 6px 7px;border-radius:7px;font-weight:600;font-size:13px;color:var(--text)}
+table.mytab .ob:hover:not(:disabled){background:var(--surface-2);border:0}
+table.mytab .ob.on{background:var(--accent);color:#fff;font-weight:800}
+table.mytab .ob:disabled:not(.on){opacity:1;color:var(--muted)}
+table.mytab .ob.act{box-shadow:none}
+table.mytab .ob.act:not(.on){color:var(--win);font-weight:800}
+table.mytab .ob.act::after{content:"";position:absolute;left:50%;bottom:1px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--win)}
+table.mytab .ob.on.act::after{background:#fff}
+table.mytab .lnb{border:0;background:transparent;padding:4px 4px;font-weight:700;color:var(--muted)}
+table.mytab .lnb i{opacity:.35;font-size:9.5px}table.mytab tr:hover .lnb i{opacity:.8}
+table.mytab .lnb.mine{border:0;background:transparent;color:var(--accent);text-decoration:underline dotted;text-underline-offset:3px}
+table.mytab .lnb:hover{background:var(--surface-2)}
 .mytab td.mts .mtot{display:block;font-size:10.5px;font-weight:700;color:var(--muted);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
 .lninp{width:64px;padding:4px 6px;border:2px solid var(--accent);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-weight:700;text-align:center}
 .ocrln{display:block;font-size:11.5px;color:#15803d;font-weight:700;margin:2px 0 0 26px}
@@ -4039,8 +4059,11 @@ function myTable(list, sel, showGrp){
       ${lnBtn("ou", line, bet.ouLine != null)}${hasLine ? cell("ou", "over", o.overOdds, ouAct) + cell("ou", "under", o.underOdds, ouAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}
       ${lnBtn("hc", hcl, bet.hcLine != null)}${hasHc ? cell("hc", "home", ho.spreadOdds, hcAct) + cell("hc", "away", ao.spreadOdds, hcAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}</tr>`;
   };
-  return `<div class="mtwrap"><table class="mytab"><thead><tr><th class="mtp">★</th>${sel ? "<th></th>" : ""}${showGrp ? "<th>묶음</th>" : ""}<th>리그</th><th>시간</th><th class="r">홈</th><th></th><th class="l">원정</th><th class="l">중계</th>
-    <th>승</th><th>무</th><th>패</th><th title="눌러서 내 사이트 기준점 넣기">언오버<br>기준✎</th><th>오버</th><th>언더</th><th title="홈팀 기준 · 눌러서 내 사이트 기준 넣기">핸디<br>기준✎</th><th>홈</th><th>원정</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`;
+  // 머리줄 2단: 위 = 묶음 이름(승무패·언오버·핸디), 아래 = 칸 이름
+  const rs = 'rowspan="2"';
+  return `<div class="mtwrap"><table class="mytab"><thead><tr><th class="mtp" ${rs}>★</th>${sel ? `<th ${rs}></th>` : ""}${showGrp ? `<th ${rs}>묶음</th>` : ""}<th ${rs}>리그</th><th ${rs}>시간</th><th class="r" ${rs}>홈</th><th ${rs}></th><th class="l" ${rs}>원정</th><th class="l mtxh" ${rs}>중계</th>
+    <th colspan="3" class="gh">승무패</th><th colspan="3" class="gh gsep">언오버</th><th colspan="3" class="gh gsep">핸디 <small>(홈 기준)</small></th></tr>
+    <tr class="sub"><th>승</th><th>무</th><th>패</th><th class="gsep" title="눌러서 내 사이트 기준 넣기">기준 ✎</th><th>오버</th><th>언더</th><th class="gsep" title="눌러서 내 사이트 기준 넣기">기준 ✎</th><th>홈</th><th>원정</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`;
 }
 async function openMyMatch(lg, id){
   if (S.lg !== lg){ setLeague(lg); }
