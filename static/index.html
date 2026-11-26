@@ -712,6 +712,8 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.lnb{border:1px dashed var(--border);background:transparent;border-radius:6px;padding:3px 6px;font:inherit;font-weight:700;cursor:pointer;color:var(--text);white-space:nowrap}
+.lnb i{font-style:normal;font-size:10px;color:var(--muted);margin-left:2px}.lnb.mine{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent)}
 #pipbox .pkb,.mrow .pkb{font-style:normal;flex:none;display:inline-block;font-size:9.5px;font-weight:800;line-height:1;color:#fff;background:#16a34a;border-radius:4px;padding:2px 4px;white-space:nowrap}
 #pipbox .pkm{display:flex;gap:3px;justify-content:center;margin-bottom:2px}#pipbox .mteams{font-size:11.5px}
 .kbadge{display:inline-block;font-size:11px;background:#fde68a;border:1px solid #f59e0b;border-radius:6px;padding:0 3px;line-height:1.4;vertical-align:1px}
@@ -1562,9 +1564,11 @@ const ESPN = "https://site.api.espn.com/apis/";
 // /espn 중계는 로컬 테스트 서버(app.py)에만 있음 → 공개 사이트(GitHub Pages 등)에선 처음부터 ESPN 직접 호출 (쓸데없는 404 요청 100여 개 방지)
 let MODE = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || /^192\.168\./.test(location.hostname) ? "server" : "direct";
 const memo = new Map();
+let ESPN_PAUSE = 0;  // ESPN이 거절(차단·접속 실패)하면 2분 동안 새 요청을 보내지 않음
 function espn(path, ttl = 60){
   const hit = memo.get(path);
   if (hit && Date.now() - hit.t < ttl * 1000) return hit.p;
+  if (MODE === "direct" && Date.now() < ESPN_PAUSE) return Promise.reject(new Error("ESPN이 잠시 접속을 막고 있습니다. 2분 뒤 자동으로 다시 시도합니다."));
   const p = (async () => {
     if (MODE === "server"){
       try {
@@ -1579,7 +1583,8 @@ function espn(path, ttl = 60){
     try {
       let r;
       try { r = await fetch(ESPN + path, {cache:"no-store", signal:ac?.signal}); }
-      catch (e) { throw new Error(e?.name === "AbortError" ? "ESPN 응답이 너무 늦습니다. 잠시 후 다시 시도해 주세요." : "데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); }
+      catch (e) { if (e?.name !== "AbortError") ESPN_PAUSE = Date.now() + 120000; throw new Error(e?.name === "AbortError" ? "ESPN 응답이 너무 늦습니다. 잠시 후 다시 시도해 주세요." : "ESPN에 접속하지 못했습니다(인터넷 문제이거나 ESPN이 잠시 막음). 2분 뒤 다시 시도합니다."); }
+      if (r.status === 403 || r.status === 429) ESPN_PAUSE = Date.now() + 120000;
       if (!r.ok) throw new Error("ESPN 응답 오류 (" + r.status + ")");
       return await r.json();
     } finally { if (tm) clearTimeout(tm); }
@@ -3540,7 +3545,7 @@ function baseballSection(m, sum){
 
 // ================================================================ LIVE 탭 (자동 갱신)
 const LV = {};            // 리그별 실시간 데이터 {events, raw, t, err, loading}
-const LIVE_FAST = 20000;  // 경기 중 갱신 간격
+const LIVE_FAST = 30000;  // 경기 중 갱신 간격 (ESPN이 요청 많으면 막아서 20초 → 30초)
 const LIVE_SLOW = 60000;  // 진행 중 경기가 없을 때
 
 function liveCount(lg = S.lg){
@@ -3830,9 +3835,11 @@ const espnDates = iso => { const d = new Date(iso);
 
 async function loadMy(){
   const reqs = new Map();
-  for (const p of PICKS){ const Lg = LEAGUES[p.lg]; for (const dd of espnDates(p.date)) reqs.set(`site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${dd}`, p.lg); }
+  const fresh = new Set();  // 경기 중·곧 시작(±3시간)인 날짜만 자주, 끝난 날짜는 10분
+  for (const p of PICKS){ const Lg = LEAGUES[p.lg], near = Math.abs(new Date(p.date) - Date.now()) < 3 * 36e5 || MY.ev[p.lg + "|" + p.id]?.state === "in";
+    for (const dd of espnDates(p.date)){ const path = `site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard?dates=${dd}`; reqs.set(path, p.lg); if (near) fresh.add(path); } }
   const raw = {};
-  const res = await Promise.all([...reqs].map(([path, lg]) => espn(path, 15).then(j => { for (const e of j.events || []) raw[lg + "|" + e.id] = e; return true; }).catch(() => false)));
+  const res = await Promise.all([...reqs].map(([path, lg]) => espn(path, fresh.has(path) ? 25 : 600).then(j => { for (const e of j.events || []) raw[lg + "|" + e.id] = e; return true; }).catch(() => false)));
   if (res.length && !res.some(Boolean)) throw new Error("데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");
   const ev = {};
   for (const p of PICKS){ const k = p.lg + "|" + p.id; if (raw[k]){ const n = dedupe([raw[k]])[0]; if (n) ev[k] = n; } }
@@ -4002,9 +4009,14 @@ function myTable(list, sel, showGrp){
     const pre = m.state === "pre", live = m.state === "in", post = m.state === "post";
     const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
     const act = post ? (hs > as ? "home" : hs < as ? "away" : sp === "soccer" ? "draw" : m.home.winner ? "home" : "away") : live ? (hs > as ? "home" : hs < as ? "away" : "draw") : null;
-    const line = pre ? Number(o.overUnder) : (bet.line ?? Number(o.overUnder));
+    // 기준점: 내가 넣은 값(사이트마다 다름) → 고를 때 저장한 값 → ESPN 값
+    const line = bet.ouLine ?? (pre ? Number(o.overUnder) : (bet.line ?? Number(o.overUnder)));
     const hasLine = line != null && !isNaN(line);
     const ouAct = (post || live) && hasLine && hs + as !== line ? (hs + as > line ? "over" : "under") : null;
+    const hcl = bet.hcLine ?? (pre ? Number(o.spread) : (bet.hcl ?? Number(o.spread)));
+    const hasHc = hcl != null && !isNaN(hcl), adj = hs + hcl - as;
+    const hcAct = (post || live) && hasHc && adj !== 0 ? (adj > 0 ? "home" : "away") : null;
+    const lnBtn = (f, v, mine) => `<td class="ln"><button class="lnb ${mine ? "mine" : ""}" data-myline="${esc(pk(p))}|${f}" title="눌러서 내 사이트 기준점 넣기">${v == null || isNaN(v) ? "-" : f === "hc" ? sgn(v) : v}<i>✎</i></button></td>`;
     // 배당 칸 = 예측 고르기 버튼. 고른 칸 파랑, 실제(진행 중이면 현재) 결과 칸 초록 테두리, 끝나면 ✅/❌
     const cell = (f, v, ml, a) => { const d = ml != null ? fOdds(ml) : "-", on = bet[f] === v, hit = post && a ? a === v : null;  // 채점은 이 묶음의 예측 기준
       return `<td class="moc"><button class="ob ${on ? "on" : ""} ${a === v ? "act" : ""}" ${pre ? `data-bet="${esc(pk(p))}|${f}|${v}"` : "disabled"}>${d}${on && post && hit != null ? `<i>${hit ? "✅" : "❌"}</i>` : ""}</button></td>`; };
@@ -4020,10 +4032,11 @@ function myTable(list, sel, showGrp){
       <td class="mtx" data-mymatch="${esc(p.lg)}|${esc(p.id)}">${(() => { if (live){ const x = pbpLatest(k); return x ? `<span class="${x.big ? "big" : ""}" title="${x.t} ${x.txt.replace(/"/g, "&quot;")}">${x.txt}</span>` : '<span class="muted">중계 준비 중…</span>'; }
         if (pre){ const cd = countdown(m.date); return cd ? `<span class="cdx">⏰ ${cd}</span>` : ""; } return ""; })()}</td>
       ${cell("res", "home", ho.moneyLine, act)}${sp === "soccer" ? cell("res", "draw", (o.drawOdds || {}).moneyLine, act) : '<td class="moc"><span class="na">-</span></td>'}${cell("res", "away", ao.moneyLine, act)}
-      <td class="ln">${hasLine ? line : "-"}</td>${hasLine ? cell("ou", "over", o.overOdds, ouAct) + cell("ou", "under", o.underOdds, ouAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}</tr>`;
+      ${lnBtn("ou", line, bet.ouLine != null)}${hasLine ? cell("ou", "over", o.overOdds, ouAct) + cell("ou", "under", o.underOdds, ouAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}
+      ${lnBtn("hc", hcl, bet.hcLine != null)}${hasHc ? cell("hc", "home", ho.spreadOdds, hcAct) + cell("hc", "away", ao.spreadOdds, hcAct) : '<td class="moc"><span class="na">-</span></td><td class="moc"><span class="na">-</span></td>'}</tr>`;
   };
   return `<div class="mtwrap"><table class="mytab"><thead><tr><th class="mtp">★</th>${sel ? "<th></th>" : ""}${showGrp ? "<th>묶음</th>" : ""}<th>리그</th><th>시간</th><th class="r">홈</th><th></th><th class="l">원정</th><th class="l">중계</th>
-    <th>승</th><th>무</th><th>패</th><th>기준</th><th>오버</th><th>언더</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`;
+    <th>승</th><th>무</th><th>패</th><th title="눌러서 내 사이트 기준점 넣기">언오버<br>기준✎</th><th>오버</th><th>언더</th><th title="홈팀 기준 · 눌러서 내 사이트 기준 넣기">핸디<br>기준✎</th><th>홈</th><th>원정</th></tr></thead><tbody>${list.map(row).join("")}</tbody></table></div>`;
 }
 async function openMyMatch(lg, id){
   if (S.lg !== lg){ setLeague(lg); }
@@ -4864,7 +4877,10 @@ function loadIndex(force){
   const one = async ([lg, Lg]) => {
     const base = `site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard`;
     const paths = [base, `${base}?dates=${ymd(now)}`, ...months.map(m => `${base}?dates=${m}&limit=500`)];
-    const lists = await Promise.all(paths.map((p, i) => espn(p, i < 2 ? 15 : 600).then(j => j.events || []).catch(() => [])));
+    // 요청 줄이기(ESPN이 너무 많은 요청에 접속을 막음): 지금 경기 중이거나 2시간 안에 시작/4시간 안에 시작한 리그만 30초, 나머지 15분, 한 달 일정 1시간
+    const hot = IDX.list.some(x => x.lg === lg && (x.m.state === "in" || (x.m.state === "pre" && Math.abs(new Date(x.m.date) - now) < 2 * 36e5) || (x.m.state === "post" && now - new Date(x.m.date) < 4 * 36e5 && now - new Date(x.m.date) > 0 && false)));
+    const ttl = i => i === 0 ? (hot || !IDX.list.length ? 30 : 900) : i === 1 ? (hot ? 120 : 900) : 3600;
+    const lists = await Promise.all(paths.map((p, i) => espn(p, ttl(i)).then(j => j.events || []).catch(() => [])));
     const by = new Map();
     for (const e of lists.flat()) if (!by.has(String(e.id))) by.set(String(e.id), e);  // 앞쪽(오늘·실시간)이 우선
     return [...by.values()].map(nEvent).filter(m => m.home && m.away).map(m => ({lg, m}));
@@ -5001,7 +5017,7 @@ async function notiTick(){
     // 대상 리그만 오늘 점수판을 새로 받음
     const evs = {};
     await Promise.all([...lgs].map(async lg => { const Lg = LEAGUES[lg], base = `site/v2/sports/${Lg.sport}/${Lg.slug}/scoreboard`;
-      for (const p of [base, `${base}?dates=${ymd(new Date())}`]) { const j = await espn(p, 15).catch(() => null); for (const e of (j && j.events) || []) evs[lg + "|" + e.id] = nEvent(e); } }));
+      for (const p of [base]) { const j = await espn(p, 30).catch(() => null); for (const e of (j && j.events) || []) evs[lg + "|" + e.id] = nEvent(e); } }));
     for (const k of keys){
       const m = evs[k]; if (!m || !m.home || !m.away) continue;
       const lg = k.split("|")[0], sp = sportOf(lg), set = NOTI[sp] || {};
@@ -5067,19 +5083,45 @@ function setBet(sk, field, val){
   const m = MY.ev[k]; if (m && m.state !== "pre"){ toast("경기가 시작돼 예측을 바꿀 수 없습니다"); return; }
   p.bet = p.bet || {};
   p.bet[field] = p.bet[field] === val ? null : val;
-  if (field === "ou") p.bet.line = p.bet.ou ? Number((MY.odds[k] || {}).overUnder) : null;
+  if (field === "ou") p.bet.line = p.bet.ou ? (p.bet.ouLine ?? Number((MY.odds[k] || {}).overUnder)) : null;
+  if (field === "hc") p.bet.hcl = p.bet.hc ? (p.bet.hcLine ?? Number((MY.odds[k] || {}).spread)) : null;
   savePicks();
   if (field === "res") predPush(p);
   const i = BETLOG.findIndex(b => b.k === k);
-  if (!p.bet.res && !p.bet.ou){ if (i >= 0) BETLOG.splice(i, 1); }
-  else { const e = {k, lg:p.lg, date:p.date, home:p.home, away:p.away, res:p.bet.res || null, ou:p.bet.ou || null, line:p.bet.line ?? null, rHit:null, oHit:null}; if (i >= 0) BETLOG[i] = e; else BETLOG.push(e); }
+  betLogSync(p);
+}
+// 이 경기 예측을 적중 기록(BETLOG)에 반영 · 기준점을 바꾸면 다시 채점
+function betLogSync(p){
+  const k = p.lg + "|" + p.id, b = p.bet || {}, i = BETLOG.findIndex(x => x.k === k);
+  if (!b.res && !b.ou && !b.hc){ if (i >= 0) BETLOG.splice(i, 1); }
+  else { const e = {k, lg:p.lg, date:p.date, home:p.home, away:p.away, res:b.res || null, ou:b.ou || null, line:b.line ?? null, hc:b.hc || null, hcl:b.hcl ?? null, rHit:null, oHit:null, hHit:null}; if (i >= 0) BETLOG[i] = e; else BETLOG.push(e); }
   saveBet();
 }
+// ✎ 기준점 직접 넣기 (사이트마다 언오버·핸디 기준이 다름) — 비우면 ESPN 기준으로 돌아감
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-myline]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const [lg, id, grp, f] = b.dataset.myline.split("|"), p = PICKS.find(x => x.lg === lg && x.id === id && String(x.grp) === grp); if (!p) return;
+  p.bet = p.bet || {};
+  const cur = f === "ou" ? p.bet.ouLine : p.bet.hcLine;
+  const v = prompt(f === "ou" ? "언오버 기준점 (내가 산 사이트 기준, 예: 2.5 · 220.5)\n비우면 ESPN 기준으로 돌아갑니다." : "핸디 기준 — 홈팀 기준 (예: -1.5 = 홈 1.5점 지고 시작, +0.5)\n비우면 ESPN 기준으로 돌아갑니다.", cur ?? "");
+  if (v === null) return;
+  const n = parseFloat(String(v).replace(",", "."));
+  if (String(v).trim() === "") { if (f === "ou") delete p.bet.ouLine; else delete p.bet.hcLine; }
+  else if (!isFinite(n)) { toast("숫자로 넣어 주세요 (예: 2.5, -1.5)"); return; }
+  else if (f === "ou") p.bet.ouLine = n; else p.bet.hcLine = n;
+  const k = p.lg + "|" + p.id, o = MY.odds[k] || {};
+  if (f === "ou" && p.bet.ou) p.bet.line = p.bet.ouLine ?? Number(o.overUnder);
+  if (f === "hc" && p.bet.hc) p.bet.hcl = p.bet.hcLine ?? Number(o.spread);
+  savePicks(); betLogSync(p); gradeBets();
+  toast(String(v).trim() === "" ? "ESPN 기준으로 돌렸습니다" : `${f === "ou" ? "언오버" : "핸디"} 기준 ${f === "hc" && n > 0 ? "+" : ""}${n} 로 판단합니다`);
+  renderMy(true);
+}, true);
 // 끝난 경기 채점
 function gradeBets(){
   let ch = false;
   for (const b of BETLOG){
-    if (b.rHit !== null || b.oHit !== null) continue;
+    if (b.done) continue;
     const [lg, id] = b.k.split("|"), m = MY.ev[b.k] || (IDX.list.find(x => x.lg === lg && x.m.id === id) || {}).m;
     if (!m || m.state !== "post") continue;
     const hs = Number(m.home.score) || 0, as = Number(m.away.score) || 0;
@@ -5088,6 +5130,7 @@ function gradeBets(){
     if (b.res) b.rHit = b.res === w;
     if (b.ou && b.line != null && !isNaN(b.line)){ const t = hs + as; b.oHit = t === b.line ? null : (b.ou === "over") === (t > b.line); if (b.oHit === null) b.ou = null; }
     if (!b.res) b.rHit = null;
+    if (b.hc && b.hcl != null && !isNaN(b.hcl)){ const adj = hs + Number(b.hcl) - as; b.hHit = adj === 0 ? null : (b.hc === "home") === (adj > 0); }  // 0 = 적특
     b.done = true; ch = true;
   }
   if (ch) saveBet();
@@ -5172,7 +5215,7 @@ function betStats(){
   gradeBets();
   if (!BETLOG.length) return "";
   const today = dkey(new Date().toISOString()), wk = Date.now() - 7 * 864e5;
-  const calc = list => { let h = 0, n = 0; for (const b of list){ for (const x of [b.rHit, b.oHit]) if (x === true || x === false){ n++; if (x) h++; } } return {h, n, pct:n ? Math.round(h / n * 100) : null}; };
+  const calc = list => { let h = 0, n = 0; for (const b of list){ for (const x of [b.rHit, b.oHit, b.hHit]) if (x === true || x === false){ n++; if (x) h++; } } return {h, n, pct:n ? Math.round(h / n * 100) : null}; };
   const pend = BETLOG.filter(b => !b.done).length;
   const T = calc(BETLOG.filter(b => dkey(b.date) === today)), W = calc(BETLOG.filter(b => new Date(b.date) > wk)), A = calc(BETLOG);
   // 종목별 (승패·언오버 합쳐서)
@@ -5267,7 +5310,7 @@ function renderHome(fromTick){
   const grid = arr => `<div class="hgrid">${arr.map(row).join("")}</div>`;
   const d = new Date(), selD = new Date(d0); if (dy !== "all") selD.setDate(selD.getDate() + Number(dy));
   let html = `<div class="hhead"><h2>📅 ${far ? `${selD.getMonth() + 1}월 ${selD.getDate()}일 (${"일월화수목금토"[selD.getDay()]}) 통합 일정` : `${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]}) 오늘의 경기`}</h2>
-    <span class="auto"><i></i>30초마다 자동 업데이트</span></div>
+    <span class="auto"><i></i>1분마다 자동 업데이트</span></div>
     <div class="bar hbar dnav">
       <div class="chips">${[["all", "3일 전체"], ["-1", "어제"], ["0", "오늘"], ["1", "내일"]].map(([k, l]) => `<button class="chip ${dy === k ? "on" : ""}" data-hday="${k}">${l}${far ? "" : `<span class="n">${dcnt[k] || 0}</span>`}</button>`).join("")}</div></div>
     <div class="bar hbar"><div class="chips">${SPORTS.map(([k, l]) => `<button class="chip ${sp === k ? "on" : ""}" data-hsp="${k}">${l}</button>`).join("")}</div>
@@ -5303,8 +5346,8 @@ function renderHome(fromTick){
   const y = window.scrollY;
   $("#main").innerHTML = html;
   if (fromTick) window.scrollTo(0, y);
-  S.homePoll = setTimeout(async () => { if (S.tab !== "home" || document.hidden){ if (S.tab === "home") S.homePoll = setTimeout(() => renderHome(true), 30000); return; }
-    try { await loadIndex(true); } catch {} if (S.tab === "home" && !modal.open) renderHome(true); else if (S.tab === "home") S.homePoll = setTimeout(() => renderHome(true), 30000); }, 30000);
+  S.homePoll = setTimeout(async () => { if (S.tab !== "home" || document.hidden){ if (S.tab === "home") S.homePoll = setTimeout(() => renderHome(true), 60000); return; }
+    try { await loadIndex(true); } catch {} if (S.tab === "home" && !modal.open) renderHome(true); else if (S.tab === "home") S.homePoll = setTimeout(() => renderHome(true), 60000); }, 60000);
 }
 document.addEventListener("click", e => {
   const a = e.target.closest("[data-hsp],[data-hst],[data-golg],[data-hday],[data-hlg]");
@@ -5727,7 +5770,7 @@ function pipHtml(){
     if (soon.length) body += `<h4>곧 시작 (3시간 안)</h4>` + rows(soon.slice(0, 8));
   }
   return `<div class="pipw"><div class="piph"><b>📺 SPORTS LIVE!</b><button data-pipv="all" class="${PIP.view === "all" ? "on" : ""}">● 진행 중 ${live.length}</button><button data-pipv="my" class="${PIP.view === "my" ? "on" : ""}">★ My</button>${window.PIPW ? "" : '<button data-pipx title="닫기">✕</button>'}</div>
-    <div class="pipb">${body}</div><div class="pipf">20초마다 자동 업데이트 · ${new Date().toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</div></div>`;
+    <div class="pipb">${body}</div><div class="pipf">30초마다 자동 업데이트 · ${new Date().toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</div></div>`;
 }
 function pipRender(){
   const root = window.PIPW ? PIPW.document.getElementById("piproot") : PIP.el;
@@ -5741,7 +5784,7 @@ async function pipTick(){
   if (!PIP.on) return;
   try { await loadIndex(true); } catch {}
   pipRender();
-  PIP.timer = setTimeout(pipTick, 20000);
+  PIP.timer = setTimeout(pipTick, 30000);
 }
 function pipClick(e){
   const v = e.target.closest("[data-pipv]");
