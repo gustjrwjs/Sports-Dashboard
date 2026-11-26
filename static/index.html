@@ -712,6 +712,7 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.ocrln{display:block;font-size:11.5px;color:#15803d;font-weight:700;margin:2px 0 0 26px}
 .lnb{border:1px dashed var(--border);background:transparent;border-radius:6px;padding:3px 6px;font:inherit;font-weight:700;cursor:pointer;color:var(--text);white-space:nowrap}
 .lnb i{font-style:normal;font-size:10px;color:var(--muted);margin-left:2px}.lnb.mine{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent)}
 #pipbox .pkb,.mrow .pkb{font-style:normal;flex:none;display:inline-block;font-size:9.5px;font-weight:800;line-height:1;color:#fff;background:#16a34a;border-radius:4px;padding:2px 4px;white-space:nowrap}
@@ -5426,6 +5427,27 @@ function teamKeys(lg, t){
   for (const s of strong) weak.delete(s);
   return {strong:[...strong].filter(s => s.length >= 2), weak:[...weak].filter(s => s.length >= 3)};
 }
+// 캡처에서 경기를 찾은 줄 근처(그 줄 + 아래 2줄)의 언오버·핸디 기준점 읽기
+//   언더오버 2.5 / U/O 2.5 / 언더 2.5 / 2.5 오버 · 핸디 -1.5 / H -1.0 / 팀이름(-1.5)
+function slipLines(text, normLine, x){
+  const raw = text.split(/\n+/).filter(l => normS(l).length > 1);
+  const i = raw.findIndex(l => normS(l) === normLine); if (i < 0) return {};
+  const t = raw.slice(i, i + 3).join(" ").replace(/,(\d)/g, ".$1");
+  const out = {}, num = "(\\d{1,3}\\.\\d{1,2}|\\d{1,3})";
+  let m = t.match(new RegExp(`(?:언더\\s*오버|언오버|언\\s*/\\s*오|오버\\s*/\\s*언더|U\\s*/\\s*O|O\\s*/\\s*U)\\s*[:(\\[]?\\s*${num}`, "i"))
+       || t.match(new RegExp(`(언더|오버|under|over)\\s*[:(\\[]?\\s*${num}`, "i")) || t.match(new RegExp(`${num}\\s*(언더|오버)`));
+  if (m){ const v = parseFloat(m[m.length === 3 && /언더|오버/.test(m[2] || "") ? 1 : m.length - 1] ?? m[1]); const n = parseFloat((m[0].match(/\d{1,3}(?:\.\d{1,2})?/) || [])[0]);
+    if (isFinite(n) && n > 0 && n < 400) out.ouLine = n; }
+  const sel = t.replace(/언더\s*오버|언오버|오버\s*\/\s*언더|언\s*\/\s*오/g, "");
+  if (/언더|under/i.test(sel) && !/오버|over/i.test(sel)) out.ou = "under"; else if (/오버|over/i.test(sel) && !/언더|under/i.test(sel)) out.ou = "over";
+  const h = t.match(/(?:핸디캡|핸디|핸|\bH)\s*[:(\[]?\s*([+\-−]\s*\d{1,2}(?:\.\d{1,2})?)/i) || t.match(/\(\s*([+\-−]\d{1,2}(?:\.\d{1,2})?)\s*\)/);
+  if (h){ let v = parseFloat(h[1].replace(/\s/g, "").replace("−", "-"));
+    // 괄호 숫자가 원정팀 이름 바로 뒤에 붙어 있으면 원정 기준 → 홈 기준으로 바꿈
+    const ai = t.search(new RegExp(ko(x.m.away.name).slice(0, 2))), hi2 = t.indexOf(h[0]);
+    if (h[0].startsWith("(") && ai >= 0 && hi2 > ai && hi2 - ai < 14) v = -v;
+    if (isFinite(v) && Math.abs(v) < 60) out.hcLine = v; }
+  return out;
+}
 function slipMatch(text){
   const from = Date.now() - 2 * 864e5, until = Date.now() + 10 * 864e5;
   // 한 줄(+다음 줄) 안에 두 팀이 같이 나와야 한 경기로 봄 → 다른 줄의 팀끼리 잘못 엮이지 않음
@@ -5443,9 +5465,9 @@ function slipMatch(text){
   for (const x of IDX.list){
     const d = new Date(x.m.date).getTime(); if (d < from || d > until) continue;
     if (!hit(ALL, x.lg, x.m.home) && !hit(ALL, x.lg, x.m.away)) continue;
-    let best = 0;
-    for (const w of wins){ const h = hit(w, x.lg, x.m.home), a = hit(w, x.lg, x.m.away); if (h && a) best = Math.max(best, h + a); }
-    if (best) both.push({...x, sc:best, both:true});
+    let best = 0, at = -1;
+    wins.forEach((w, i) => { const h = hit(w, x.lg, x.m.home), a = hit(w, x.lg, x.m.away); if (h && a && h + a > best){ best = h + a; at = i; } });
+    if (best) both.push({...x, sc:best, both:true, ...slipLines(text, lines[at], x)});
     else { const h = hit(ALL, x.lg, x.m.home), a = hit(ALL, x.lg, x.m.away); if (Math.max(h, a) === 2) one.push({...x, sc:1, both:false}); }
   }
   // 같은 두 팀 경기가 여러 개면(홈·원정 2연전 등) 지금과 가장 가까운 경기만 (진행 중 우선)
@@ -5506,7 +5528,8 @@ async function importSlips(files){
     }
     S.ocrFound = []; S.ocrUrls = per.map(x => x.url);
     const row = (x, on) => { const idx = S.ocrFound.push(x) - 1, had = isPicked(x.lg, x.m.id);
-      return `<label class="ocr-it"><input type="checkbox" data-oi="${idx}" data-of="${x.fi}" ${on ? "checked" : ""}>${miniRow(x, {noPick:true})}${had ? '<small class="muted">다른 묶음에도 있음</small>' : ""}</label>`; };
+      const ln = [x.ouLine != null ? `언오버 ${x.ouLine}${x.ou ? ` (${x.ou === "over" ? "오버" : "언더"})` : ""}` : "", x.hcLine != null ? `핸디 홈 ${sgn(x.hcLine)}` : ""].filter(Boolean).join(" · ");
+      return `<label class="ocr-it"><input type="checkbox" data-oi="${idx}" data-of="${x.fi}" ${on ? "checked" : ""}>${miniRow(x, {noPick:true})}${ln ? `<small class="ocrln">📏 캡처에서 읽은 기준: ${esc(ln)} · 담으면 미리 적용</small>` : ""}${had ? '<small class="muted">다른 묶음에도 있음</small>' : ""}</label>`; };
     const total = per.reduce((a, x) => a + x.strong.length, 0), multi = per.length > 1;
     st(total ? `<b>${total}경기</b>를 찾았습니다.${multi ? ` 캡처 ${per.length}장 → 캡처마다 새 묶음으로 담깁니다.` : ""} 확인하고 담기를 누르세요.` : "두 팀이 모두 맞는 경기를 찾지 못했습니다. 아래 후보에서 골라 주세요.");
     const nextG = freeGrps(per.length);
@@ -5640,7 +5663,12 @@ document.addEventListener("click", e => {
     let n = 0; const made = [];
     for (const [, list] of [...byFile].sort((a, b) => a[0] - b[0])){
       const g = sep ? newGrp() : addGrp(); let k = 0;
-      for (const x of list) if (addPickFrom(x.lg, x.m, g)){ n++; k++; }
+      for (const x of list) if (addPickFrom(x.lg, x.m, g)){ n++; k++;
+        const p = PICKS.find(q => q.lg === x.lg && q.id === x.m.id && q.grp === g);
+        if (p && (x.ouLine != null || x.hcLine != null)){ p.bet = p.bet || {};
+          if (x.ouLine != null) p.bet.ouLine = x.ouLine; if (x.hcLine != null) p.bet.hcLine = x.hcLine;
+          if (x.ou && new Date(x.m.date) > Date.now()){ p.bet.ou = x.ou; p.bet.line = x.ouLine ?? null; betLogSync(p); }
+          savePicks(); } }
       if (sep){ if (k) made.push(g); else { MYGRPS = MYGRPS.filter(y => y !== g); saveGrps(); } }
     }
     (S.ocrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.ocrUrls = [];
