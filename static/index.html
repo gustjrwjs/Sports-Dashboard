@@ -527,7 +527,7 @@ dialog::backdrop{background:rgba(5,8,14,.55)}
 /* 팝업이 열려 있는 동안 뒤 페이지는 스크롤되지 않게 (창 끝까지 내려도 뒤로 넘어가지 않음) */
 dialog{overscroll-behavior:contain}
 html:has(dialog[open]){overflow:hidden;scrollbar-gutter:stable}
-.m-in{padding:0 18px 18px}
+.m-in{padding:0 18px 70px}  /* 아래 ▲ 맨 위 버튼이 마지막 줄을 가리지 않게 */
 .m-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:10px 10px 6px;background:var(--bg)}
 .m-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .m-head h2{margin:0;font-size:20px}
@@ -712,6 +712,15 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.h2hl{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.h2hl li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border)}.h2hl li:last-child{border-bottom:0}
+.h2hl li.go{cursor:pointer}.h2hl li.go:hover{background:var(--surface-2)}
+.h2hl .d{flex:none;width:64px;font-size:12px;color:var(--muted)}.h2hl .c{flex:none;width:96px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h2hl .hm{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto minmax(0,1fr);align-items:center;gap:6px;font-size:13.5px}
+.h2hl .hm>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}.h2hl .hm>span:first-child{text-align:right}
+.h2hl .hm>span.w{color:var(--text);font-weight:800}.h2hl .hm b{white-space:nowrap;font-variant-numeric:tabular-nums}.h2hl .hm .lg{width:18px;height:18px}
+.h2hl .hm small{grid-column:1/-1;text-align:center;font-size:11px;color:var(--muted)}.h2hl .who{flex:none}
+@media (max-width:520px){ .h2hl li{flex-wrap:wrap;gap:2px 8px;padding:8px 10px} .h2hl .d{width:auto;font-size:11px} .h2hl .c{width:auto;font-size:11px} .h2hl .who{margin-left:auto} .h2hl .hm{flex-basis:100%;order:4;font-size:13px;gap:5px} .h2hl .hm .lg{width:16px;height:16px} }
 .inj .stt.newsinj{color:#b91c1c;font-weight:800}
 .dnav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dnav .dnb{padding:6px 12px;font-size:13px;line-height:1}
@@ -1135,7 +1144,7 @@ ul.news small{font-size:11px}
   .cmp .f{width:16px;height:16px;font-size:10px}
   .cmp .form{gap:2px}
   .mh .t{font-size:14px}
-  .m-in{padding:0 12px 12px}
+  .m-in{padding:0 12px 64px}
   .pl{width:58px}
   .pl .nm{max-width:58px}
   .av{width:38px;height:38px}
@@ -2561,10 +2570,20 @@ function seriesEvents(sum){
   return out;
 }
 // 상대 전적 요약: 승무패 · 평균 득실 · 언오버 · 양팀 득점
-function h2hSummary(rs, sp, line){
+// 상대 전적 줄: 날짜 · 대회 | 홈팀 점수 - 점수 원정팀 (이긴 팀 굵게) | 이 경기 홈팀 기준 승/무/패
+function h2hList(rs, m){
+  const me = ko(m.home.name);
+  return `<ul class="h2hl">${rs.map(r => { const e = r.ev, ok = e.id && !String(e.id).startsWith("s") && e.home && e.away; if (ok) EVX[S.lg + "|" + e.id] = e;
+    const hs = Number(e.home.score), as = Number(e.away.score), hw = hs > as || (hs === as && e.home.winner), aw = as > hs || (hs === as && e.away.winner);
+    return `<li${ok ? ` class="go" data-match="${esc(e.id)}" title="눌러서 경기 상세 보기"` : ""}>
+      <span class="d">${dShort(e.date)}</span><span class="c">${esc(compKo(e.competition) || L().short)}</span>
+      <span class="hm"><span class="${hw ? "w" : ""}">${esc(ko(e.home.name))}</span>${logo(e.home.logo)}<b>${hs} - ${as}</b>${logo(e.away.logo)}<span class="${aw ? "w" : ""}">${esc(ko(e.away.name))}</span>${r.pk ? `<small>${r.pk}</small>` : ""}</span>
+      <span class="who" title="${esc(me)} 기준">${badge(r.r)}</span></li>`; }).join("")}</ul>`;
+}
+function h2hSummary(rs, sp, line, m){
   const n = rs.length, W = rs.filter(r => r.r === "W").length, D = rs.filter(r => r.r === "D").length, Lx = n - W - D;
   const gf = rs.reduce((a, r) => a + r.gf, 0), ga = rs.reduce((a, r) => a + r.ga, 0), tot = (gf + ga) / n;
-  const items = [[`${W}승${sp === "soccer" ? ` ${D}무` : ""} ${Lx}패`, "전적"], [`${(gf / n).toFixed(1)} : ${(ga / n).toFixed(1)}`, "평균 득실"], [(tot).toFixed(1), "평균 합계"]];
+  const items = [[`${W}승${sp === "soccer" ? ` ${D}무` : ""} ${Lx}패`, m ? `${ko(m.home.name)} 전적` : "전적"], [`${(gf / n).toFixed(1)} : ${(ga / n).toFixed(1)}`, m ? `평균 득실 (${ko(m.home.name)} : ${ko(m.away.name)})` : "평균 득실"], [(tot).toFixed(1), "평균 합계"]];
   if (sp === "soccer") items.push([`${rs.filter(r => r.gf + r.ga > 2.5).length}/${n}`, "2.5골 오버"], [`${rs.filter(r => r.gf > 0 && r.ga > 0).length}/${n}`, "양팀 득점"]);
   if (!isNaN(line) && line && !(sp === "soccer" && line === 2.5)) items.push([`${rs.filter(r => r.gf + r.ga > line).length}/${n}`, `${line} 오버`]);
   return `<div class="h2hs">${items.map(([v, k]) => `<div><b>${v}</b><small>${k}</small></div>`).join("")}</div>`;
@@ -3021,8 +3040,8 @@ async function openMatch(id){
         <div><div class="sec-h"><h3>${esc(ko(m.home.name))} 최근 5경기</h3></div>${short(h5)}</div>
         <div><div class="sec-h"><h3>${esc(ko(m.away.name))} 최근 5경기</h3></div>${short(a5)}</div>
       </div>
-      <div class="sec"><div class="sec-h"><h3>🆚 상대 전적</h3><span class="muted sp">${esc(ko(m.home.name))} 기준 · 최근 ${h2h.length}경기</span></div>
-        ${h2h.length ? h2hSummary(h2h, sp, ouLine) + resList(h2h) : '<div class="card empty">찾을 수 있는 맞대결 기록이 없습니다.</div>'}</div>`);
+      <div class="sec"><div class="sec-h"><h3>🆚 상대 전적</h3><span class="muted sp">최근 ${h2h.length}경기 · 승패는 <b>${esc(ko(m.home.name))}</b> 기준</span></div>
+        ${h2h.length ? h2hSummary(h2h, sp, ouLine, m) + h2hList(h2h, m) : '<div class="card empty">찾을 수 있는 맞대결 기록이 없습니다.</div>'}</div>`);
     if (sp === "soccer" && m.state === "pre" && !hasLineup(sum ? parseLineups(sum) : null)) fillPrevLineups(m, h, a);
     if (sp === "soccer") fillSoccerIntel(lg, m, h, a, sum);
     if (sp === "basketball" && document.getElementById("bb-pre")) fillBbPre(m, h, a);
