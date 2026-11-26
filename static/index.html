@@ -712,6 +712,7 @@ tr.dnp td{color:var(--muted)}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 8px}
 .hhead h2{margin:0;font-size:19px}
 .hbar{margin-bottom:12px}
+.lninp{width:64px;padding:4px 6px;border:2px solid var(--accent);border-radius:6px;background:var(--surface);color:var(--text);font:inherit;font-weight:700;text-align:center}
 .ocrln{display:block;font-size:11.5px;color:#15803d;font-weight:700;margin:2px 0 0 26px}
 .lnb{border:1px dashed var(--border);background:transparent;border-radius:6px;padding:3px 6px;font:inherit;font-weight:700;cursor:pointer;color:var(--text);white-space:nowrap}
 .lnb i{font-style:normal;font-size:10px;color:var(--muted);margin-left:2px}.lnb.mine{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent)}
@@ -3883,6 +3884,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function renderMy(fromRefresh){
+  if (fromRefresh && document.activeElement?.classList?.contains("lninp")) return;  // 기준점 입력 중이면 다시 그리지 않음
   const bar = n => `<div class="live-bar"><h2><span class="mystar">★</span> My 경기 <span class="live">LIVE</span> <span class="muted" style="font-size:14px">${n}경기</span></h2>${MY.t > 0
     ? `<span class="auto"><i></i>${Object.values(MY.ev).some(m => m.state === "in") ? LIVE_FAST / 1000 : LIVE_SLOW / 1000}초마다 자동 업데이트 · ${new Date(MY.t).toLocaleTimeString("ko-KR", {hour:"2-digit", minute:"2-digit", second:"2-digit"})}</span>` : ""}</div>`;
   if (!PICKS.length){
@@ -5098,25 +5100,38 @@ function betLogSync(p){
   else { const e = {k, lg:p.lg, date:p.date, home:p.home, away:p.away, res:b.res || null, ou:b.ou || null, line:b.line ?? null, hc:b.hc || null, hcl:b.hcl ?? null, rHit:null, oHit:null, hHit:null}; if (i >= 0) BETLOG[i] = e; else BETLOG.push(e); }
   saveBet();
 }
-// ✎ 기준점 직접 넣기 (사이트마다 언오버·핸디 기준이 다름) — 비우면 ESPN 기준으로 돌아감
-document.addEventListener("click", e => {
-  const b = e.target.closest("[data-myline]"); if (!b) return;
-  e.preventDefault(); e.stopPropagation();
-  const [lg, id, grp, f] = b.dataset.myline.split("|"), p = PICKS.find(x => x.lg === lg && x.id === id && String(x.grp) === grp); if (!p) return;
+// ✎ 기준점 직접 넣기 (사이트마다 언오버·핸디 기준이 다름) — 칸을 누르면 그 자리에서 입력, Enter·밖 누르기 = 저장, Esc = 취소, 비우면 ESPN
+function applyMyLine(p, f, v){
   p.bet = p.bet || {};
-  const cur = f === "ou" ? p.bet.ouLine : p.bet.hcLine;
-  const v = prompt(f === "ou" ? "언오버 기준점 (내가 산 사이트 기준, 예: 2.5 · 220.5)\n비우면 ESPN 기준으로 돌아갑니다." : "핸디 기준 — 홈팀 기준 (예: -1.5 = 홈 1.5점 지고 시작, +0.5)\n비우면 ESPN 기준으로 돌아갑니다.", cur ?? "");
-  if (v === null) return;
-  const n = parseFloat(String(v).replace(",", "."));
-  if (String(v).trim() === "") { if (f === "ou") delete p.bet.ouLine; else delete p.bet.hcLine; }
-  else if (!isFinite(n)) { toast("숫자로 넣어 주세요 (예: 2.5, -1.5)"); return; }
+  const t = String(v ?? "").trim(), n = parseFloat(t.replace(",", ".").replace("−", "-"));
+  if (t === "") { if (f === "ou") delete p.bet.ouLine; else delete p.bet.hcLine; }
+  else if (!isFinite(n)) { toast("숫자로 넣어 주세요 (예: 2.5, -1.5)"); return false; }
   else if (f === "ou") p.bet.ouLine = n; else p.bet.hcLine = n;
   const k = p.lg + "|" + p.id, o = MY.odds[k] || {};
   if (f === "ou" && p.bet.ou) p.bet.line = p.bet.ouLine ?? Number(o.overUnder);
   if (f === "hc" && p.bet.hc) p.bet.hcl = p.bet.hcLine ?? Number(o.spread);
   savePicks(); betLogSync(p); gradeBets();
-  toast(String(v).trim() === "" ? "ESPN 기준으로 돌렸습니다" : `${f === "ou" ? "언오버" : "핸디"} 기준 ${f === "hc" && n > 0 ? "+" : ""}${n} 로 판단합니다`);
-  renderMy(true);
+  return true;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-myline]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  const [lg, id, grp, f] = b.dataset.myline.split("|"), p = PICKS.find(x => x.lg === lg && x.id === id && String(x.grp) === grp); if (!p) return;
+  const cur = f === "ou" ? p.bet?.ouLine : p.bet?.hcLine, shown = b.firstChild?.textContent?.trim();
+  const inp = document.createElement("input");
+  inp.className = "lninp"; inp.inputMode = "decimal"; inp.enterKeyHint = "done"; inp.autocomplete = "off";
+  inp.value = cur ?? (shown && shown !== "-" ? shown.replace(/^\+/, "") : "");
+  inp.placeholder = f === "ou" ? "예 2.5" : "홈 -1.5";
+  inp.title = f === "ou" ? "언오버 기준 (Enter 저장 · Esc 취소 · 비우면 ESPN)" : "핸디 기준, 홈팀 기준 (Enter 저장 · Esc 취소 · 비우면 ESPN)";
+  b.replaceWith(inp); inp.focus(); inp.select();
+  let done = false;
+  const finish = save => { if (done) return; done = true;
+    if (save && inp.value.trim() !== String(cur ?? (shown || "").replace(/^\+/, "")) && applyMyLine(p, f, inp.value)) toast(inp.value.trim() === "" ? "ESPN 기준으로 돌렸습니다" : `${f === "ou" ? "언오버" : "핸디"} 기준 ${inp.value.trim()} 로 판단합니다`);
+    if (document.activeElement === inp) inp.blur();
+    renderMy(true); };
+  inp.addEventListener("keydown", ev => { if (ev.key === "Enter"){ ev.preventDefault(); finish(true); } else if (ev.key === "Escape"){ ev.preventDefault(); finish(false); } });
+  inp.addEventListener("blur", () => finish(true));
+  ["click", "mousedown", "pointerdown"].forEach(t => inp.addEventListener(t, ev => ev.stopPropagation()));
 }, true);
 // 끝난 경기 채점
 function gradeBets(){
